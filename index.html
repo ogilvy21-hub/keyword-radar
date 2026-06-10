@@ -955,7 +955,7 @@ if (totalContent === 0) {
               return { ...row, blog: realBlog, cafe: realCafe, score: newScore };
             } catch (error) {
               console.error(`${row.kw} API 호출 실패`, error);
-              return { ...row, score: row.score || 50 };
+             return { ...row, blog: 0, cafe: 0, score: 40 };
             }
           })
         );

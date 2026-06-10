@@ -1352,66 +1352,74 @@ ${outlinesText}
 );
 
     const scoredRows = apiRows.map(row => {
-      const monthlyTotal = Number(row.monthly || 0);
-      const totalContent = Number(row.totalContent || 0);
+  const monthlyTotal = Number(row.monthly || 0);
+  const totalContent = Number(row.totalContent || 0);
 
-      let searchScore = 0;
-      let contentScore = 0;
-      let opportunityType = '검토';
+  let searchScore = 0;
+  let contentScore = 0;
+  let opportunityType = '검토';
 
-      if (monthlyTotal >= 100000) searchScore = 50;
-      else if (monthlyTotal >= 30000) searchScore = 45;
-      else if (monthlyTotal >= 10000) searchScore = 38;
-      else if (monthlyTotal >= 3000) searchScore = 30;
-      else if (monthlyTotal >= 1000) searchScore = 22;
-      else if (monthlyTotal >= 300) searchScore = 14;
-      else if (monthlyTotal > 0) searchScore = 8;
-      else searchScore = 0;
+  if (!row.contentOk || !row.searchOk) {
+    return {
+      ...row,
+      score: 20,
+      opportunityType: '검증필요'
+    };
+  }
 
-      if (totalContent === 0) contentScore = monthlyTotal > 0 ? 45 : 15;
-      else if (totalContent <= 500) contentScore = 45;
-      else if (totalContent <= 1000) contentScore = 40;
-      else if (totalContent <= 3000) contentScore = 35;
-      else if (totalContent <= 10000) contentScore = 28;
-      else if (totalContent <= 30000) contentScore = 20;
-      else if (totalContent <= 50000) contentScore = 14;
-      else if (totalContent <= 100000) contentScore = 8;
-      else if (totalContent <= 300000) contentScore = 3;
-      else contentScore = 0;
+  if (monthlyTotal >= 100000) searchScore = 50;
+  else if (monthlyTotal >= 30000) searchScore = 45;
+  else if (monthlyTotal >= 10000) searchScore = 38;
+  else if (monthlyTotal >= 3000) searchScore = 30;
+  else if (monthlyTotal >= 1000) searchScore = 22;
+  else if (monthlyTotal >= 300) searchScore = 14;
+  else if (monthlyTotal > 0) searchScore = 8;
+  else searchScore = 0;
 
-      let adPenalty = 0;
-      if (row.ad === '높음') adPenalty = 8;
-      if (row.ad === '중간') adPenalty = 4;
+  if (totalContent === 0) contentScore = monthlyTotal > 0 ? 35 : 10;
+  else if (totalContent <= 500) contentScore = 45;
+  else if (totalContent <= 1000) contentScore = 40;
+  else if (totalContent <= 3000) contentScore = 35;
+  else if (totalContent <= 10000) contentScore = 28;
+  else if (totalContent <= 30000) contentScore = 20;
+  else if (totalContent <= 50000) contentScore = 14;
+  else if (totalContent <= 100000) contentScore = 8;
+  else if (totalContent <= 300000) contentScore = 3;
+  else contentScore = 0;
 
-      let finalScore = Math.max(
-        1,
-        Math.min(95, Math.round(searchScore + contentScore - adPenalty))
-      );
+  let adPenalty = 0;
+  if (row.ad === '높음') adPenalty = 8;
+  if (row.ad === '중간') adPenalty = 4;
 
-      if (monthlyTotal >= 3000 && totalContent > 0 && totalContent <= 3000) {
-        opportunityType = '황금키워드';
-      } else if (monthlyTotal >= 1000 && totalContent > 0 && totalContent <= 10000) {
-        opportunityType = '준황금키워드';
-      } else if (monthlyTotal > 0 && totalContent === 0) {
-        opportunityType = '선점키워드';
-        finalScore = Math.max(finalScore, 55);
-      } else if (monthlyTotal >= 3000 && totalContent <= 50000) {
-        opportunityType = '도전키워드';
-      } else if (monthlyTotal === 0 && totalContent === 0) {
-        opportunityType = '검증필요';
-        finalScore = 25;
-      } else if (totalContent >= 100000) {
-        opportunityType = '경쟁과다';
-      } else {
-        opportunityType = '보통키워드';
-      }
+  let finalScore = Math.max(
+    1,
+    Math.min(95, Math.round(searchScore + contentScore - adPenalty))
+  );
 
-      return {
-        ...row,
-        score: finalScore,
-        opportunityType
-      };
-    });
+  if (monthlyTotal >= 3000 && totalContent > 0 && totalContent <= 3000) {
+    opportunityType = '황금키워드';
+  } else if (monthlyTotal >= 1000 && totalContent > 0 && totalContent <= 10000) {
+    opportunityType = '준황금키워드';
+  } else if (monthlyTotal > 0 && totalContent === 0) {
+    opportunityType = '선점키워드';
+    finalScore = Math.min(finalScore, 55);
+  } else if (monthlyTotal >= 3000 && totalContent <= 50000) {
+    opportunityType = '도전키워드';
+  } else if (monthlyTotal === 0 && totalContent === 0) {
+    opportunityType = '검증필요';
+    finalScore = 20;
+  } else if (totalContent >= 100000) {
+    opportunityType = '경쟁과다';
+  } else {
+    opportunityType = '보통키워드';
+  }
+
+  return {
+    ...row,
+    score: finalScore,
+    opportunityType
+  };
+});
 
     const sortedRows = [...scoredRows].sort((a, b) => {
       const aMonthly = Number(a.monthly || 0);

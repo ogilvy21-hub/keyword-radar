@@ -767,17 +767,41 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
 위 내용을 바탕으로 티스토리 원고를 작성해줘. 첫 문단에서 검색자가 원하는 답을 바로 전달하고, 필요한 부분은 표로 정리해줘. 기계적인 표현은 쓰지 말고 작가가 독자에게 직접 설명하는 자연어 문체로 써줘. 마지막에는 자료출처와 태그 10개를 붙여줘.`;
     }
 
-    function renderAll(resetSelection = true) {
+          async function fetchNaverTotals(keyword) {
+      const response = await fetch(`/api/keyword?keyword=${encodeURIComponent(keyword)}`);
+
+      if (!response.ok) {
+        throw new Error('네이버 API 호출 실패');
+      }
+
+      return response.json();
+    }
+
+    async function renderAll(resetSelection = true) {
       const keyword = keywordInput.value.trim() || '키워드';
       currentData = getDataset(keyword);
+
+      try {
+        const apiData = await fetchNaverTotals(keyword);
+
+        currentData.rows[0].blog = apiData.blogTotal;
+        currentData.rows[0].cafe = apiData.cafeTotal;
+        currentData.rows[0].kw = apiData.keyword;
+      } catch (error) {
+        console.error(error);
+      }
+
       if (resetSelection) {
         const best = Math.max(...currentData.rows.map(row => row.score));
         selectedIndex = currentData.rows.findIndex(row => row.score === best);
       }
+
       const bestRow = currentData.rows[selectedIndex];
+
       totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
       bestKeywordText.textContent = bestRow.kw;
       bestScoreText.textContent = bestRow.score;
+
       renderTable();
       renderSelected();
     }
@@ -792,22 +816,34 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
       });
     }
 
-    analyzeBtn.addEventListener('click', () => renderAll(true));
-    keywordInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter') renderAll(true);
+    analyzeBtn.addEventListener('click', () => {
+      renderAll(true);
     });
-    copyPromptBtn.addEventListener('click', () => copyText(draftPrompt.value, copyPromptBtn, '원고 프롬프트 복사'));
+
+    keywordInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        renderAll(true);
+      }
+    });
+
+    copyPromptBtn.addEventListener('click', () => {
+      copyText(draftPrompt.value, copyPromptBtn, '원고 프롬프트 복사');
+    });
+
     [platformSelect, toneSelect, lengthSelect, outputSelect, tableCheck, faqCheck].forEach(control => {
       control.addEventListener('change', () => renderSelected());
     });
+
     copyKeywordsBtn.addEventListener('click', () => {
       const row = currentData.rows[selectedIndex];
       const text = `선택 키워드: ${row.kw}
 관련 키워드: ${currentData.related.join(', ')}
 검색의도: ${currentData.intent}
 기회점수: ${row.score}`;
+
       copyText(text, copyKeywordsBtn, '키워드 복사');
     });
+
     resetBtn.addEventListener('click', () => {
       keywordInput.value = '고유가 지원금';
       renderAll(true);

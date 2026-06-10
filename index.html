@@ -558,7 +558,7 @@
         <div class="search-zone">
           <h2>1차: 키워드 검색 → 경쟁강도 확인</h2>
           <div class="search-row">
-            <input id="keywordInput" value="" placeholder="분석할 키워드를 입력하세요" />
+            <input id="keywordInput" value="" placeholder="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
             <button id="analyzeBtn">분석</button>
           </div>
           <div class="steps">
@@ -2236,11 +2236,70 @@ async function fetchKeywordDataCached(keyword) {
   keywordApiCache.set(cacheKey, result);
   return result;
 }
+  function renderIdleState() {
+  currentData = {
+    rows: [],
+    allRows: [],
+    detailRows: [],
+    recommendedRows: [],
+    related: [],
+    intent: '대기',
+    needs: [],
+    outlines: [],
+    reason: '키워드를 입력하면 결과가 표시됩니다.',
+    categoryName: '대기',
+    totalCandidateCount: 0,
+    seedKeyword: ''
+  };
+
+  selectedIndex = 0;
+  totalKeywords.textContent = '0개';
+  bestKeywordText.textContent = '-';
+  bestScoreText.textContent = '0';
+  intentShortText.textContent = '대기';
+  judgementTitle.textContent = '키워드를 입력하면 글감 판단이 표시됩니다.';
+  judgementReason.textContent = '검색창에 분석할 키워드를 입력하고 분석 버튼을 누르세요.';
+  strategyList.innerHTML = '';
+  proofMonthly.textContent = '0';
+  proofContent.textContent = '0';
+  proofRelevance.textContent = '-';
+  proofAiFit.textContent = '-';
+  keywordTable.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
+  detailKeywordTable.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:24px; color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
+  selectedHint.textContent = '키워드를 입력하세요';
+  relatedChips.innerHTML = '';
+  readerNeeds.innerHTML = '';
+  titleList.innerHTML = '';
+  outlineList.innerHTML = '';
+  sideKeyword.textContent = '-';
+  sideBadge.textContent = '대기';
+  sideScore.textContent = '0';
+  sideReason.textContent = '키워드를 입력하면 검색량 대비 발행량과 의도를 기준으로 추천 이유가 표시됩니다.';
+  sideMetrics.innerHTML = [
+    ['월간 검색수', '0'],
+    ['PC 검색수', '0'],
+    ['MO 검색수', '0'],
+    ['블로그 발행수', '0'],
+    ['카페 발행수', '0'],
+    ['경쟁비율', '-'],
+    ['광고 경쟁도', '-']
+  ].map(item => `<div><span>${item[0]}</span><b>${item[1]}</b></div>`).join('');
+  draftPrompt.value = '';
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = '분석';
+}
+
   async function renderAll(resetSelection = true) {
+  const keyword = keywordInput.value.trim();
+
+  if (!keyword) {
+    renderIdleState();
+    return;
+  }
+
   analyzeBtn.disabled = true;
   analyzeBtn.textContent = '분석 중';
 
-  const keyword = keywordInput.value.trim() || '키워드';
   currentData = getDataset(keyword);
   currentData.seedKeyword = keyword;
 
@@ -2591,7 +2650,10 @@ async function fetchKeywordDataCached(keyword) {
 
     analyzeBtn.addEventListener('click', () => renderAll(true));
     keywordInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter') renderAll(true);
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        renderAll(true);
+      }
     });
     copyPromptBtn.addEventListener('click', () => copyText(draftPrompt.value, copyPromptBtn, '원고 프롬프트 복사'));
     [platformSelect, toneSelect, lengthSelect, outputSelect, tableCheck, faqCheck].forEach(control => {
@@ -2608,10 +2670,11 @@ async function fetchKeywordDataCached(keyword) {
     });
     resetBtn.addEventListener('click', () => {
       keywordInput.value = '';
-      renderAll(true);
+      renderIdleState();
     });
 
-    renderAll(true);
+    keywordInput.value = '';
+    renderIdleState();
   </script>
 </body>
 </html>

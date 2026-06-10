@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>글감레이더 | 키워드 경쟁강도·검색의도·제목목차 생성 데모</title>
+  <meta name="description" content="키워드 검색부터 경쟁강도 확인, 검색의도 분석, 제목·목차 생성, 원고 프롬프트까지 이어지는 콘텐츠 제작 데모입니다." />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, Apple SD Gothic Neo, sans-serif;
+      background: #0f172a;
+      color: #111827;
+    }
+    button, input, select { font: inherit; }
+    .app {
+      min-height: 100vh;
+      padding: 32px;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(37,99,235,.35), transparent 34%),
+        radial-gradient(circle at 100% 20%, rgba(16,185,129,.22), transparent 30%),
+        #0f172a;
+    }
+    .hero {
+      max-width: 1360px;
+      margin: 0 auto 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 24px;
+      color: #fff;
+      align-items: end;
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: #93c5fd;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .14em;
+    }
+    h1 {
+      margin: 0;
+      font-size: 46px;
+      line-height: 1.08;
+      letter-spacing: -1.6px;
+    }
+    .hero p.desc {
+      max-width: 760px;
+      margin: 16px 0 0;
+      color: #cbd5e1;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .status-card {
+      padding: 22px;
+      border-radius: 26px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(16px);
+    }
+    .status-card span { color: #cbd5e1; font-size: 13px; }
+    .status-card strong { display: block; margin: 8px 0; font-size: 25px; }
+    .status-card p { margin: 0; color: #bfdbfe; font-size: 13px; line-height: 1.55; }
+    .layout {
+      max-width: 1360px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      gap: 24px;
+    }
+    .panel, .side {
+      border-radius: 28px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(0,0,0,.26);
+      overflow: hidden;
+    }
+    .topbar {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 16px;
+      background: #e5e7eb;
+    }
+    .traffic { display: flex; gap: 7px; }
+    .traffic i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+    .traffic i:nth-child(1) { background:#ef4444; }
+    .traffic i:nth-child(2) { background:#f59e0b; }
+    .traffic i:nth-child(3) { background:#22c55e; }
+    .url {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #fff;
+      color: #64748b;
+      font-size: 13px;
+    }
+    .ext-btn {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 12px;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 900;
+    }
+    .search-zone {
+      padding: 36px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .search-zone h2 { margin: 0 0 18px; font-size: 28px; letter-spacing: -.6px; }
+    .search-row {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) 130px;
+      gap: 10px;
+      max-width: 860px;
+    }
+    .search-row input {
+      width: 100%;
+      border: 2px solid #dbeafe;
+      outline: 0;
+      padding: 17px 18px;
+      border-radius: 18px;
+      font-size: 18px;
+      box-shadow: 0 14px 36px rgba(37,99,235,.10);
+    }
+    .search-row button {
+      border: 0;
+      border-radius: 18px;
+      background: #111827;
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 18px;
+      max-width: 860px;
+    }
+    .step {
+      padding: 13px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+    .step.active { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .content-zone { padding: 28px 36px 36px; background: #f8fafc; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric {
+      padding: 18px;
+      border-radius: 22px;
+      background: #111827;
+      color: #fff;
+    }
+    .metric p { margin: 0 0 8px; color: #93c5fd; font-size: 12px; font-weight: 900; }
+    .metric strong { display:block; font-size: 27px; letter-spacing: -.5px; }
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 24px 0 12px;
+    }
+    .section-title h3 { margin: 0; font-size: 18px; letter-spacing: -.3px; }
+    .hint { color: #64748b; font-size: 13px; font-weight: 800; }
+    .table-wrap { overflow: auto; border-radius: 22px; border: 1px solid #e5e7eb; background: #fff; }
+    table { width: 100%; border-collapse: collapse; min-width: 850px; }
+    th, td { padding: 14px 13px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 13px; white-space: nowrap; }
+    th { background: #f1f5f9; color: #475569; font-weight: 900; }
+    td { color: #334155; font-weight: 700; }
+    tr:last-child td { border-bottom: 0; }
+    tr.selected td { background: #eff6ff; }
+    .pick-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 10px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .score {
+      display: inline-flex;
+      min-width: 42px;
+      height: 28px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #047857;
+      font-weight: 900;
+    }
+    .score.mid { background: #fef3c7; color: #a16207; }
+    .score.low { background: #fee2e2; color: #b91c1c; }
+    .builder-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .card {
+      padding: 18px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+    }
+    .card h4 { margin: 0 0 10px; font-size: 15px; }
+    .builder-grid .card:nth-child(2) h4,
+    .builder-grid .card:nth-child(3) h4 {
+      color: #2563eb;
+      font-weight: 900;
+    }
+    .chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .chip.hot { background: #2563eb; color: #fff; }
+    .title-list, .outline-list { display: grid; gap: 9px; }
+    .title-item, .outline-item {
+      padding: 12px;
+      border-radius: 15px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 800;
+    }
+    .title-item { border-left: 1px solid #e5e7eb; }
+    .outline-item { display: flex; gap: 10px; }
+    .outline-item span {
+      flex: 0 0 24px;
+      width: 24px; height: 24px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      background: #111827; color:#fff;
+      font-size: 11px; font-weight: 900;
+    }
+    .side { padding: 24px; align-self: start; position: sticky; top: 24px; }
+    .side-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:18px; }
+    .side-label { margin:0 0 8px; color:#2563eb; font-size:12px; font-weight:900; letter-spacing:.12em; }
+    .side h2 { margin:0; font-size:22px; line-height:1.35; letter-spacing:-.4px; }
+    .badge {
+      flex: 0 0 auto;
+      padding: 9px 11px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #047857;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .side-box {
+      margin-top: 14px;
+      padding: 17px;
+      border-radius: 22px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+    }
+    .side-box.dark { background: #111827; color:#fff; border-color:#111827; }
+    .side-box h3 { margin:0 0 12px; font-size:15px; }
+    .side-box p { margin:0; color:#4b5563; font-size:13px; line-height:1.65; font-weight:700; }
+    .side-box.dark p { color:#dbeafe; }
+    .opportunity {
+      display:grid;
+      grid-template-columns: 90px 1fr;
+      gap: 14px;
+      align-items:center;
+    }
+    .big-score {
+      width: 88px; height: 88px;
+      display:grid; place-items:center;
+      border-radius: 26px;
+      background:#2563eb;
+      color:#fff;
+      font-size: 32px;
+      font-weight: 900;
+    }
+    .mini-list { display:grid; gap:8px; }
+    .mini-list div {
+      display:flex; justify-content:space-between; gap:10px;
+      padding:10px 12px;
+      border-radius: 14px;
+      background:#fff;
+      color:#334155;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .side-box.dark .mini-list div { background: rgba(255,255,255,.09); color:#e5e7eb; }
+    .action-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+    .action-row button, .full-btn {
+      border:0;
+      border-radius:18px;
+      padding:16px 12px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .green { background:#10b981; color:#fff; box-shadow:0 14px 28px rgba(16,185,129,.22); }
+    .black { background:#111827; color:#fff; }
+    .blue { background:#2563eb; color:#fff; }
+    .full-btn { width:100%; margin-top:10px; }
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 13px;
+      resize: vertical;
+      color:#334155;
+      font-size: 13px;
+      line-height: 1.6;
+      outline: 0;
+    }
+    .option-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .option-field label {
+      display: block;
+      margin: 0 0 6px;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .option-field select {
+      width: 100%;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fff;
+      padding: 11px 10px;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 800;
+      outline: 0;
+    }
+    .format-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .check-item input { accent-color: #2563eb; }
+    @media (max-width: 1100px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .side { position: static; }
+      h1 { font-size: 36px; }
+      .summary-grid, .builder-grid, .steps { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">KEYWORD TO DRAFT ENGINE</p>
+        <h1>글감레이더<br>키워드에서 원고 설계까지</h1>
+        <p class="desc">키워드를 입력하면 경쟁강도, 블로그·카페 발행량, PC·모바일 검색량, 검색의도, 제목·목차, 원고 프롬프트까지 한 번에 이어지는 콘텐츠 제작 데모입니다.</p>
+      </div>
+      <div class="status-card">
+        <span>현재 버전</span>
+        <strong>GitHub Demo v1</strong>
+        <p>실제 API 연결 전, 화면 구조와 사용자 흐름을 확인하는 정적 데모입니다.</p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="topbar">
+          <div class="traffic"><i></i><i></i><i></i></div>
+          <div class="url">https://keyword-radar.github.io</div>
+          <button class="ext-btn">KR</button>
+        </div>
+
+        <div class="search-zone">
+          <h2>1차: 키워드 검색 → 경쟁강도 확인</h2>
+          <div class="search-row">
+            <input id="keywordInput" value="고유가 지원금" placeholder="분석할 키워드를 입력하세요" />
+            <button id="analyzeBtn">분석</button>
+          </div>
+          <div class="steps">
+            <div class="step active">STEP 1<br>키워드 수집</div>
+            <div class="step active">STEP 2<br>경쟁강도</div>
+            <div class="step active">STEP 3<br>키워드 선택</div>
+            <div class="step active">STEP 4<br>검색의도</div>
+            <div class="step active">STEP 5<br>제목·목차</div>
+          </div>
+        </div>
+
+        <div class="content-zone">
+          <div class="summary-grid">
+            <div class="metric"><p>수집 키워드</p><strong id="totalKeywords">0개</strong></div>
+            <div class="metric"><p>추천 키워드</p><strong id="bestKeywordText">-</strong></div>
+            <div class="metric"><p>최고 기회점수</p><strong id="bestScoreText">0</strong></div>
+            <div class="metric"><p>검색의도</p><strong id="intentShortText">-</strong></div>
+          </div>
+
+          <div class="section-title">
+            <h3>키워드 경쟁강도 표</h3>
+            <span class="hint">데모 수치 · 실제 서비스에서는 API 연결</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>선택</th>
+                  <th>키워드</th>
+                  <th>월간 검색수</th>
+                  <th>PC</th>
+                  <th>MO</th>
+                  <th>블로그 발행수</th>
+                  <th>카페 발행수</th>
+                  <th>광고 경쟁</th>
+                  <th>기회점수</th>
+                </tr>
+              </thead>
+              <tbody id="keywordTable"></tbody>
+            </table>
+          </div>
+
+          <div class="section-title">
+            <h3>2차: 검색의도 → 제목·목차 생성</h3>
+            <span class="hint" id="selectedHint">키워드를 선택하세요</span>
+          </div>
+          <div class="builder-grid">
+            <div class="card">
+              <h4>함께 넣을 키워드</h4>
+              <div class="chip-wrap" id="relatedChips"></div>
+            </div>
+            <div class="card">
+              <h4>검색자가 원하는 답</h4>
+              <div class="title-list" id="readerNeeds"></div>
+            </div>
+            <div class="card">
+              <h4>제목 후보</h4>
+              <div class="title-list" id="titleList"></div>
+            </div>
+            <div class="card">
+              <h4>목차 초안</h4>
+              <div class="outline-list" id="outlineList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="side-head">
+          <div>
+            <p class="side-label">SELECTED KEYWORD</p>
+            <h2 id="sideKeyword">-</h2>
+          </div>
+          <span class="badge" id="sideBadge">대기</span>
+        </div>
+
+        <section class="side-box dark">
+          <h3>키워드 선택 판단</h3>
+          <div class="opportunity">
+            <div class="big-score" id="sideScore">0</div>
+            <p id="sideReason">키워드를 분석하면 검색량 대비 발행량과 의도를 기준으로 추천 이유가 표시됩니다.</p>
+          </div>
+        </section>
+
+        <section class="side-box">
+          <h3>경쟁 데이터</h3>
+          <div class="mini-list" id="sideMetrics"></div>
+        </section>
+
+        <section class="side-box">
+          <h3>원고 생성 옵션</h3>
+          <div class="option-grid">
+            <div class="option-field">
+              <label for="platformSelect">플랫폼</label>
+              <select id="platformSelect">
+                <option>티스토리</option>
+                <option>네이버 블로그</option>
+                <option>워드프레스</option>
+                <option>블로그스팟</option>
+                <option>브런치</option>
+                <option>네이버 홈판용</option>
+              </select>
+            </div>
+            <div class="option-field">
+              <label for="toneSelect">문체</label>
+              <select id="toneSelect">
+                <option>정보형</option>
+                <option>애널리스트형</option>
+                <option>감성 에세이형</option>
+                <option>생활정보형</option>
+                <option>리뷰형</option>
+              </select>
+            </div>
+            <div class="option-field">
+              <label for="lengthSelect">분량</label>
+              <select id="lengthSelect">
+                <option>짧게 800자</option>
+                <option selected>일반 1500자</option>
+                <option>깊게 3000자</option>
+                <option>장문 5000자 이상</option>
+              </select>
+            </div>
+            <div class="option-field">
+              <label for="outputSelect">기본 출력</label>
+              <select id="outputSelect">
+                <option>텍스트</option>
+                <option>HTML</option>
+              </select>
+            </div>
+          </div>
+          <div class="format-options">
+            <label class="check-item"><input id="tableCheck" type="checkbox" checked /> 표 포함</label>
+            <label class="check-item"><input id="faqCheck" type="checkbox" checked /> FAQ 포함</label>
+          </div>
+        </section>
+
+        <section class="side-box">
+          <h3>원고 작성 프롬프트</h3>
+          <textarea id="draftPrompt" readonly></textarea>
+          <button class="full-btn blue" id="copyPromptBtn">원고 프롬프트 복사</button>
+        </section>
+
+        <section class="side-box">
+          <h3>발행 전 검수 기준</h3>
+          <div class="mini-list">
+            <div><span>첫 문단 즉답</span><b>필수</b></div>
+            <div><span>목차 포함</span><b>필수</b></div>
+            <div><span>표 포함</span><b>권장</b></div>
+            <div><span>기계적 표현 제거</span><b>필수</b></div>
+          </div>
+        </section>
+
+        <div class="action-row">
+          <button class="green" id="copyKeywordsBtn">키워드 복사</button>
+          <button class="black" id="resetBtn">초기화</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const keywordInput = document.getElementById('keywordInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const keywordTable = document.getElementById('keywordTable');
+    const totalKeywords = document.getElementById('totalKeywords');
+    const bestKeywordText = document.getElementById('bestKeywordText');
+    const bestScoreText = document.getElementById('bestScoreText');
+    const intentShortText = document.getElementById('intentShortText');
+    const selectedHint = document.getElementById('selectedHint');
+    const relatedChips = document.getElementById('relatedChips');
+    const readerNeeds = document.getElementById('readerNeeds');
+    const titleList = document.getElementById('titleList');
+    const outlineList = document.getElementById('outlineList');
+    const sideKeyword = document.getElementById('sideKeyword');
+    const sideBadge = document.getElementById('sideBadge');
+    const sideScore = document.getElementById('sideScore');
+    const sideReason = document.getElementById('sideReason');
+    const sideMetrics = document.getElementById('sideMetrics');
+    const draftPrompt = document.getElementById('draftPrompt');
+    const copyPromptBtn = document.getElementById('copyPromptBtn');
+    const copyKeywordsBtn = document.getElementById('copyKeywordsBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const platformSelect = document.getElementById('platformSelect');
+    const toneSelect = document.getElementById('toneSelect');
+    const lengthSelect = document.getElementById('lengthSelect');
+    const outputSelect = document.getElementById('outputSelect');
+    const tableCheck = document.getElementById('tableCheck');
+    const faqCheck = document.getElementById('faqCheck');
+
+    const presetData = {
+      support: {
+        match: /고유가|지원금|사용처|서브웨이|편의점|주유소/,
+        rows: [
+          { kw:'고유가 지원금 사용처', monthly:4800, pc:620, mo:4180, blog:12400, cafe:2100, ad:'중간', score:58 },
+          { kw:'고유가 지원금 서브웨이', monthly:620, pc:70, mo:550, blog:190, cafe:42, ad:'낮음', score:91 },
+          { kw:'고유가 지원금 편의점', monthly:1900, pc:250, mo:1650, blog:2600, cafe:530, ad:'중간', score:76 },
+          { kw:'고유가 지원금 주유소', monthly:1500, pc:180, mo:1320, blog:980, cafe:210, ad:'중간', score:84 },
+          { kw:'고유가 지원금 신청', monthly:3600, pc:520, mo:3080, blog:8500, cafe:1200, ad:'높음', score:62 },
+          { kw:'고유가 지원금 대상', monthly:2100, pc:330, mo:1770, blog:4100, cafe:680, ad:'중간', score:68 }
+        ],
+        related:['사용처','서브웨이','편의점','주유소','신청','대상','지역별','카드사','업종 제한','잔액 확인'],
+        intent:'즉답형',
+        needs:['서브웨이에서 쓸 수 있는지 바로 알고 싶다','안 된다면 어떤 업종 제한 때문인지 알고 싶다','편의점·주유소 같은 대체 사용처를 함께 확인하고 싶다','지역이나 카드사에 따라 달라지는지 확인하고 싶다'],
+        outlines:['고유가 지원금은 어디서 쓸 수 있나','서브웨이 사용 가능 여부','편의점·주유소·카페 사용 가능 여부','지역별 사용처가 달라지는 이유','결제 전 확인해야 할 기준','자주 묻는 질문'],
+        reason:'검색 의도가 매우 구체적이고 발행량이 낮습니다. 첫 문단에서 사용 가능 여부를 바로 답하면 실용 검색에 강합니다.'
+      },
+      loan: {
+        match: /청년|버팀목|전세|대출|장기안심주택|조건|신청/,
+        rows: [
+          { kw:'청년버팀목전세대출 조건', monthly:8700, pc:1500, mo:7200, blog:18500, cafe:3100, ad:'높음', score:65 },
+          { kw:'청년버팀목전세대출 서류', monthly:3200, pc:480, mo:2720, blog:3900, cafe:670, ad:'중간', score:82 },
+          { kw:'청년버팀목전세대출 소득 기준', monthly:2600, pc:390, mo:2210, blog:2100, cafe:420, ad:'중간', score:88 },
+          { kw:'청년버팀목전세대출 부결 사유', monthly:900, pc:130, mo:770, blog:420, cafe:95, ad:'낮음', score:93 },
+          { kw:'청년버팀목전세대출 한도', monthly:5400, pc:840, mo:4560, blog:8200, cafe:1400, ad:'높음', score:70 }
+        ],
+        related:['조건','소득 기준','한도','금리','필요 서류','부결 사유','신청 방법','전입신고','은행','연장'],
+        intent:'조건확인형',
+        needs:['내가 신청 대상인지 먼저 알고 싶다','소득·보증금·나이 조건을 한눈에 보고 싶다','한도와 금리를 숫자로 확인하고 싶다','부결될 수 있는 이유를 미리 알고 싶다'],
+        outlines:['청년버팀목전세대출 핵심 요약','신청 대상과 소득 조건','한도·금리·보증금 기준','필요 서류와 신청 절차','부결 사유와 주의사항','신청 전 체크리스트'],
+        reason:'조건과 서류 검색은 즉시 판단 수요가 큽니다. 표와 체크리스트를 붙이면 체류 시간을 높일 수 있습니다.'
+      },
+      stock: {
+        match: /주가|전망|공모주|상장|실적|목표가|적정주가|ETF|수요예측/,
+        rows: [
+          { kw:'공모주 수요예측 결과', monthly:4200, pc:900, mo:3300, blog:3200, cafe:870, ad:'중간', score:82 },
+          { kw:'상장일 매도 전략', monthly:1300, pc:280, mo:1020, blog:480, cafe:120, ad:'낮음', score:92 },
+          { kw:'주가 전망 실적 기준', monthly:1800, pc:420, mo:1380, blog:2100, cafe:360, ad:'중간', score:73 },
+          { kw:'목표가 계산 방법', monthly:900, pc:300, mo:600, blog:260, cafe:55, ad:'낮음', score:94 },
+          { kw:'적정주가 비교 기업', monthly:700, pc:210, mo:490, blog:180, cafe:40, ad:'낮음', score:95 }
+        ],
+        related:['실적','매출','영업이익','시가총액','PER','수급','보호예수','오버행','지지선','목표가'],
+        intent:'투자판단형',
+        needs:['지금 가격이 비싼지 싼지 알고 싶다','상승 이유와 하락 리스크를 분리해서 보고 싶다','비교 기업과 숫자로 판단하고 싶다','매수보다 관망 기준을 찾고 싶다'],
+        outlines:['현재 주가 이슈 요약','실적과 밸류에이션 확인','상승 요인과 수급','리스크와 보호예수 물량','비교 기업으로 보는 가격 구간','투자자가 볼 체크포인트'],
+        reason:'투자 키워드는 숫자와 비교표가 강합니다. 검색량보다 신뢰도와 근거 제시가 중요합니다.'
+      },
+      default: null
+    };
+
+    function formatNum(num) {
+      return num.toLocaleString('ko-KR');
+    }
+
+    function getDataset(keyword) {
+      const found = Object.values(presetData).find(item => item && item.match.test(keyword));
+      if (found) return found;
+      return {
+        rows: [
+          { kw:`${keyword} 뜻`, monthly:1200, pc:240, mo:960, blog:980, cafe:170, ad:'낮음', score:82 },
+          { kw:`${keyword} 방법`, monthly:900, pc:180, mo:720, blog:620, cafe:130, ad:'중간', score:78 },
+          { kw:`${keyword} 비교`, monthly:700, pc:160, mo:540, blog:410, cafe:95, ad:'낮음', score:85 },
+          { kw:`${keyword} 추천`, monthly:1500, pc:310, mo:1190, blog:2900, cafe:620, ad:'높음', score:61 },
+          { kw:`${keyword} 주의사항`, monthly:550, pc:120, mo:430, blog:190, cafe:40, ad:'낮음', score:91 }
+        ],
+        related:['뜻','방법','비교','추천','후기','가격','주의사항','장점','단점','FAQ'],
+        intent:'정보탐색형',
+        needs:['핵심 의미를 빠르게 알고 싶다','비슷한 개념과 차이를 확인하고 싶다','실제로 어떻게 적용하는지 예시를 보고 싶다','주의할 점을 미리 알고 싶다'],
+        outlines:[`${keyword} 핵심 요약`, `${keyword}의 뜻과 기본 개념`, `${keyword} 방법과 실제 예시`, `${keyword} 비교 포인트`, `${keyword} 주의사항`, '자주 묻는 질문'],
+        reason:'일반 정보 키워드는 정의보다 실제 예시와 주의사항을 함께 넣을 때 검색 의도에 더 잘 맞습니다.'
+      };
+    }
+
+    let currentData = null;
+    let selectedIndex = 0;
+
+    function scoreClass(score) {
+      if (score >= 85) return 'score';
+      if (score >= 70) return 'score mid';
+      return 'score low';
+    }
+
+    function makeTitles(keyword, intent) {
+      if (intent === '즉답형') return [
+        `${keyword} 가능할까? 사용 전 꼭 확인할 기준`,
+        `${keyword} 총정리 | 가능 여부와 예외 조건`,
+        `${keyword}, 결제 전 먼저 봐야 할 사용처 기준`
+      ];
+      if (intent === '조건확인형') return [
+        `${keyword} 조건·서류·신청방법 총정리`,
+        `${keyword}, 내가 받을 수 있는지 확인하는 법`,
+        `${keyword} 신청 전 꼭 봐야 할 조건과 부결 사유`
+      ];
+      if (intent === '투자판단형') return [
+        `${keyword} 전망 | 실적·수급·리스크로 보는 핵심 구간`,
+        `${keyword}, 지금 가격에서 봐야 할 숫자들`,
+        `${keyword} 분석 | 상승 요인과 하락 리스크 정리`
+      ];
+      return [
+        `${keyword} 뜻과 핵심 정보 총정리`,
+        `${keyword} 방법·비교·주의사항 한 번에 보기`,
+        `${keyword} 선택 전 알아야 할 장점과 단점`
+      ];
+    }
+
+    function renderTable() {
+      keywordTable.innerHTML = currentData.rows.map((row, index) => `
+        <tr class="${index === selectedIndex ? 'selected' : ''}">
+          <td><button class="pick-btn" data-index="${index}">선택</button></td>
+          <td>${row.kw}</td>
+          <td>${formatNum(row.monthly)}</td>
+          <td>${formatNum(row.pc)}</td>
+          <td>${formatNum(row.mo)}</td>
+          <td>${formatNum(row.blog)}</td>
+          <td>${formatNum(row.cafe)}</td>
+          <td>${row.ad}</td>
+          <td><span class="${scoreClass(row.score)}">${row.score}</span></td>
+        </tr>
+      `).join('');
+      document.querySelectorAll('.pick-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          selectedIndex = Number(button.dataset.index);
+          renderAll(false);
+        });
+      });
+    }
+
+    function renderSelected() {
+      const row = currentData.rows[selectedIndex];
+      const titles = makeTitles(row.kw, currentData.intent);
+      selectedHint.textContent = row.kw;
+      sideKeyword.textContent = row.kw;
+      sideBadge.textContent = currentData.intent;
+      sideScore.textContent = row.score;
+      sideReason.textContent = currentData.reason;
+      intentShortText.textContent = currentData.intent;
+
+      relatedChips.innerHTML = currentData.related.map((item, index) => `<span class="chip ${index < 4 ? 'hot' : ''}">${item}</span>`).join('');
+      readerNeeds.innerHTML = currentData.needs.map(item => `<div class="title-item">${item}</div>`).join('');
+      titleList.innerHTML = titles.map(item => `<div class="title-item">${item}</div>`).join('');
+      outlineList.innerHTML = currentData.outlines.map((item, index) => `<div class="outline-item"><span>${index + 1}</span><div>${item}</div></div>`).join('');
+      sideMetrics.innerHTML = [
+        ['월간 검색수', formatNum(row.monthly)],
+        ['PC 검색수', formatNum(row.pc)],
+        ['MO 검색수', formatNum(row.mo)],
+        ['블로그 발행수', formatNum(row.blog)],
+        ['카페 발행수', formatNum(row.cafe)],
+        ['광고 경쟁도', row.ad]
+      ].map(item => `<div><span>${item[0]}</span><b>${item[1]}</b></div>`).join('');
+
+      const formatExtras = [
+        tableCheck.checked ? '표 포함' : null,
+        faqCheck.checked ? 'FAQ 포함' : null
+      ].filter(Boolean).join(', ') || '기본 형식';
+
+      draftPrompt.value = `플랫폼: ${platformSelect.value}
+문체: ${toneSelect.value}
+분량: ${lengthSelect.value}
+출력 형식: ${outputSelect.value}
+추가 형식: ${formatExtras}
+
+제목: ${titles[0]}
+
+기준 키워드: ${row.kw}
+함께 넣을 키워드: ${currentData.related.join(', ')}
+검색의도: ${currentData.intent}
+독자가 원하는 답: ${currentData.needs.join(' / ')}
+
+목차:
+${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
+
+위 내용을 바탕으로 티스토리 원고를 작성해줘. 첫 문단에서 검색자가 원하는 답을 바로 전달하고, 필요한 부분은 표로 정리해줘. 기계적인 표현은 쓰지 말고 작가가 독자에게 직접 설명하는 자연어 문체로 써줘. 마지막에는 자료출처와 태그 10개를 붙여줘.`;
+    }
+
+    function renderAll(resetSelection = true) {
+      const keyword = keywordInput.value.trim() || '키워드';
+      currentData = getDataset(keyword);
+      if (resetSelection) {
+        const best = Math.max(...currentData.rows.map(row => row.score));
+        selectedIndex = currentData.rows.findIndex(row => row.score === best);
+      }
+      const bestRow = currentData.rows[selectedIndex];
+      totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
+      bestKeywordText.textContent = bestRow.kw;
+      bestScoreText.textContent = bestRow.score;
+      renderTable();
+      renderSelected();
+    }
+
+    function copyText(text, button, label) {
+      navigator.clipboard.writeText(text).then(() => {
+        button.textContent = '복사 완료';
+        setTimeout(() => button.textContent = label, 1200);
+      }).catch(() => {
+        button.textContent = '복사 실패';
+        setTimeout(() => button.textContent = label, 1200);
+      });
+    }
+
+    analyzeBtn.addEventListener('click', () => renderAll(true));
+    keywordInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') renderAll(true);
+    });
+    copyPromptBtn.addEventListener('click', () => copyText(draftPrompt.value, copyPromptBtn, '원고 프롬프트 복사'));
+    [platformSelect, toneSelect, lengthSelect, outputSelect, tableCheck, faqCheck].forEach(control => {
+      control.addEventListener('change', () => renderSelected());
+    });
+    copyKeywordsBtn.addEventListener('click', () => {
+      const row = currentData.rows[selectedIndex];
+      const text = `선택 키워드: ${row.kw}
+관련 키워드: ${currentData.related.join(', ')}
+검색의도: ${currentData.intent}
+기회점수: ${row.score}`;
+      copyText(text, copyKeywordsBtn, '키워드 복사');
+    });
+    resetBtn.addEventListener('click', () => {
+      keywordInput.value = '고유가 지원금';
+      renderAll(true);
+    });
+
+    renderAll(true);
+  </script>
+</body>
+</html>

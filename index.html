@@ -485,6 +485,21 @@
       font-weight: 700;
     }
     .detail-table table { min-width: 1180px; }
+    .recommend-empty {
+      padding: 22px 20px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #334155;
+      font-weight: 800;
+      line-height: 1.6;
+    }
+    .recommend-empty strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #111827;
+      font-size: 17px;
+    }
     .table-caption {
       display:flex;
       align-items:center;
@@ -1273,28 +1288,96 @@ function makeCommerceLongtailRows(keyword) {
   }));
 }
 
-function makePlaceLongtailRows(keyword) {
+function parsePlaceKeyword(keyword) {
   const cleanKeyword = String(keyword || '').trim().replace(/\s+/g, ' ');
+  const placeTypes = ['카페', '맛집', '숙소', '호텔', '펜션', '리조트', '캠핑장', '축제', '전시', '팝업', '가볼만한곳', '식당'];
+  const compact = normalizeKeywordKey(cleanKeyword);
+  const placeType = placeTypes.find(type => compact.includes(normalizeKeywordKey(type))) || '';
 
-  const longtails = [
-    `${cleanKeyword} 주차`,
-    `${cleanKeyword} 영업시간`,
-    `${cleanKeyword} 예약`,
-    `${cleanKeyword} 후기`,
-    `${cleanKeyword} 조용한 곳`,
-    `${cleanKeyword} 데이트`,
-    `${cleanKeyword} 혼자`,
-    `${cleanKeyword} 근처`,
-    `${cleanKeyword} 디저트`,
-    `${cleanKeyword} 분위기 좋은 곳`,
-    `${cleanKeyword} 노트북`,
-    `${cleanKeyword} 늦게까지`
-  ];
+  let area = cleanKeyword;
 
-  return uniqueByCompact(longtails).map(kw => makeRowFromKeyword(kw, {
-    fromExpansion: true,
-    fromPlaceLongtail: true
-  }));
+  if (placeType) {
+    const pattern = new RegExp(escapeRegExp(placeType), 'i');
+    area = cleanKeyword.replace(pattern, '').trim();
+  }
+
+  area = area || cleanKeyword.replace(/\s*(추천|후기|주차|영업시간|예약|근처|위치|주소|가격)\s*$/g, '').trim();
+
+  return {
+    base: cleanKeyword,
+    area: area || cleanKeyword,
+    placeType: placeType || '장소'
+  };
+}
+
+function makePlaceLongtailRows(keyword) {
+  const { base, area, placeType } = parsePlaceKeyword(keyword);
+
+  let longtails = [];
+
+  if (placeType === '카페') {
+    longtails = [
+      `${area} 조용한 카페`,
+      `${area} 카페 추천`,
+      `${area} 공부하기 좋은 카페`,
+      `${area} 디저트 카페`,
+      `${area} 대형 카페`,
+      `${area} 카페 주차`,
+      `${area} 데이트 카페`,
+      `${area} 혼자 가기 좋은 카페`,
+      `${area} 늦게까지 하는 카페`,
+      `${area} 분위기 좋은 카페`,
+      `${area} 노트북 카페`,
+      `${area} 브런치 카페`,
+      `${area} 카페 영업시간`,
+      `${area} 카페 예약`
+    ];
+  } else if (placeType === '맛집' || placeType === '식당') {
+    longtails = [
+      `${area} 맛집 추천`,
+      `${area} 점심 맛집`,
+      `${area} 저녁 맛집`,
+      `${area} 혼밥 맛집`,
+      `${area} 데이트 맛집`,
+      `${area} 주차 가능한 맛집`,
+      `${area} 예약 맛집`,
+      `${area} 가성비 맛집`,
+      `${area} 가족 모임 맛집`,
+      `${area} 맛집 후기`
+    ];
+  } else if (['숙소', '호텔', '펜션', '리조트'].includes(placeType)) {
+    longtails = [
+      `${area} ${placeType} 추천`,
+      `${area} ${placeType} 가격`,
+      `${area} ${placeType} 후기`,
+      `${area} ${placeType} 예약`,
+      `${area} 가족 ${placeType}`,
+      `${area} 커플 ${placeType}`,
+      `${area} 가성비 ${placeType}`,
+      `${area} 오션뷰 ${placeType}`,
+      `${area} 주차 가능한 ${placeType}`
+    ];
+  } else {
+    longtails = [
+      `${base} 추천`,
+      `${base} 주차`,
+      `${base} 영업시간`,
+      `${base} 예약`,
+      `${base} 후기`,
+      `${area} 데이트 코스`,
+      `${area} 아이와 가볼만한곳`,
+      `${area} 혼자 가볼만한곳`,
+      `${area} 주말 가볼만한곳`,
+      `${area} 근처 가볼만한곳`
+    ];
+  }
+
+  return uniqueByCompact(longtails)
+    .filter(kw => !/(뜻|방법|주의사항|비교)$/.test(kw))
+    .map(kw => makeRowFromKeyword(kw, {
+      fromExpansion: true,
+      fromPlaceLongtail: true
+    }));
 }
 
 function makeRecipeLongtailRows(keyword) {
@@ -1729,11 +1812,43 @@ function getDataset(keyword) {
       return 'pill';
     }
 
+    function getCompetitionRatioValue(row) {
+      const monthly = Number(row?.monthly || 0);
+      const totalContent = Number(row?.totalContent || 0);
+      if (monthly <= 0) return 999999;
+      return totalContent / monthly;
+    }
+
+    function getCompetitionRatioLabel(row) {
+      const ratio = getCompetitionRatioValue(row);
+      if (!Number.isFinite(ratio) || ratio >= 999999) return '검색량없음';
+      if (ratio < 10) return '좋음';
+      if (ratio < 30) return '검토 가능';
+      if (ratio < 100) return '경쟁 높음';
+      if (ratio < 300) return '매우 높음';
+      return '경쟁과다';
+    }
+
     function getCompetitionRatio(row) {
       const monthly = Number(row.monthly || 0);
       const totalContent = Number(row.totalContent || 0);
       if (monthly <= 0) return '-';
-      return `${(totalContent / monthly).toFixed(1)}배`;
+      return `${(totalContent / monthly).toFixed(1)}배 · ${getCompetitionRatioLabel(row)}`;
+    }
+
+    function isRecommendable(row) {
+      const monthly = Number(row.monthly || 0);
+      const totalContent = Number(row.totalContent || 0);
+      const ratio = Number(row.competitionRatio || getCompetitionRatioValue(row) || 999999);
+      const score = Number(row.score || 0);
+
+      if (score < 40) return false;
+      if (monthly < 100) return false;
+      if (ratio > 100) return false;
+      if (totalContent > 50000 && monthly < 1000) return false;
+      if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요'].includes(row.opportunityType)) return false;
+
+      return true;
     }
 
     function makeWhyRecommended(row, currentData) {
@@ -1838,7 +1953,10 @@ function getDataset(keyword) {
 
     function renderTable() {
       if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
-        keywordTable.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 분석하면 추천 글감이 표시됩니다.</td></tr>';
+        const hasAnalyzed = currentData && Array.isArray(currentData.detailRows) && currentData.detailRows.length > 0;
+        keywordTable.innerHTML = hasAnalyzed
+          ? '<tr><td colspan="9"><div class="recommend-empty"><strong>추천 가능한 글감이 부족합니다.</strong>입력어를 더 구체화하거나 다른 각도로 다시 분석하세요. 상세 후보 검증표에서 경쟁비율이 낮은 후보를 확인할 수 있습니다.</div></td></tr>'
+          : '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 분석하면 추천 글감이 표시됩니다.</td></tr>';
         return;
       }
 
@@ -1877,7 +1995,11 @@ function getDataset(keyword) {
     }
 
     function renderSelected() {
-      if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+      const selectableRows = currentData && Array.isArray(currentData.rows) && currentData.rows.length
+        ? currentData.rows
+        : (currentData && Array.isArray(currentData.detailRows) ? currentData.detailRows : []);
+
+      if (!currentData || !selectableRows.length) {
         sideKeyword.textContent = '-';
         sideBadge.textContent = '대기';
         sideScore.textContent = '0';
@@ -1892,9 +2014,9 @@ function getDataset(keyword) {
         return;
       }
 
-      if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) selectedIndex = 0;
+      if (selectedIndex < 0 || selectedIndex >= selectableRows.length) selectedIndex = 0;
 
-      const row = currentData.rows[selectedIndex];
+      const row = selectableRows[selectedIndex];
       const selectedKeyword = row.kw || '-';
       const judgement = makeJudgement(row, currentData);
       const totalContentForProof = Number(row.totalContent || 0);
@@ -1928,6 +2050,7 @@ function getDataset(keyword) {
         ['MO 검색수', Number(row.mo || 0).toLocaleString('ko-KR')],
         ['블로그 발행수', Number(row.blog || 0).toLocaleString('ko-KR')],
         ['카페 발행수', Number(row.cafe || 0).toLocaleString('ko-KR')],
+        ['경쟁비율', getCompetitionRatio(row)],
         ['광고 경쟁도', row.ad || '-']
       ].map(item => `<div><span>${item[0]}</span><b>${item[1]}</b></div>`).join('');
 
@@ -1963,6 +2086,7 @@ function getDataset(keyword) {
 - 모바일 검색수: ${Number(row.mo || 0).toLocaleString('ko-KR')}
 - 블로그 발행수: ${Number(row.blog || 0).toLocaleString('ko-KR')}
 - 카페 발행수: ${Number(row.cafe || 0).toLocaleString('ko-KR')}
+- 경쟁비율: ${getCompetitionRatio(row)}
 - 기회점수: ${row.score || 0}
 
 함께 넣을 키워드:
@@ -2134,13 +2258,13 @@ async function fetchKeywordDataCached(keyword) {
     const scoredRows = apiRows.map(row => {
       const monthlyTotal = Number(row.monthly || 0);
       const totalContent = Number(row.totalContent || 0);
-
-      let score = 1;
-      let opportunityType = '검증필요';
+      const competitionRatio = getCompetitionRatioValue(row);
 
       if (!row.contentOk || !row.searchOk) {
         const failedRow = {
           ...row,
+          competitionRatio,
+          competitionRatioLabel: getCompetitionRatioLabel(row),
           score: 20,
           opportunityType: '검증필요'
         };
@@ -2151,174 +2275,169 @@ async function fetchKeywordDataCached(keyword) {
         return failedRow;
       }
 
-      // 검색량이 거의 없는 키워드는 황금키워드가 아님
-      if (monthlyTotal === 0) {
+      let score = 0;
+      let opportunityType = '검증필요';
+
+      if (monthlyTotal <= 0) {
         score = 5;
         opportunityType = '검색량없음';
-      } else if (monthlyTotal < 100) {
-        score = totalContent === 0 ? 18 : 10;
-        opportunityType = '관찰키워드';
-      } else if (monthlyTotal < 300) {
-        score = totalContent === 0 ? 28 : 18;
-        opportunityType = '선점후보';
-      } else if (monthlyTotal < 1000) {
-        if (totalContent === 0) {
-          score = 38;
-          opportunityType = '선점키워드';
-        } else if (totalContent <= 1000) {
-          score = 55;
-          opportunityType = '소형기회';
-        } else if (totalContent <= 10000) {
-          score = 42;
-          opportunityType = '도전키워드';
-        } else {
-          score = 20;
-          opportunityType = '경쟁높음';
-        }
-      } else if (monthlyTotal < 3000) {
-        if (totalContent === 0) {
-          score = 50;
-          opportunityType = '선점키워드';
-        } else if (totalContent <= 1000) {
-          score = 78;
-          opportunityType = '준황금키워드';
-        } else if (totalContent <= 3000) {
-          score = 70;
-          opportunityType = '우수키워드';
-        } else if (totalContent <= 10000) {
-          score = 58;
-          opportunityType = '도전키워드';
-        } else if (totalContent <= 30000) {
-          score = 40;
-          opportunityType = '경쟁높음';
-        } else {
-          score = 18;
-          opportunityType = '경쟁과다';
-        }
-      } else if (monthlyTotal < 10000) {
-        if (totalContent === 0) {
-          score = 58;
-          opportunityType = '선점키워드';
-        } else if (totalContent <= 1000) {
-          score = 90;
-          opportunityType = '황금키워드';
-        } else if (totalContent <= 3000) {
-          score = 84;
-          opportunityType = '황금키워드';
-        } else if (totalContent <= 10000) {
-          score = 72;
-          opportunityType = '준황금키워드';
-        } else if (totalContent <= 30000) {
-          score = 55;
-          opportunityType = '도전키워드';
-        } else if (totalContent <= 100000) {
-          score = 32;
-          opportunityType = '경쟁높음';
-        } else {
-          score = 12;
-          opportunityType = '경쟁과다';
-        }
       } else {
-        if (totalContent === 0) {
-          score = 65;
-          opportunityType = '선점키워드';
-        } else if (totalContent <= 1000) {
-          score = 95;
-          opportunityType = '황금키워드';
-        } else if (totalContent <= 3000) {
-          score = 92;
-          opportunityType = '황금키워드';
-        } else if (totalContent <= 10000) {
-          score = 82;
-          opportunityType = '준황금키워드';
-        } else if (totalContent <= 30000) {
-          score = 65;
-          opportunityType = '도전키워드';
-        } else if (totalContent <= 100000) {
-          score = 42;
-          opportunityType = '경쟁높음';
-        } else {
-          score = 15;
-          opportunityType = '경쟁과다';
-        }
+        // 검색량 점수보다 경쟁비율 점수를 더 크게 반영한다.
+        // 검색량이 조금 있어도 발행량이 과도하면 추천으로 올리지 않는다.
+        if (monthlyTotal >= 10000) score += 35;
+        else if (monthlyTotal >= 3000) score += 30;
+        else if (monthlyTotal >= 1000) score += 25;
+        else if (monthlyTotal >= 300) score += 20;
+        else if (monthlyTotal >= 100) score += 15;
+        else score += 5;
+
+        if (competitionRatio < 3) score += 45;
+        else if (competitionRatio < 10) score += 40;
+        else if (competitionRatio < 30) score += 32;
+        else if (competitionRatio < 100) score += 22;
+        else if (competitionRatio < 300) score += 8;
+        else score += 0;
+
+        if (monthlyTotal >= 1000 && competitionRatio < 10) opportunityType = '황금키워드';
+        else if (monthlyTotal >= 1000 && competitionRatio < 30) opportunityType = '준황금키워드';
+        else if (monthlyTotal >= 300 && competitionRatio < 30) opportunityType = '우수키워드';
+        else if (monthlyTotal >= 100 && competitionRatio < 100) opportunityType = '도전키워드';
+        else if (monthlyTotal < 300 && competitionRatio < 30) opportunityType = '선점키워드';
+        else if (monthlyTotal < 100) opportunityType = '관찰키워드';
+        else if (competitionRatio >= 100) opportunityType = '경쟁높음';
+        else opportunityType = '검증필요';
       }
+
+      const enrichedRowBase = {
+        ...row,
+        competitionRatio,
+        competitionRatioLabel: getCompetitionRatioLabel(row),
+        opportunityType
+      };
+
+      enrichedRowBase.sourceType = getSourceLabel(enrichedRowBase);
+      enrichedRowBase.relevanceType = getRelevanceLabel(enrichedRowBase, currentData?.seedKeyword, currentData);
+      enrichedRowBase.aiAnswerFit = getAiAnswerFitLabel(enrichedRowBase, currentData);
+
+      // AI 호감도는 최대 5점까지만 보조 반영한다.
+      const aiFitBonus = {
+        '높음': 5,
+        '중간': 3,
+        '낮음': 1,
+        '싫어함': -5
+      }[enrichedRowBase.aiAnswerFit] ?? 0;
+
+      const relevanceBonus = {
+        '매우 가까움': 4,
+        '가까움': 2,
+        '확장 후보': 1,
+        '넓은 관련': -4
+      }[enrichedRowBase.relevanceType] ?? 0;
 
       let adPenalty = 0;
       if (row.ad === '높음') adPenalty = 8;
       if (row.ad === '중간') adPenalty = 4;
 
-      const finalScore = Math.max(1, Math.min(95, score - adPenalty));
+      score = Math.max(1, Math.min(95, score + aiFitBonus + relevanceBonus - adPenalty));
+
+      // 경쟁비율 상한선. 이 부분이 추천 여부를 최종적으로 막는다.
+      if (competitionRatio >= 300) {
+        score = Math.min(score, 15);
+        opportunityType = '경쟁과다';
+      } else if (competitionRatio >= 100) {
+        score = Math.min(score, 30);
+        opportunityType = '경쟁높음';
+      }
+
+      if (monthlyTotal < 300 && totalContent >= 30000) {
+        score = Math.min(score, 20);
+        opportunityType = '경쟁과다';
+      }
+
+      if (monthlyTotal <= 0) {
+        score = 5;
+        opportunityType = '검색량없음';
+      }
 
       const enrichedRow = {
-        ...row,
-        score: finalScore,
+        ...enrichedRowBase,
+        score: Math.round(score),
         opportunityType
       };
 
-      enrichedRow.sourceType = getSourceLabel(enrichedRow);
-      enrichedRow.relevanceType = getRelevanceLabel(enrichedRow, currentData?.seedKeyword, currentData);
-      enrichedRow.aiAnswerFit = getAiAnswerFitLabel(enrichedRow, currentData);
+      enrichedRow.competitionRatioLabel = getCompetitionRatioLabel(enrichedRow);
       enrichedRow.whyRecommended = makeWhyRecommended(enrichedRow, currentData);
 
       return enrichedRow;
     });
 
     const typeRank = {
-      '황금키워드': 7,
-      '준황금키워드': 6,
-      '우수키워드': 5,
-      '도전키워드': 4,
-      '선점키워드': 3,
-      '소형기회': 3,
-      '선점후보': 2,
-      '관찰키워드': 1,
-      '경쟁높음': 0,
-      '경쟁과다': -1,
-      '검색량없음': -2,
-      '검증필요': -3
+      '황금키워드': 8,
+      '준황금키워드': 7,
+      '우수키워드': 6,
+      '도전키워드': 5,
+      '선점키워드': 4,
+      '소형기회': 4,
+      '선점후보': 3,
+      '관찰키워드': 2,
+      '경쟁높음': 1,
+      '경쟁과다': 0,
+      '검색량없음': -1,
+      '검증필요': -2
+    };
+
+    const relevanceRank = {
+      '매우 가까움': 4,
+      '가까움': 3,
+      '확장 후보': 2,
+      '넓은 관련': 1
+    };
+
+    const intentClarityRank = row => {
+      const aiFitRank = { '높음': 3, '중간': 2, '낮음': 1, '싫어함': 0 }[row.aiAnswerFit] ?? 0;
+      const relevance = relevanceRank[row.relevanceType] ?? 0;
+      const sourcePriority = getCandidatePriorityScore(row, currentData) / 20;
+      return aiFitRank + relevance + sourcePriority;
     };
 
     const sortedRows = [...scoredRows].sort((a, b) => {
       const aRank = typeRank[a.opportunityType] ?? 0;
       const bRank = typeRank[b.opportunityType] ?? 0;
-      const aScore = Number(a.score || 0);
-      const bScore = Number(b.score || 0);
 
-      // 둘 다 추천 기준 미달이면, 단순 점수보다 카테고리 의도에 맞는 후보를 먼저 보여준다.
-      // 이렇게 해야 원피스 검색에서 잠옷·파자마 같은 애매한 related 후보가 상단을 차지하지 않는다.
-      if (aScore < 40 && bScore < 40) {
-        const aPriority = getCandidatePriorityScore(a, currentData);
-        const bPriority = getCandidatePriorityScore(b, currentData);
+      // 1~3. 황금/준황금/선점 가능성
+      if (bRank !== aRank) return bRank - aRank;
 
-        if (bPriority !== aPriority) {
-          return bPriority - aPriority;
-        }
-      }
+      // 4. 검색의도 명확성
+      const aIntent = intentClarityRank(a);
+      const bIntent = intentClarityRank(b);
+      if (bIntent !== aIntent) return bIntent - aIntent;
 
-      if (bRank !== aRank) {
-        return bRank - aRank;
-      }
+      // 5. 경쟁비율 낮은 순
+      const aRatio = Number(a.competitionRatio || getCompetitionRatioValue(a));
+      const bRatio = Number(b.competitionRatio || getCompetitionRatioValue(b));
+      if (aRatio !== bRatio) return aRatio - bRatio;
 
-      if (bScore !== aScore) {
-        return bScore - aScore;
-      }
-
+      // 6. 월간 검색수
       const aMonthly = Number(a.monthly || 0);
       const bMonthly = Number(b.monthly || 0);
+      if (bMonthly !== aMonthly) return bMonthly - aMonthly;
 
-      if (bMonthly !== aMonthly) {
-        return bMonthly - aMonthly;
-      }
+      // 7. 입력어 관련도
+      const aRelevance = relevanceRank[a.relevanceType] ?? 0;
+      const bRelevance = relevanceRank[b.relevanceType] ?? 0;
+      if (bRelevance !== aRelevance) return bRelevance - aRelevance;
 
+      // 8. 발행량 낮은 순
       const aContent = Number(a.totalContent || 0);
       const bContent = Number(b.totalContent || 0);
+      if (aContent !== bContent) return aContent - bContent;
 
-      return aContent - bContent;
+      return Number(b.score || 0) - Number(a.score || 0);
     });
 
     currentData.allRows = scoredRows;
     currentData.detailRows = sortedRows.slice(0, 30);
-    currentData.recommendedRows = sortedRows.slice(0, 6);
+    currentData.recommendedRows = sortedRows.filter(isRecommendable).slice(0, 6);
     currentData.rows = currentData.recommendedRows;
 
   } catch (error) {
@@ -2327,10 +2446,11 @@ async function fetchKeywordDataCached(keyword) {
 
   if (!currentData.rows.length) {
     selectedIndex = 0;
-    totalKeywords.textContent = '0개';
-    bestKeywordText.textContent = '-';
-    bestScoreText.textContent = '0';
-    intentShortText.textContent = currentData.intent || '-';
+    const fallbackRow = currentData.detailRows?.[0] || null;
+    totalKeywords.textContent = `${currentData.totalCandidateCount || currentData.detailRows?.length || 0}개`;
+    bestKeywordText.textContent = '추천 부족';
+    bestScoreText.textContent = fallbackRow ? fallbackRow.score : '0';
+    intentShortText.textContent = fallbackRow ? fallbackRow.opportunityType : (currentData.intent || '-');
     renderTable();
     renderDetailTable();
     renderSelected();

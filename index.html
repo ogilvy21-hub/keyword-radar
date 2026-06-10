@@ -823,9 +823,20 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
       return response.json();
     }
 
-    async function renderAll(resetSelection = true) {
+   async function renderAll(resetSelection = true) {
   const keyword = keywordInput.value.trim() || '키워드';
   currentData = getDataset(keyword);
+
+  if (!currentData || !Array.isArray(currentData.rows)) {
+    currentData = {
+      rows: [],
+      related: [],
+      intent: '대기',
+      needs: [],
+      outlines: [],
+      reason: '키워드를 분석하면 결과가 표시됩니다.'
+    };
+  }
 
   try {
     const updatedRows = await Promise.all(
@@ -837,7 +848,7 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
           const realCafe = apiData.cafeTotal || 0;
           const totalContent = realBlog + realCafe;
 
-          let newScore = row.score;
+          let newScore = row.score || 50;
 
           if (totalContent > 0 && row.monthly > 0) {
             const rawScore = Math.round((row.monthly / totalContent) * 100);
@@ -852,7 +863,10 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
           };
         } catch (error) {
           console.error(`${row.kw} API 호출 실패`, error);
-          return row;
+          return {
+            ...row,
+            score: row.score || 50
+          };
         }
       })
     );
@@ -862,9 +876,32 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
     console.error(error);
   }
 
+  if (!currentData.rows.length) {
+    selectedIndex = 0;
+    totalKeywords.textContent = '0개';
+    bestKeywordText.textContent = '-';
+    bestScoreText.textContent = '0';
+    renderTable();
+    renderSelected();
+    return;
+  }
+
   if (resetSelection) {
-    const best = Math.max(...currentData.rows.map(row => row.score));
-    selectedIndex = currentData.rows.findIndex(row => row.score === best);
+    let bestIndex = 0;
+    let bestScore = currentData.rows[0].score || 0;
+
+    currentData.rows.forEach((row, index) => {
+      if ((row.score || 0) > bestScore) {
+        bestScore = row.score || 0;
+        bestIndex = index;
+      }
+    });
+
+    selectedIndex = bestIndex;
+  }
+
+  if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
+    selectedIndex = 0;
   }
 
   const bestRow = currentData.rows[selectedIndex];

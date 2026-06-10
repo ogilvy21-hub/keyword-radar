@@ -367,11 +367,110 @@
       cursor: pointer;
     }
     .check-item input { accent-color: #2563eb; }
+
+    .judgement-card {
+      margin: 0 0 18px;
+      padding: 24px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, #111827, #1e3a8a);
+      color: #fff;
+      box-shadow: 0 18px 46px rgba(15,23,42,.22);
+    }
+    .judgement-label {
+      margin: 0 0 8px;
+      color: #93c5fd;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .12em;
+    }
+    .judgement-card h3 {
+      margin: 0 0 10px;
+      font-size: 25px;
+      line-height: 1.35;
+      letter-spacing: -.4px;
+    }
+    .judgement-card p {
+      margin: 0;
+      color: #dbeafe;
+      font-size: 14px;
+      line-height: 1.7;
+      font-weight: 700;
+    }
+    .strategy-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .strategy-item {
+      padding: 11px 13px;
+      border-radius: 15px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.14);
+      color: #f8fafc;
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 800;
+    }
+    .proof-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .proof-item {
+      padding: 16px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+    }
+    .proof-item span {
+      display: block;
+      margin-bottom: 6px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .proof-item strong {
+      display: block;
+      color: #111827;
+      font-size: 20px;
+      letter-spacing: -.4px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pill.green { background: #dcfce7; color: #047857; }
+    .pill.yellow { background: #fef3c7; color: #a16207; }
+    .pill.red { background: #fee2e2; color: #b91c1c; }
+    .reason-cell {
+      max-width: 340px;
+      white-space: normal;
+      line-height: 1.5;
+      color: #475569;
+      font-weight: 700;
+    }
+    .detail-table table { min-width: 1180px; }
+    .table-caption {
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.6;
+      font-weight: 700;
+      margin: -4px 0 12px;
+    }
     @media (max-width: 1100px) {
       .hero, .layout { grid-template-columns: 1fr; }
       .side { position: static; }
       h1 { font-size: 36px; }
-      .summary-grid, .builder-grid, .steps { grid-template-columns: 1fr; }
+      .summary-grid, .builder-grid, .steps, .proof-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -415,32 +514,74 @@
 
         <div class="content-zone">
           <div class="summary-grid">
-            <div class="metric"><p>수집 키워드</p><strong id="totalKeywords">0개</strong></div>
-            <div class="metric"><p>추천 키워드</p><strong id="bestKeywordText">-</strong></div>
-            <div class="metric"><p>최고 기회점수</p><strong id="bestScoreText">0</strong></div>
-            <div class="metric"><p>검색의도</p><strong id="intentShortText">-</strong></div>
+            <div class="metric"><p>검증 후보</p><strong id="totalKeywords">0개</strong></div>
+            <div class="metric"><p>추천 글감</p><strong id="bestKeywordText">-</strong></div>
+            <div class="metric"><p>글감점수</p><strong id="bestScoreText">0</strong></div>
+            <div class="metric"><p>판단</p><strong id="intentShortText">-</strong></div>
+          </div>
+
+          <div class="judgement-card">
+            <p class="judgement-label">GEULGAM RADAR DECISION</p>
+            <h3 id="judgementTitle">키워드를 분석하면 글감 판단이 표시됩니다.</h3>
+            <p id="judgementReason">검색량, 블로그·카페 발행량, 검색의도, AI답변 적합도를 함께 보고 원고 작성 가능성을 판단합니다.</p>
+            <div class="strategy-list" id="strategyList"></div>
+          </div>
+
+          <div class="proof-grid">
+            <div class="proof-item"><span>월간 검색수</span><strong id="proofMonthly">0</strong></div>
+            <div class="proof-item"><span>블로그·카페 발행량</span><strong id="proofContent">0</strong></div>
+            <div class="proof-item"><span>입력어 관련도</span><strong id="proofRelevance">-</strong></div>
+            <div class="proof-item"><span>AI답변 적합도</span><strong id="proofAiFit">-</strong></div>
           </div>
 
           <div class="section-title">
-            <h3>키워드 경쟁강도 표</h3>
-            <span class="hint">블로그·카페 발행수는 네이버 검색 API 기준</span>
+            <h3>추천 글감 TOP 6</h3>
+            <span class="hint">입력어 유사도보다 글감 가능성이 높은 순서로 정렬</span>
           </div>
+          <p class="table-caption">추천 글감은 검색광고 연관어, 자체 롱테일, 카테고리 확장 후보를 API 데이터로 검증한 뒤 선별합니다.</p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>선택</th>
-                  <th>키워드</th>
+                  <th>추천 글감</th>
+                  <th>판단</th>
+                  <th>출처</th>
+                  <th>관련도</th>
+                  <th>AI적합도</th>
                   <th>월간 검색수</th>
-                  <th>PC</th>
-                  <th>MO</th>
-                  <th>블로그 발행수</th>
-                  <th>카페 발행수</th>
-                  <th>광고 경쟁</th>
-                  <th>기회점수</th>
+                  <th>발행량</th>
+                  <th>점수</th>
                 </tr>
               </thead>
               <tbody id="keywordTable"></tbody>
+            </table>
+          </div>
+
+          <div class="section-title">
+            <h3>상세 후보 검증표</h3>
+            <span class="hint">AI 추천을 검증하는 근거표</span>
+          </div>
+          <p class="table-caption">후보가 입력 키워드와 조금 달라 보여도 출처, 관련도, 검색량, 발행량, 추천 이유를 함께 확인할 수 있습니다.</p>
+          <div class="table-wrap detail-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>키워드</th>
+                  <th>출처</th>
+                  <th>관련도</th>
+                  <th>AI적합도</th>
+                  <th>월간 검색수</th>
+                  <th>블로그</th>
+                  <th>카페</th>
+                  <th>경쟁비율</th>
+                  <th>광고</th>
+                  <th>점수</th>
+                  <th>판단</th>
+                  <th>추천 이유</th>
+                </tr>
+              </thead>
+              <tbody id="detailKeywordTable"></tbody>
             </table>
           </div>
 
@@ -566,10 +707,18 @@
     const keywordInput = document.getElementById('keywordInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const keywordTable = document.getElementById('keywordTable');
+    const detailKeywordTable = document.getElementById('detailKeywordTable');
     const totalKeywords = document.getElementById('totalKeywords');
     const bestKeywordText = document.getElementById('bestKeywordText');
     const bestScoreText = document.getElementById('bestScoreText');
     const intentShortText = document.getElementById('intentShortText');
+    const judgementTitle = document.getElementById('judgementTitle');
+    const judgementReason = document.getElementById('judgementReason');
+    const strategyList = document.getElementById('strategyList');
+    const proofMonthly = document.getElementById('proofMonthly');
+    const proofContent = document.getElementById('proofContent');
+    const proofRelevance = document.getElementById('proofRelevance');
+    const proofAiFit = document.getElementById('proofAiFit');
     const selectedHint = document.getElementById('selectedHint');
     const relatedChips = document.getElementById('relatedChips');
     const readerNeeds = document.getElementById('readerNeeds');
@@ -940,29 +1089,242 @@ function convertRelatedToRows(relatedList) {
     .filter(row => row.kw);
 }
 
-function filterRelatedRows(rows, seedKeyword) {
+function getCommerceCoreFromKeyword(keyword) {
+  const compact = normalizeKeywordKey(keyword);
+  const commerceCoreWords = [
+    '원피스', '가방', '운동화', '스니커즈', '자켓', '재킷', '셔츠',
+    '니트', '청바지', '바지', '향수', '쿠션', '립스틱', '선크림'
+  ];
+
+  return commerceCoreWords.find(word => compact.includes(normalizeKeywordKey(word))) || '';
+}
+
+function filterRelatedRows(rows, seedKeyword, currentData) {
   const seedKey = normalizeKeywordKey(seedKeyword);
+  const categoryName = currentData?.categoryName || '';
+  const commerceCore = categoryName === '쇼핑·패션·뷰티'
+    ? getCommerceCoreFromKeyword(seedKeyword)
+    : '';
+  const commerceCoreKey = normalizeKeywordKey(commerceCore);
+
+  const commerceBlockWords = [
+    '잠옷', '파자마', '수영복', '속옷', '브라', '팬티', '양말',
+    '피규어', '만화', '애니', '루피', '조로', '나미', '상디', '극장판'
+  ].map(normalizeKeywordKey);
 
   return (rows || []).filter(row => {
     const key = normalizeKeywordKey(row.kw);
 
     if (!key || key.length < 2) return false;
 
-    // 검색광고 API가 준 연관어는 우선 살린다.
-    // 단, 너무 짧거나 빈 값인 키워드는 제외한다.
+    // 쇼핑 키워드는 검색광고 연관어가 너무 넓게 튀는 경우가 많다.
+    // 예: 원피스 검색 시 잠옷·파자마·애니 원피스가 섞이는 문제 방지.
+    if (categoryName === '쇼핑·패션·뷰티') {
+      if (commerceBlockWords.some(blockWord => key.includes(blockWord))) return false;
+
+      // 핵심 상품명이 잡히면 그 상품명이 포함된 연관어만 우선 검증한다.
+      // 원피스 → 코오롱스포츠원피스는 통과, 빅사이즈잠옷은 제외.
+      if (commerceCoreKey && !key.includes(commerceCoreKey)) return false;
+    }
+
     if (seedKey && key.includes(seedKey)) return true;
 
     return true;
   });
 }
 
-function mergeCandidateRows(baseRows, relatedRows) {
-  const mergedRows = uniqueRowsByCompact([
-    ...(relatedRows || []),
-    ...(baseRows || [])
-  ]);
+function getVerificationLimit(currentData) {
+  return 30;
+}
 
-  return mergedRows;
+function getCandidatePriorityScore(row, currentData) {
+  const categoryName = currentData?.categoryName || '';
+  let priority = 0;
+
+  if (row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) priority += 40;
+  if (row.fromExpansion) priority += 20;
+  if (row.fromRelated) priority += 5;
+
+  if (categoryName === '쇼핑·패션·뷰티') {
+    const kw = String(row.kw || '');
+    const key = normalizeKeywordKey(kw);
+    const longtailWords = ['40대', '30대', '키작녀', '체형커버', '빅사이즈', '하객룩', '바캉스', '휴양지', '냉감', '임산부', '통통', '출근룩'];
+    if (longtailWords.some(word => key.includes(normalizeKeywordKey(word)))) priority += 25;
+  }
+
+  return priority;
+}
+
+function getCandidatePriorityMode(currentData) {
+  const categoryName = currentData?.categoryName || '';
+
+  const expansionFirstCategories = [
+    '쇼핑·패션·뷰티',
+    '레시피·식품',
+    '장소·여행·맛집',
+    '건강·효능',
+    '생활정보'
+  ];
+
+  const relatedFirstCategories = [
+    'IT·앱·서비스',
+    '정책·지원금',
+    '금융·대출',
+    '주식·투자',
+    '뉴스·이슈',
+    '방송·콘텐츠',
+    '교육·시험',
+    '법률·계약'
+  ];
+
+  if (expansionFirstCategories.includes(categoryName)) return 'expansionFirst';
+  if (relatedFirstCategories.includes(categoryName)) return 'relatedFirst';
+
+  return 'balanced';
+}
+
+function makeRowFromKeyword(kw, extra = {}) {
+  return {
+    kw,
+    monthly: 0,
+    pc: 0,
+    mo: 0,
+    blog: 0,
+    cafe: 0,
+    totalContent: 0,
+    ad: '낮음',
+    score: 0,
+    ...extra
+  };
+}
+
+function makeCommerceLongtailRows(keyword) {
+  const cleanKeyword = String(keyword || '').trim().replace(/\s+/g, ' ');
+  const compact = cleanKeyword.replace(/\s+/g, '');
+
+  const commerceCoreWords = [
+    '원피스', '가방', '운동화', '스니커즈', '자켓', '재킷', '셔츠',
+    '니트', '청바지', '바지', '향수', '쿠션', '립스틱', '선크림'
+  ];
+
+  const core = commerceCoreWords.find(word => compact.includes(word.replace(/\s+/g, ''))) || cleanKeyword;
+
+  const longtails = [
+    `40대 여름 ${core}`,
+    `30대 여름 ${core}`,
+    `키작녀 ${core} 코디`,
+    `체형커버 ${core} 추천`,
+    `빅사이즈 여름 ${core}`,
+    `하객룩 ${core} 브랜드`,
+    `바캉스 ${core} 후기`,
+    `휴양지 ${core} 코디`,
+    `냉감 ${core} 추천`,
+    `임산부 여름 ${core}`,
+    `통통 ${core} 코디`,
+    `출근룩 ${core} 추천`
+  ];
+
+  return uniqueByCompact(longtails).map(kw => makeRowFromKeyword(kw, {
+    fromExpansion: true,
+    fromCommerceLongtail: true
+  }));
+}
+
+function makePlaceLongtailRows(keyword) {
+  const cleanKeyword = String(keyword || '').trim().replace(/\s+/g, ' ');
+
+  const longtails = [
+    `${cleanKeyword} 주차`,
+    `${cleanKeyword} 영업시간`,
+    `${cleanKeyword} 예약`,
+    `${cleanKeyword} 후기`,
+    `${cleanKeyword} 조용한 곳`,
+    `${cleanKeyword} 데이트`,
+    `${cleanKeyword} 혼자`,
+    `${cleanKeyword} 근처`,
+    `${cleanKeyword} 디저트`,
+    `${cleanKeyword} 분위기 좋은 곳`,
+    `${cleanKeyword} 노트북`,
+    `${cleanKeyword} 늦게까지`
+  ];
+
+  return uniqueByCompact(longtails).map(kw => makeRowFromKeyword(kw, {
+    fromExpansion: true,
+    fromPlaceLongtail: true
+  }));
+}
+
+function makeRecipeLongtailRows(keyword) {
+  const cleanKeyword = String(keyword || '').trim().replace(/\s+/g, ' ');
+  const base = cleanKeyword
+    .replace(/\s*레시피\s*$/g, '')
+    .replace(/\s*만드는법\s*$/g, '')
+    .replace(/\s*끓이는법\s*$/g, '')
+    .trim();
+
+  const core = base || cleanKeyword;
+
+  const longtails = [
+    `${core} 레시피`,
+    `${core} 끓이는법`,
+    `${core} 만드는법`,
+    `${core} 재료`,
+    `${core} 양념`,
+    `${core} 효능`,
+    `${core} 보관법`,
+    `${core} 칼로리`,
+    `${core} 된장국`,
+    `${core} 백종원`,
+    `${core} 알토란`,
+    `${core} 간단 레시피`
+  ];
+
+  return uniqueByCompact(longtails).map(kw => makeRowFromKeyword(kw, {
+    fromExpansion: true,
+    fromRecipeLongtail: true
+  }));
+}
+
+function makeCategoryBoostRows(keyword, currentData) {
+  const categoryName = currentData?.categoryName || '';
+
+  if (categoryName === '쇼핑·패션·뷰티') return makeCommerceLongtailRows(keyword);
+  if (categoryName === '장소·여행·맛집') return makePlaceLongtailRows(keyword);
+  if (categoryName === '레시피·식품') return makeRecipeLongtailRows(keyword);
+
+  return [];
+}
+
+function interleaveRows(firstRows, secondRows) {
+  const result = [];
+  const maxLength = Math.max((firstRows || []).length, (secondRows || []).length);
+
+  for (let i = 0; i < maxLength; i += 1) {
+    if (firstRows && firstRows[i]) result.push(firstRows[i]);
+    if (secondRows && secondRows[i]) result.push(secondRows[i]);
+  }
+
+  return result;
+}
+
+function mergeRowsByCategoryPriority(expansionRows, relatedRows, currentData) {
+  const mode = getCandidatePriorityMode(currentData);
+
+  if (mode === 'expansionFirst') {
+    return uniqueRowsByCompact([
+      ...(expansionRows || []),
+      ...(relatedRows || [])
+    ]);
+  }
+
+  if (mode === 'relatedFirst') {
+    return uniqueRowsByCompact([
+      ...(relatedRows || []),
+      ...(expansionRows || [])
+    ]);
+  }
+
+  return uniqueRowsByCompact(interleaveRows(relatedRows || [], expansionRows || []));
 }
 
 function stripTrailingIntentWords(keyword, rule) {
@@ -1229,9 +1591,164 @@ function getDataset(keyword) {
   ];
 }
 
+
+    function getSourceLabel(row) {
+      if (row.fromRelated && (row.fromExpansion || row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail)) return '혼합 후보';
+      if (row.fromRelated) return '검색광고 연관어';
+      if (row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) return '카테고리 확장';
+      if (row.fromExpansion) return '자체 롱테일';
+      return '자체 조합';
+    }
+
+    function getRelevanceLabel(row, seedKeyword, currentData) {
+      const seedKey = normalizeKeywordKey(seedKeyword || currentData?.seedKeyword || '');
+      const rowKey = normalizeKeywordKey(row.kw);
+      if (!rowKey || !seedKey) return '확장 후보';
+      if (rowKey === seedKey) return '매우 가까움';
+      if (rowKey.includes(seedKey) || seedKey.includes(rowKey)) return '매우 가까움';
+
+      const categoryName = currentData?.categoryName || '';
+      if (categoryName === '쇼핑·패션·뷰티') {
+        const core = getCommerceCoreFromKeyword(seedKeyword || currentData?.seedKeyword || '');
+        if (core && rowKey.includes(normalizeKeywordKey(core))) return '가까움';
+      }
+
+      const seedParts = String(seedKeyword || currentData?.seedKeyword || '').split(/\s+/).filter(Boolean);
+      const matched = seedParts.filter(part => rowKey.includes(normalizeKeywordKey(part))).length;
+      if (matched >= 1) return '가까움';
+      if (row.fromExpansion || row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) return '확장 후보';
+      return '넓은 관련';
+    }
+
+    function getAiAnswerFitLabel(row, currentData) {
+      const key = normalizeKeywordKey(row.kw);
+      const intent = currentData?.intent || '';
+      const highWords = ['기준', '방법', '해결', '비교', '조건', '대상', '서류', '지급일', '사용처', '후기', '주의사항', '체형커버', '코디', '브랜드', '주차', '영업시간', '예약', '끓이는법', '만드는법', '재료', '효능'];
+      const midWords = ['추천', '가격', '사이즈', '원인', '정리', '전망', '맛집', '카페', '레시피'];
+
+      if (highWords.some(word => key.includes(normalizeKeywordKey(word)))) return '높음';
+      if (intent && ['조건확인형', '문제해결형', '실행방법형', '방문탐색형', '위험확인형'].includes(intent)) return '높음';
+      if (midWords.some(word => key.includes(normalizeKeywordKey(word)))) return '중간';
+      return '낮음';
+    }
+
+    function getPillClass(value) {
+      if (['황금키워드', '준황금키워드', '우수키워드', '높음', '매우 가까움'].includes(value)) return 'pill green';
+      if (['도전키워드', '선점키워드', '소형기회', '가까움', '중간', '확장 후보'].includes(value)) return 'pill yellow';
+      if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요', '낮음', '넓은 관련'].includes(value)) return 'pill red';
+      return 'pill';
+    }
+
+    function getCompetitionRatio(row) {
+      const monthly = Number(row.monthly || 0);
+      const totalContent = Number(row.totalContent || 0);
+      if (monthly <= 0) return '-';
+      return `${(totalContent / monthly).toFixed(1)}배`;
+    }
+
+    function makeWhyRecommended(row, currentData) {
+      const type = row.opportunityType || '검증필요';
+      const source = row.sourceType || getSourceLabel(row);
+      const relevance = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
+      const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
+      const monthly = Number(row.monthly || 0);
+      const totalContent = Number(row.totalContent || 0);
+
+      if (type === '황금키워드' || type === '준황금키워드') {
+        return `검색량 대비 발행량이 낮아 글감 후보로 검토할 만합니다. 출처는 ${source}, 입력어 관련도는 ${relevance}입니다.`;
+      }
+
+      if (type === '선점키워드' || type === '선점후보' || type === '관찰키워드') {
+        return `검색량은 크지 않지만 경쟁이 낮아 먼저 잡아둘 수 있는 후보입니다. AI답변 적합도는 ${aiFit}입니다.`;
+      }
+
+      if (type === '경쟁높음' || type === '경쟁과다') {
+        return `월간 검색수 ${monthly.toLocaleString('ko-KR')}회 대비 발행량 ${totalContent.toLocaleString('ko-KR')}건으로 경쟁이 높습니다. 대체 롱테일 판단용 근거로 보세요.`;
+      }
+
+      if (source === '카테고리 확장' || source === '자체 롱테일') {
+        return `입력어를 그대로 반복하지 않고 대상·상황·문제 조건을 붙여 만든 확장 후보입니다.`;
+      }
+
+      return `입력 키워드와 연결된 후보를 API 데이터로 검증한 결과입니다.`;
+    }
+
+    function makeJudgement(row, currentData) {
+      const monthly = Number(row.monthly || 0);
+      const totalContent = Number(row.totalContent || 0);
+      const type = row.opportunityType || '검증필요';
+      const keyword = row.kw || '선택 키워드';
+
+      if (type === '황금키워드' || type === '준황금키워드' || type === '우수키워드') {
+        return {
+          title: `${keyword}는 글감 후보로 검토할 만합니다`,
+          reason: `월간 검색수 ${monthly.toLocaleString('ko-KR')}회, 블로그·카페 발행량 ${totalContent.toLocaleString('ko-KR')}건입니다. 검색량 대비 경쟁 부담이 상대적으로 낮습니다.`,
+          strategy: ['첫 문단에서 검색자의 질문에 바로 답하세요.', '표와 FAQ로 확인 욕구를 줄이면 AI 검색 화면에 맞는 글이 됩니다.', '제목에는 대상·조건·상황을 구체적으로 넣어야 합니다.']
+        };
+      }
+
+      if (type === '선점키워드' || type === '선점후보' || type === '관찰키워드' || type === '소형기회') {
+        return {
+          title: `${keyword}는 선점형 글감으로 볼 수 있습니다`,
+          reason: `검색량은 아직 크지 않지만 경쟁이 낮거나 의도가 구체적입니다. 단기 유입보다 먼저 쌓아두는 글감에 가깝습니다.`,
+          strategy: ['짧은 글보다 질문과 답변을 촘촘하게 넣으세요.', '관련 후보를 함께 묶어 하나의 완성형 글로 확장하세요.', '검색량이 커지는지 나중에 다시 분석하면 좋습니다.']
+        };
+      }
+
+      if (type === '경쟁높음' || type === '경쟁과다') {
+        return {
+          title: `${keyword}는 바로 쓰기에는 경쟁이 높습니다`,
+          reason: `월간 검색수는 ${monthly.toLocaleString('ko-KR')}회지만 블로그·카페 발행량이 ${totalContent.toLocaleString('ko-KR')}건입니다. 단독 키워드보다 롱테일 전환이 필요합니다.`,
+          strategy: ['입력어에 연령, 체형, 지역, 상황, 문제 조건을 붙이세요.', '검색량이 조금 낮아도 질문이 선명한 후보를 우선하세요.', '아래 상세 후보표에서 경쟁비율이 낮은 후보를 확인하세요.']
+        };
+      }
+
+      return {
+        title: `${keyword}는 추천 강도가 낮습니다`,
+        reason: '검색량이 낮거나 API 데이터가 충분하지 않아 바로 쓰기에는 판단 근거가 약합니다.',
+        strategy: ['더 구체적인 검색어로 다시 분석하세요.', '대상, 상황, 지역, 계절을 붙인 롱테일로 전환하세요.', '상세 후보표에서 확장 후보의 출처와 관련도를 확인하세요.']
+      };
+    }
+
+    function renderDetailTable() {
+      const rows = currentData?.detailRows || currentData?.allRows || [];
+
+      if (!rows.length) {
+        detailKeywordTable.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:24px; color:#64748b;">상세 후보 데이터가 표시됩니다.</td></tr>';
+        return;
+      }
+
+      detailKeywordTable.innerHTML = rows.map(row => {
+        const totalContent = Number(row.totalContent || 0);
+        const score = Number(row.score || 0);
+        const source = row.sourceType || getSourceLabel(row);
+        const relevance = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
+        const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
+        const type = row.opportunityType || '-';
+        const why = row.whyRecommended || makeWhyRecommended(row, currentData);
+
+        return `
+          <tr>
+            <td>${row.kw || '-'}</td>
+            <td><span class="pill">${source}</span></td>
+            <td><span class="${getPillClass(relevance)}">${relevance}</span></td>
+            <td><span class="${getPillClass(aiFit)}">${aiFit}</span></td>
+            <td>${Number(row.monthly || 0).toLocaleString('ko-KR')}</td>
+            <td>${Number(row.blog || 0).toLocaleString('ko-KR')}</td>
+            <td>${Number(row.cafe || 0).toLocaleString('ko-KR')}</td>
+            <td>${getCompetitionRatio(row)}</td>
+            <td>${row.ad || '-'}</td>
+            <td><span class="${score >= 85 ? 'score' : score >= 70 ? 'score mid' : 'score low'}">${score}</span></td>
+            <td><span class="${getPillClass(type)}">${type}</span></td>
+            <td class="reason-cell">${why}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     function renderTable() {
       if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
-        keywordTable.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 분석하면 경쟁강도 결과가 표시됩니다.</td></tr>';
+        keywordTable.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 분석하면 추천 글감이 표시됩니다.</td></tr>';
         return;
       }
 
@@ -1239,16 +1756,22 @@ function getDataset(keyword) {
         const selectedClass = index === selectedIndex ? 'selected' : '';
         const score = Number(row.score || 0);
         const scoreClassName = score >= 85 ? 'score' : score >= 70 ? 'score mid' : 'score low';
+        const totalContent = Number(row.totalContent || 0);
+        const source = row.sourceType || getSourceLabel(row);
+        const relevance = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
+        const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
+        const type = row.opportunityType || '-';
+
         return `
           <tr class="${selectedClass}">
             <td><button class="pick-btn" data-index="${index}">선택</button></td>
             <td>${row.kw || '-'}</td>
+            <td><span class="${getPillClass(type)}">${type}</span></td>
+            <td><span class="pill">${source}</span></td>
+            <td><span class="${getPillClass(relevance)}">${relevance}</span></td>
+            <td><span class="${getPillClass(aiFit)}">${aiFit}</span></td>
             <td>${Number(row.monthly || 0).toLocaleString('ko-KR')}</td>
-            <td>${Number(row.pc || 0).toLocaleString('ko-KR')}</td>
-            <td>${Number(row.mo || 0).toLocaleString('ko-KR')}</td>
-            <td>${Number(row.blog || 0).toLocaleString('ko-KR')}</td>
-            <td>${Number(row.cafe || 0).toLocaleString('ko-KR')}</td>
-            <td>${row.ad || '-'}</td>
+            <td>${totalContent.toLocaleString('ko-KR')}</td>
             <td><span class="${scoreClassName}">${score}</span></td>
           </tr>
         `;
@@ -1269,6 +1792,13 @@ function getDataset(keyword) {
         sideBadge.textContent = '대기';
         sideScore.textContent = '0';
         draftPrompt.value = '';
+        judgementTitle.textContent = '키워드를 분석하면 글감 판단이 표시됩니다.';
+        judgementReason.textContent = '검색량과 발행량을 기준으로 글감 가능성을 분석합니다.';
+        strategyList.innerHTML = '';
+        proofMonthly.textContent = '0';
+        proofContent.textContent = '0';
+        proofRelevance.textContent = '-';
+        proofAiFit.textContent = '-';
         return;
       }
 
@@ -1276,6 +1806,18 @@ function getDataset(keyword) {
 
       const row = currentData.rows[selectedIndex];
       const selectedKeyword = row.kw || '-';
+      const judgement = makeJudgement(row, currentData);
+      const totalContentForProof = Number(row.totalContent || 0);
+      const relevanceForProof = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
+      const aiFitForProof = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
+
+      judgementTitle.textContent = judgement.title;
+      judgementReason.textContent = judgement.reason;
+      strategyList.innerHTML = judgement.strategy.map(item => `<div class="strategy-item">${item}</div>`).join('');
+      proofMonthly.textContent = Number(row.monthly || 0).toLocaleString('ko-KR');
+      proofContent.textContent = totalContentForProof.toLocaleString('ko-KR');
+      proofRelevance.textContent = relevanceForProof;
+      proofAiFit.textContent = aiFitForProof;
       const intent = currentData.intent || '정보탐색형';
       const categoryName = currentData.categoryName || '일반정보';
       const titles = makeTitles(selectedKeyword, intent);
@@ -1420,6 +1962,7 @@ async function fetchKeywordDataCached(keyword) {
 
   const keyword = keywordInput.value.trim() || '키워드';
   currentData = getDataset(keyword);
+  currentData.seedKeyword = keyword;
 
   if (!currentData || !Array.isArray(currentData.rows)) {
     currentData = {
@@ -1443,22 +1986,34 @@ async function fetchKeywordDataCached(keyword) {
       console.warn(`${keyword} 원 키워드 검색광고 API 호출 실패`, error);
     }
 
-    // 2. 검색광고 related 후보와 기존 자체 조합 후보를 합친다.
+    // 2. 검색광고 related 후보와 카테고리별 보강 후보를 합친다.
     const relatedRows = convertRelatedToRows(seedAdData?.related || []);
-    const filteredRelatedRows = filterRelatedRows(relatedRows, keyword);
-    const mergedRows = mergeCandidateRows(currentData.rows, filteredRelatedRows);
+    const filteredRelatedRows = filterRelatedRows(relatedRows, keyword, currentData);
+    const categoryBoostRows = makeCategoryBoostRows(keyword, currentData);
 
-    currentData.rows = mergedRows.slice(0, 30);
+    const expansionRows = uniqueRowsByCompact([
+      ...categoryBoostRows,
+      ...(currentData.rows || [])
+    ]);
+
+    const mergedRows = mergeRowsByCategoryPriority(
+      expansionRows,
+      filteredRelatedRows,
+      currentData
+    );
+
+    currentData.rows = mergedRows.slice(0, 50);
     currentData.totalCandidateCount = mergedRows.length;
 
-    // 3. 화면의 관련 키워드 칩도 실제 related 후보를 우선 반영한다.
+    // 3. 화면의 관련 키워드 칩도 병합 후보 기준으로 반영한다.
     currentData.related = uniqueByCompact([
-      ...filteredRelatedRows.map(row => row.kw),
+      ...mergedRows.map(row => row.kw),
       ...(currentData.related || [])
     ]).slice(0, 16);
 
-    // 4. API 검증 대상은 일단 12개로 유지한다.
-    const targetRows = currentData.rows.slice(0, 12);
+    // 4. 카테고리에 따라 API 검증 개수를 조정한다.
+    const verificationLimit = getVerificationLimit(currentData);
+    const targetRows = currentData.rows.slice(0, verificationLimit);
     const apiRows = [];
 
     for (const row of targetRows) {
@@ -1476,7 +2031,11 @@ async function fetchKeywordDataCached(keyword) {
         relKeyword: apiData.relKeyword || row.relKeyword || row.kw,
         contentOk: Boolean(apiData.contentOk),
         searchOk: Boolean(apiData.searchOk),
-        fromRelated: Boolean(row.fromRelated)
+        fromRelated: Boolean(row.fromRelated),
+        fromExpansion: Boolean(row.fromExpansion),
+        fromCommerceLongtail: Boolean(row.fromCommerceLongtail),
+        fromRecipeLongtail: Boolean(row.fromRecipeLongtail),
+        fromPlaceLongtail: Boolean(row.fromPlaceLongtail)
       });
     }
 
@@ -1488,11 +2047,16 @@ async function fetchKeywordDataCached(keyword) {
       let opportunityType = '검증필요';
 
       if (!row.contentOk || !row.searchOk) {
-        return {
+        const failedRow = {
           ...row,
           score: 20,
           opportunityType: '검증필요'
         };
+        failedRow.sourceType = getSourceLabel(failedRow);
+        failedRow.relevanceType = getRelevanceLabel(failedRow, currentData?.seedKeyword, currentData);
+        failedRow.aiAnswerFit = getAiAnswerFitLabel(failedRow, currentData);
+        failedRow.whyRecommended = 'API 응답이 불완전해 검증이 필요한 후보입니다.';
+        return failedRow;
       }
 
       // 검색량이 거의 없는 키워드는 황금키워드가 아님
@@ -1593,11 +2157,18 @@ async function fetchKeywordDataCached(keyword) {
 
       const finalScore = Math.max(1, Math.min(95, score - adPenalty));
 
-      return {
+      const enrichedRow = {
         ...row,
         score: finalScore,
         opportunityType
       };
+
+      enrichedRow.sourceType = getSourceLabel(enrichedRow);
+      enrichedRow.relevanceType = getRelevanceLabel(enrichedRow, currentData?.seedKeyword, currentData);
+      enrichedRow.aiAnswerFit = getAiAnswerFitLabel(enrichedRow, currentData);
+      enrichedRow.whyRecommended = makeWhyRecommended(enrichedRow, currentData);
+
+      return enrichedRow;
     });
 
     const typeRank = {
@@ -1618,13 +2189,26 @@ async function fetchKeywordDataCached(keyword) {
     const sortedRows = [...scoredRows].sort((a, b) => {
       const aRank = typeRank[a.opportunityType] ?? 0;
       const bRank = typeRank[b.opportunityType] ?? 0;
+      const aScore = Number(a.score || 0);
+      const bScore = Number(b.score || 0);
+
+      // 둘 다 추천 기준 미달이면, 단순 점수보다 카테고리 의도에 맞는 후보를 먼저 보여준다.
+      // 이렇게 해야 원피스 검색에서 잠옷·파자마 같은 애매한 related 후보가 상단을 차지하지 않는다.
+      if (aScore < 40 && bScore < 40) {
+        const aPriority = getCandidatePriorityScore(a, currentData);
+        const bPriority = getCandidatePriorityScore(b, currentData);
+
+        if (bPriority !== aPriority) {
+          return bPriority - aPriority;
+        }
+      }
 
       if (bRank !== aRank) {
         return bRank - aRank;
       }
 
-      if ((b.score || 0) !== (a.score || 0)) {
-        return (b.score || 0) - (a.score || 0);
+      if (bScore !== aScore) {
+        return bScore - aScore;
       }
 
       const aMonthly = Number(a.monthly || 0);
@@ -1641,7 +2225,9 @@ async function fetchKeywordDataCached(keyword) {
     });
 
     currentData.allRows = scoredRows;
-    currentData.rows = sortedRows.slice(0, 6);
+    currentData.detailRows = sortedRows.slice(0, 30);
+    currentData.recommendedRows = sortedRows.slice(0, 6);
+    currentData.rows = currentData.recommendedRows;
 
   } catch (error) {
     console.error(error);
@@ -1654,6 +2240,7 @@ async function fetchKeywordDataCached(keyword) {
     bestScoreText.textContent = '0';
     intentShortText.textContent = currentData.intent || '-';
     renderTable();
+    renderDetailTable();
     renderSelected();
     analyzeBtn.disabled = false;
     analyzeBtn.textContent = '분석';

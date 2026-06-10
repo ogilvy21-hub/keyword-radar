@@ -1280,8 +1280,18 @@ ${outlinesText}
       if (!response.ok) throw new Error('네이버 API 호출 실패');
       return response.json();
     }
+    
+   async function fetchSearchAdData(keyword) {
+  const response = await fetch(`/api/searchad?keyword=${encodeURIComponent(keyword)}`);
 
-   async function renderAll(resetSelection = true) {
+  if (!response.ok) {
+    throw new Error('네이버 검색광고 API 호출 실패');
+  }
+
+  return response.json();
+}
+    
+  async function renderAll(resetSelection = true) {
   const keyword = keywordInput.value.trim() || '키워드';
   currentData = getDataset(keyword);
 
@@ -1301,98 +1311,125 @@ ${outlinesText}
     const apiRows = await Promise.all(
       currentData.rows.map(async (row) => {
         try {
-          const apiData = await fetchNaverTotals(row.kw);
+          const [contentData, searchAdData] = await Promise.all([
+            fetchNaverTotals(row.kw),
+            fetchSearchAdData(row.kw)
+          ]);
 
-          const realBlog = Number(apiData.blogTotal || 0);
-          const realCafe = Number(apiData.cafeTotal || 0);
+          const realBlog = Number(contentData.blogTotal || 0);
+          const realCafe = Number(contentData.cafeTotal || 0);
           const totalContent = realBlog + realCafe;
+
+          const monthlyPc = Number(searchAdData.monthlyPc || 0);
+          const monthlyMobile = Number(searchAdData.monthlyMobile || 0);
+          const monthlyTotal = Number(searchAdData.monthlyTotal || 0);
 
           return {
             ...row,
+            monthly: monthlyTotal,
+            pc: monthlyPc,
+            mo: monthlyMobile,
             blog: realBlog,
             cafe: realCafe,
-            totalContent
+            totalContent,
+            ad: searchAdData.competition || row.ad || '낮음',
+            relKeyword: searchAdData.relKeyword || row.kw
           };
         } catch (error) {
           console.error(`${row.kw} API 호출 실패`, error);
 
           return {
             ...row,
+            monthly: 0,
+            pc: 0,
+            mo: 0,
             blog: 0,
             cafe: 0,
             totalContent: 0,
-            score: 40
+            score: 25,
+            opportunityType: '검증필요'
           };
         }
       })
     );
 
-    const rowsWithContent = apiRows.filter(row => Number(row.totalContent || 0) > 0);
-    const maxMonthly = Math.max(...apiRows.map(row => Number(row.monthly || 0)), 1);
-
-    let minContent = 0;
-    let maxContent = 0;
-
-    if (rowsWithContent.length > 0) {
-      minContent = Math.min(...rowsWithContent.map(row => Number(row.totalContent || 0)));
-      maxContent = Math.max(...rowsWithContent.map(row => Number(row.totalContent || 0)));
-    }
-
     const scoredRows = apiRows.map(row => {
-  const totalContent = Number(row.totalContent || 0);
+      const monthlyTotal = Number(row.monthly || 0);
+      const totalContent = Number(row.totalContent || 0);
 
-  let exposureScore = 10;
+      let searchScore = 0;
+      let contentScore = 0;
+      let opportunityType = '검토';
 
-  if (totalContent === 0) {
-    exposureScore = 10;
-  } else if (totalContent <= 500) {
-    exposureScore = 95;
-  } else if (totalContent <= 1000) {
-    exposureScore = 90;
-  } else if (totalContent <= 3000) {
-    exposureScore = 82;
-  } else if (totalContent <= 10000) {
-    exposureScore = 70;
-  } else if (totalContent <= 30000) {
-    exposureScore = 55;
-  } else if (totalContent <= 50000) {
-    exposureScore = 42;
-  } else if (totalContent <= 100000) {
-    exposureScore = 30;
-  } else if (totalContent <= 300000) {
-    exposureScore = 15;
-  } else {
-    exposureScore = 5;
-  }
+      if (monthlyTotal >= 100000) searchScore = 50;
+      else if (monthlyTotal >= 30000) searchScore = 45;
+      else if (monthlyTotal >= 10000) searchScore = 38;
+      else if (monthlyTotal >= 3000) searchScore = 30;
+      else if (monthlyTotal >= 1000) searchScore = 22;
+      else if (monthlyTotal >= 300) searchScore = 14;
+      else if (monthlyTotal > 0) searchScore = 8;
+      else searchScore = 0;
 
-  let adPenalty = 0;
-  if (row.ad === '높음') adPenalty = 8;
-  if (row.ad === '중간') adPenalty = 4;
+      if (totalContent === 0) contentScore = monthlyTotal > 0 ? 45 : 15;
+      else if (totalContent <= 500) contentScore = 45;
+      else if (totalContent <= 1000) contentScore = 40;
+      else if (totalContent <= 3000) contentScore = 35;
+      else if (totalContent <= 10000) contentScore = 28;
+      else if (totalContent <= 30000) contentScore = 20;
+      else if (totalContent <= 50000) contentScore = 14;
+      else if (totalContent <= 100000) contentScore = 8;
+      else if (totalContent <= 300000) contentScore = 3;
+      else contentScore = 0;
 
-  const finalScore = Math.max(
-    1,
-    Math.min(95, exposureScore - adPenalty)
-  );
+      let adPenalty = 0;
+      if (row.ad === '높음') adPenalty = 8;
+      if (row.ad === '중간') adPenalty = 4;
 
-  return {
-    ...row,
-    score: finalScore
-  };
-}); 
+      let finalScore = Math.max(
+        1,
+        Math.min(95, Math.round(searchScore + contentScore - adPenalty))
+      );
+
+      if (monthlyTotal >= 3000 && totalContent > 0 && totalContent <= 3000) {
+        opportunityType = '황금키워드';
+      } else if (monthlyTotal >= 1000 && totalContent > 0 && totalContent <= 10000) {
+        opportunityType = '준황금키워드';
+      } else if (monthlyTotal > 0 && totalContent === 0) {
+        opportunityType = '선점키워드';
+        finalScore = Math.max(finalScore, 55);
+      } else if (monthlyTotal >= 3000 && totalContent <= 50000) {
+        opportunityType = '도전키워드';
+      } else if (monthlyTotal === 0 && totalContent === 0) {
+        opportunityType = '검증필요';
+        finalScore = 25;
+      } else if (totalContent >= 100000) {
+        opportunityType = '경쟁과다';
+      } else {
+        opportunityType = '보통키워드';
+      }
+
+      return {
+        ...row,
+        score: finalScore,
+        opportunityType
+      };
+    });
 
     const sortedRows = [...scoredRows].sort((a, b) => {
-  const aContent = Number(a.totalContent || 0);
-  const bContent = Number(b.totalContent || 0);
+      const aMonthly = Number(a.monthly || 0);
+      const bMonthly = Number(b.monthly || 0);
+      const aContent = Number(a.totalContent || 0);
+      const bContent = Number(b.totalContent || 0);
 
-  if (aContent === 0 && bContent > 0) return 1;
-  if (aContent > 0 && bContent === 0) return -1;
+      if (aMonthly === 0 && bMonthly > 0) return 1;
+      if (aMonthly > 0 && bMonthly === 0) return -1;
 
-  if ((b.score || 0) !== (a.score || 0)) {
-    return (b.score || 0) - (a.score || 0);
-  }
+      if ((b.score || 0) !== (a.score || 0)) {
+        return (b.score || 0) - (a.score || 0);
+      }
 
-  return aContent - bContent;
-});
+      return aContent - bContent;
+    });
 
     currentData.allRows = scoredRows;
     currentData.rows = sortedRows.slice(0, 6);
@@ -1422,9 +1459,15 @@ ${outlinesText}
   const bestRow = currentData.rows[selectedIndex];
 
   totalKeywords.textContent = `${currentData.totalCandidateCount || currentData.rows.length}개`;
-  bestKeywordText.textContent = bestRow.kw;
+
+  if ((bestRow.score || 0) < 40) {
+    bestKeywordText.textContent = '추천 약함';
+  } else {
+    bestKeywordText.textContent = bestRow.kw;
+  }
+
   bestScoreText.textContent = bestRow.score;
-  intentShortText.textContent = currentData.intent || '-';
+  intentShortText.textContent = bestRow.opportunityType || currentData.intent || '-';
 
   renderTable();
 

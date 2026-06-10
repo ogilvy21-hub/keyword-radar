@@ -644,8 +644,13 @@
     };
 
     function getDataset(keyword) {
-  const isEntertainmentKeyword =
-    /드라마|영화|출연진|몇부작|재방송|OTT|결말|시청률|예고|[0-9]+화|회차|다시보기|줄거리/.test(keyword);
+  const normalizedKeyword = keyword.replace(/\s+/g, '');
+
+const isEntertainmentKeyword =
+  /드라마|영화|출연진|몇부작|재방송|OTT|결말|시청률|예고|회차|다시보기|줄거리|인물관계도/.test(normalizedKeyword) ||
+  /\d+(화|회)/.test(normalizedKeyword) ||
+  /시즌\d+/.test(normalizedKeyword) ||
+  /강회장|신입사원/.test(normalizedKeyword);
 
   if (isEntertainmentKeyword) {
     return {

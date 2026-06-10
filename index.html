@@ -944,10 +944,13 @@ ${outlinesText}
               const totalContent = realBlog + realCafe;
 
               let newScore = row.score || 50;
-              if (totalContent > 0 && row.monthly > 0) {
-                const rawScore = Math.round((row.monthly / totalContent) * 100);
-                newScore = Math.max(1, Math.min(95, rawScore));
-              }
+
+if (totalContent === 0) {
+  newScore = 40;
+} else if (row.monthly > 0) {
+  const rawScore = Math.round((row.monthly / totalContent) * 100);
+  newScore = Math.max(1, Math.min(95, rawScore));
+}
 
               return { ...row, blog: realBlog, cafe: realCafe, score: newScore };
             } catch (error) {

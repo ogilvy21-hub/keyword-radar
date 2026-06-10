@@ -1339,51 +1339,46 @@ ${outlinesText}
     }
 
     const scoredRows = apiRows.map(row => {
-      const totalContent = Number(row.totalContent || 0);
+  const totalContent = Number(row.totalContent || 0);
 
-      if (totalContent === 0) {
-        return {
-          ...row,
-          score: 40
-        };
-      }
+  let exposureScore = 10;
 
-      let competitionScore = 70;
+  if (totalContent === 0) {
+    exposureScore = 10;
+  } else if (totalContent <= 500) {
+    exposureScore = 95;
+  } else if (totalContent <= 1000) {
+    exposureScore = 90;
+  } else if (totalContent <= 3000) {
+    exposureScore = 82;
+  } else if (totalContent <= 10000) {
+    exposureScore = 70;
+  } else if (totalContent <= 30000) {
+    exposureScore = 55;
+  } else if (totalContent <= 50000) {
+    exposureScore = 42;
+  } else if (totalContent <= 100000) {
+    exposureScore = 30;
+  } else if (totalContent <= 300000) {
+    exposureScore = 15;
+  } else {
+    exposureScore = 5;
+  }
 
-      if (maxContent > minContent) {
-        const position = (totalContent - minContent) / (maxContent - minContent);
-        competitionScore = 95 - Math.round(position * 70);
-      }
+  let adPenalty = 0;
+  if (row.ad === '높음') adPenalty = 8;
+  if (row.ad === '중간') adPenalty = 4;
 
-      const demandBonus = Math.round((Number(row.monthly || 0) / maxMonthly) * 10);
+  const finalScore = Math.max(
+    1,
+    Math.min(95, exposureScore - adPenalty)
+  );
 
-      let adPenalty = 0;
-      if (row.ad === '높음') adPenalty = 8;
-      if (row.ad === '중간') adPenalty = 4;
-
-      let volumePenalty = 0;
-
-if (totalContent >= 1000000) volumePenalty = 45;
-else if (totalContent >= 700000) volumePenalty = 38;
-else if (totalContent >= 500000) volumePenalty = 32;
-else if (totalContent >= 300000) volumePenalty = 25;
-else if (totalContent >= 100000) volumePenalty = 15;
-else if (totalContent >= 50000) volumePenalty = 8;
-else if (totalContent >= 10000) volumePenalty = 3;
-
-      const finalScore = Math.max(
-        1,
-        Math.min(
-          95,
-          Math.round(competitionScore + demandBonus - adPenalty - volumePenalty)
-        )
-      );
-
-      return {
-        ...row,
-        score: finalScore
-      };
-    });
+  return {
+    ...row,
+    score: finalScore
+  };
+});
 
     const sortedRows = [...scoredRows].sort((a, b) => {
   const aContent = Number(a.totalContent || 0);

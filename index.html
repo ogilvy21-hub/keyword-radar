@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 | 키워드 경쟁강도·검색의도·제목목차 생성 데모</title>
-  <meta name="description" content="키워드 검색부터 경쟁강도 확인, 검색의도 분석, 제목·목차 생성, 원고 프롬프트까지 이어지는 콘텐츠 제작 데모입니다." />
+  <title>글감레이더 | 키워드 경쟁강도·검색의도·제목목차 생성</title>
+  <meta name="description" content="키워드 검색부터 블로그·카페 발행량, 검색의도, 제목·목차, 원고 프롬프트까지 이어지는 콘텐츠 제작 도구입니다." />
   <style>
     * { box-sizing: border-box; }
     body {
@@ -165,7 +165,7 @@
       color: #fff;
     }
     .metric p { margin: 0 0 8px; color: #93c5fd; font-size: 12px; font-weight: 900; }
-    .metric strong { display:block; font-size: 27px; letter-spacing: -.5px; }
+    .metric strong { display:block; font-size: 24px; letter-spacing: -.5px; word-break: keep-all; }
     .section-title {
       display: flex;
       justify-content: space-between;
@@ -179,7 +179,6 @@
     th, td { padding: 14px 13px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 13px; white-space: nowrap; }
     th { background: #f1f5f9; color: #475569; font-weight: 900; }
     td { color: #334155; font-weight: 700; }
-    tr:last-child td { border-bottom: 0; }
     tr.selected td { background: #eff6ff; }
     .pick-btn {
       border: 0;
@@ -242,7 +241,6 @@
       line-height: 1.55;
       font-weight: 800;
     }
-    .title-item { border-left: 1px solid #e5e7eb; }
     .outline-item { display: flex; gap: 10px; }
     .outline-item span {
       flex: 0 0 24px;
@@ -316,7 +314,7 @@
     .full-btn { width:100%; margin-top:10px; }
     textarea {
       width: 100%;
-      min-height: 170px;
+      min-height: 210px;
       border: 1px solid #e5e7eb;
       border-radius: 16px;
       padding: 13px;
@@ -383,12 +381,12 @@
       <div>
         <p class="eyebrow">KEYWORD TO DRAFT ENGINE</p>
         <h1>글감레이더<br>키워드에서 원고 설계까지</h1>
-        <p class="desc">키워드를 입력하면 경쟁강도, 블로그·카페 발행량, PC·모바일 검색량, 검색의도, 제목·목차, 원고 프롬프트까지 한 번에 이어지는 콘텐츠 제작 데모입니다.</p>
+        <p class="desc">키워드를 입력하면 경쟁강도, 블로그·카페 발행량, 검색의도, 제목·목차, 원고 프롬프트까지 한 번에 이어지는 콘텐츠 제작 데모입니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>GitHub Demo v1</strong>
-        <p>실제 API 연결 전, 화면 구조와 사용자 흐름을 확인하는 정적 데모입니다.</p>
+        <strong>API MVP v2</strong>
+        <p>네이버 검색 API로 블로그·카페 발행수를 가져오고, 카테고리별 검색의도 템플릿을 적용합니다.</p>
       </div>
     </header>
 
@@ -396,14 +394,14 @@
       <section class="panel">
         <div class="topbar">
           <div class="traffic"><i></i><i></i><i></i></div>
-          <div class="url">https://keyword-radar.github.io</div>
+          <div class="url">https://keyword-radar.vercel.app</div>
           <button class="ext-btn">KR</button>
         </div>
 
         <div class="search-zone">
           <h2>1차: 키워드 검색 → 경쟁강도 확인</h2>
           <div class="search-row">
-            <input id="keywordInput" value="고유가 지원금" placeholder="분석할 키워드를 입력하세요" />
+            <input id="keywordInput" value="" placeholder="분석할 키워드를 입력하세요" />
             <button id="analyzeBtn">분석</button>
           </div>
           <div class="steps">
@@ -425,7 +423,7 @@
 
           <div class="section-title">
             <h3>키워드 경쟁강도 표</h3>
-            <span class="hint">데모 수치 · 실제 서비스에서는 API 연결</span>
+            <span class="hint">블로그·카페 발행수는 네이버 검색 API 기준</span>
           </div>
           <div class="table-wrap">
             <table>
@@ -593,279 +591,311 @@
     const tableCheck = document.getElementById('tableCheck');
     const faqCheck = document.getElementById('faqCheck');
 
-    const presetData = {
-      support: {
-        match: /고유가|지원금|사용처|서브웨이|편의점|주유소/,
-        rows: [
-          { kw:'고유가 지원금 사용처', monthly:4800, pc:620, mo:4180, blog:12400, cafe:2100, ad:'중간', score:58 },
-          { kw:'고유가 지원금 서브웨이', monthly:620, pc:70, mo:550, blog:190, cafe:42, ad:'낮음', score:91 },
-          { kw:'고유가 지원금 편의점', monthly:1900, pc:250, mo:1650, blog:2600, cafe:530, ad:'중간', score:76 },
-          { kw:'고유가 지원금 주유소', monthly:1500, pc:180, mo:1320, blog:980, cafe:210, ad:'중간', score:84 },
-          { kw:'고유가 지원금 신청', monthly:3600, pc:520, mo:3080, blog:8500, cafe:1200, ad:'높음', score:62 },
-          { kw:'고유가 지원금 대상', monthly:2100, pc:330, mo:1770, blog:4100, cafe:680, ad:'중간', score:68 }
-        ],
-        related:['사용처','서브웨이','편의점','주유소','신청','대상','지역별','카드사','업종 제한','잔액 확인'],
-        intent:'즉답형',
-        needs:['서브웨이에서 쓸 수 있는지 바로 알고 싶다','안 된다면 어떤 업종 제한 때문인지 알고 싶다','편의점·주유소 같은 대체 사용처를 함께 확인하고 싶다','지역이나 카드사에 따라 달라지는지 확인하고 싶다'],
-        outlines:['고유가 지원금은 어디서 쓸 수 있나','서브웨이 사용 가능 여부','편의점·주유소·카페 사용 가능 여부','지역별 사용처가 달라지는 이유','결제 전 확인해야 할 기준','자주 묻는 질문'],
-        reason:'검색 의도가 매우 구체적이고 발행량이 낮습니다. 첫 문단에서 사용 가능 여부를 바로 답하면 실용 검색에 강합니다.'
+    const categoryTemplates = [
+      {
+        key: 'entertainment',
+        name: '방송·콘텐츠',
+        detect: /드라마|영화|예능|방송|ott|넷플릭스|티빙|웨이브|디즈니|쿠팡플레이|라프텔|출연진|등장인물|몇부작|재방송|다시보기|결말|시청률|예고|회차|줄거리|인물관계도|\d+(화|회)|시즌\d+/i,
+        intent: '콘텐츠정보형',
+        suffixes: ['줄거리', '재방송', '다시보기', '결말', '출연진', '시청률'],
+        needs: ['작품이나 회차의 핵심 내용을 빠르게 알고 싶다', '재방송과 다시보기 가능 여부를 확인하고 싶다', '출연진과 등장인물 관계를 함께 보고 싶다', '결말, 다음 회차 예고, 시청률을 확인하고 싶다'],
+        outlines: ['기본정보', '줄거리 요약', '출연진과 등장인물', '재방송·다시보기 정보', '결말과 관전 포인트', 'FAQ'],
+        reason: '방송·콘텐츠 키워드는 공개 직후 검색 수요가 빠르게 몰립니다. 줄거리, 다시보기, 출연진, 결말 정보를 한 번에 묶는 글이 유리합니다.'
       },
-      loan: {
-        match: /청년|버팀목|전세|대출|장기안심주택|조건|신청/,
-        rows: [
-          { kw:'청년버팀목전세대출 조건', monthly:8700, pc:1500, mo:7200, blog:18500, cafe:3100, ad:'높음', score:65 },
-          { kw:'청년버팀목전세대출 서류', monthly:3200, pc:480, mo:2720, blog:3900, cafe:670, ad:'중간', score:82 },
-          { kw:'청년버팀목전세대출 소득 기준', monthly:2600, pc:390, mo:2210, blog:2100, cafe:420, ad:'중간', score:88 },
-          { kw:'청년버팀목전세대출 부결 사유', monthly:900, pc:130, mo:770, blog:420, cafe:95, ad:'낮음', score:93 },
-          { kw:'청년버팀목전세대출 한도', monthly:5400, pc:840, mo:4560, blog:8200, cafe:1400, ad:'높음', score:70 }
-        ],
-        related:['조건','소득 기준','한도','금리','필요 서류','부결 사유','신청 방법','전입신고','은행','연장'],
-        intent:'조건확인형',
-        needs:['내가 신청 대상인지 먼저 알고 싶다','소득·보증금·나이 조건을 한눈에 보고 싶다','한도와 금리를 숫자로 확인하고 싶다','부결될 수 있는 이유를 미리 알고 싶다'],
-        outlines:['청년버팀목전세대출 핵심 요약','신청 대상과 소득 조건','한도·금리·보증금 기준','필요 서류와 신청 절차','부결 사유와 주의사항','신청 전 체크리스트'],
-        reason:'조건과 서류 검색은 즉시 판단 수요가 큽니다. 표와 체크리스트를 붙이면 체류 시간을 높일 수 있습니다.'
+      {
+        key: 'policy',
+        name: '정책·지원금',
+        detect: /지원금|보조금|환급|환급금|정부지원|정부|복지|바우처|쿠폰|수당|장려금|급여|신청|대상|지급일|사용처|소상공인|자영업자|근로자|취약계층|저소득|민생|재난|에너지|유류|기름값|교통비|난방비|전기요금/,
+        intent: '조건확인형',
+        suffixes: ['신청', '대상', '사용처', '지급일', '조건', '서류'],
+        needs: ['내가 대상자인지 바로 확인하고 싶다', '어디서 어떻게 신청하는지 알고 싶다', '언제 지급되는지 확인하고 싶다', '사용처와 제외 조건을 알고 싶다'],
+        outlines: ['핵심 요약', '신청 대상', '지원 금액과 지급일', '신청 방법', '사용처와 제외 조건', 'FAQ'],
+        reason: '정책·지원금 키워드는 대상, 신청 방법, 지급일, 사용처를 빠르게 확인하려는 의도가 강합니다.'
       },
-      stock: {
-        match: /주가|전망|공모주|상장|실적|목표가|적정주가|ETF|수요예측/,
-        rows: [
-          { kw:'공모주 수요예측 결과', monthly:4200, pc:900, mo:3300, blog:3200, cafe:870, ad:'중간', score:82 },
-          { kw:'상장일 매도 전략', monthly:1300, pc:280, mo:1020, blog:480, cafe:120, ad:'낮음', score:92 },
-          { kw:'주가 전망 실적 기준', monthly:1800, pc:420, mo:1380, blog:2100, cafe:360, ad:'중간', score:73 },
-          { kw:'목표가 계산 방법', monthly:900, pc:300, mo:600, blog:260, cafe:55, ad:'낮음', score:94 },
-          { kw:'적정주가 비교 기업', monthly:700, pc:210, mo:490, blog:180, cafe:40, ad:'낮음', score:95 }
-        ],
-        related:['실적','매출','영업이익','시가총액','PER','수급','보호예수','오버행','지지선','목표가'],
-        intent:'투자판단형',
-        needs:['지금 가격이 비싼지 싼지 알고 싶다','상승 이유와 하락 리스크를 분리해서 보고 싶다','비교 기업과 숫자로 판단하고 싶다','매수보다 관망 기준을 찾고 싶다'],
-        outlines:['현재 주가 이슈 요약','실적과 밸류에이션 확인','상승 요인과 수급','리스크와 보호예수 물량','비교 기업으로 보는 가격 구간','투자자가 볼 체크포인트'],
-        reason:'투자 키워드는 숫자와 비교표가 강합니다. 검색량보다 신뢰도와 근거 제시가 중요합니다.'
+      {
+        key: 'finance',
+        name: '금융·대출',
+        detect: /대출|전세대출|주택담보|담보대출|월세|전세|청약|예금|적금|카드|신용카드|체크카드|금리|이자|한도|상환|신용|보험|통장|계좌|은행|환율|환전|보증금|연말정산|세금|소득공제|공제/,
+        intent: '조건비교형',
+        suffixes: ['조건', '한도', '금리', '서류', '신청방법', '부결사유'],
+        needs: ['신청 조건과 한도를 알고 싶다', '금리와 상환 방식을 비교하고 싶다', '필요 서류와 신청 절차를 확인하고 싶다', '부결되는 이유를 미리 알고 싶다'],
+        outlines: ['핵심 조건 요약', '신청 대상', '한도와 금리', '필요 서류', '신청 방법', '부결 사유와 주의사항'],
+        reason: '금융 키워드는 조건, 한도, 금리, 서류, 부결 사유를 함께 정리해야 검색 의도에 맞습니다.'
       },
-      default: null
-    };
+      {
+        key: 'stock',
+        name: '주식·투자',
+        detect: /주가|공모주|관련주|상장|상장일|수요예측|공모가|실적|전망|목표가|적정주가|배당|etf|etn|코스피|코스닥|나스닥|반도체|방산|로봇|양자|비트코인|가상자산|암호화폐|테마주|수혜주|실리콘|그래핀|ai주|데이터센터/i,
+        intent: '투자판단형',
+        suffixes: ['주가', '전망', '실적', '관련주', '상장일', '공모가'],
+        needs: ['왜 가격이 움직였는지 알고 싶다', '실적과 재료를 함께 확인하고 싶다', '관련주와 수혜주를 비교하고 싶다', '투자 전 리스크를 알고 싶다'],
+        outlines: ['기업·테마 개요', '가격 이슈', '실적과 재료', '관련주 비교', '리스크', '전망'],
+        reason: '주식·투자 키워드는 이슈, 실적, 관련주, 리스크를 함께 봐야 합니다.'
+      },
+      {
+        key: 'commerce',
+        name: '쇼핑·패션·뷰티',
+        detect: /패션|코디|룩북|원피스|가방|운동화|스니커즈|자켓|재킷|셔츠|니트|바지|청바지|브랜드|뷰티|화장품|향수|립스틱|쿠션|선크림|추천|후기|가격|사이즈|할인|최저가|구매|쇼핑|세일|쿠폰|리뷰/,
+        intent: '구매탐색형',
+        suffixes: ['추천', '후기', '가격', '사이즈', '브랜드', '비교'],
+        needs: ['어떤 제품이 나에게 맞는지 알고 싶다', '가격과 브랜드 차이를 비교하고 싶다', '실제 후기를 확인하고 싶다', '구매 전 주의할 점을 알고 싶다'],
+        outlines: ['제품 특징', '추천 대상', '가격 비교', '후기 정리', '구매 전 체크', 'FAQ'],
+        reason: '구매형 키워드는 추천, 후기, 가격, 사이즈, 브랜드 비교가 핵심입니다.'
+      },
+      {
+        key: 'place',
+        name: '장소·여행·맛집',
+        detect: /맛집|카페|여행|숙소|호텔|펜션|리조트|캠핑|축제|행사|전시|팝업|가볼만한곳|데이트|코스|주차|예약|위치|주소|영업시간|근처|입장료|요금|교통|지도|야행|박람회/,
+        intent: '방문탐색형',
+        suffixes: ['위치', '주차', '영업시간', '예약', '후기', '근처'],
+        needs: ['위치와 이동 방법을 알고 싶다', '주차와 영업시간을 확인하고 싶다', '방문 전 후기를 보고 싶다', '예약 가능 여부와 비용을 알고 싶다'],
+        outlines: ['기본정보', '위치와 교통', '영업시간과 예약', '주차 정보', '후기와 추천 포인트', 'FAQ'],
+        reason: '장소형 키워드는 위치, 영업시간, 주차, 예약, 후기가 검색 의도의 중심입니다.'
+      },
+      {
+        key: 'recipe',
+        name: '레시피·식품',
+        detect: /레시피|만드는법|끓이는법|요리|반찬|국|찌개|비빔밥|조림|볶음|무침|양념장|소스|재료|손질|보관법|칼로리|식단|도시락|간식|효능|먹는법|제철|음식|요리법/,
+        intent: '실행방법형',
+        suffixes: ['레시피', '재료', '양념장', '만드는법', '보관법', '칼로리'],
+        needs: ['재료와 양을 정확히 알고 싶다', '조리 순서를 쉽게 따라 하고 싶다', '맛을 내는 핵심 포인트를 알고 싶다', '보관 방법과 응용법을 알고 싶다'],
+        outlines: ['재료 준비', '양념장 비율', '만드는 순서', '맛내기 팁', '보관법', 'FAQ'],
+        reason: '레시피 키워드는 재료, 비율, 순서, 맛내기 팁을 표와 단계로 보여주는 글이 좋습니다.'
+      },
+      {
+        key: 'tech',
+        name: 'IT·앱·서비스',
+        detect: /앱|어플|사이트|웹앱|ai|api|챗gpt|chatgpt|구글|네이버|크롬|확장프로그램|브라우저|설치|사용법|오류|해결|로그인|비밀번호|보안|업데이트|아이폰|갤럭시|윈도우|맥북|안드로이드|ios|개발|코딩|깃허브|버셀|서버|도메인/i,
+        intent: '문제해결형',
+        suffixes: ['사용법', '설치', '오류', '해결', '비교', '가격'],
+        needs: ['어떻게 사용하는지 알고 싶다', '설치와 설정 방법을 알고 싶다', '오류 해결 방법을 찾고 싶다', '비슷한 서비스와 차이를 알고 싶다'],
+        outlines: ['핵심 요약', '사용 방법', '설정 방법', '오류 해결', '비교 포인트', 'FAQ'],
+        reason: 'IT·서비스 키워드는 사용법, 설정, 오류 해결, 비교 정보를 함께 제공해야 합니다.'
+      },
+      {
+        key: 'health',
+        name: '건강·효능',
+        detect: /효능|부작용|영양소|건강|다이어트|혈당|혈압|피부|탈모|운동|증상|원인|치료|병원|약|영양제|수면|스트레스|질환|질병|통증|검사|수술|예방/,
+        intent: '건강정보형',
+        suffixes: ['효능', '부작용', '먹는법', '주의사항', '영양소', '보관법'],
+        needs: ['어떤 효능이 있는지 알고 싶다', '부작용과 주의사항을 확인하고 싶다', '어떻게 먹거나 활용해야 하는지 알고 싶다', '근거 있는 정보를 보고 싶다'],
+        outlines: ['핵심 요약', '주요 효능', '영양소', '먹는법', '부작용과 주의사항', 'FAQ'],
+        reason: '건강 키워드는 효능만 강조하지 말고 부작용과 주의사항을 함께 넣어야 신뢰도가 높아집니다.'
+      },
+      {
+        key: 'education',
+        name: '교육·시험',
+        detect: /시험|자격증|공부|강의|인강|대학|입시|수능|공무원|합격|접수|일정|문제|정답|기출|교육|학교|학원|커리큘럼|교재|모의고사|성적/,
+        intent: '학습정보형',
+        suffixes: ['일정', '접수', '준비물', '기출', '난이도', '합격률'],
+        needs: ['시험 일정과 접수 기간을 알고 싶다', '준비물과 응시 조건을 확인하고 싶다', '난이도와 합격률을 알고 싶다', '기출과 공부 방법을 찾고 싶다'],
+        outlines: ['핵심 요약', '시험 일정', '접수 방법', '준비물', '난이도와 합격률', 'FAQ'],
+        reason: '시험·교육 키워드는 일정, 접수, 준비물, 난이도, 기출 정보를 함께 정리해야 합니다.'
+      },
+      {
+        key: 'legal',
+        name: '법률·계약',
+        detect: /법|법률|소송|고소|신고|계약|위약금|환불|약관|판례|처벌|벌금|명예훼손|저작권|개인정보|분쟁|합의|손해배상|임대차|노무|근로기준법/,
+        intent: '위험확인형',
+        suffixes: ['법률', '신고방법', '처벌', '판례', '주의사항', '대응방법'],
+        needs: ['법적으로 문제가 되는지 알고 싶다', '신고나 대응 방법을 알고 싶다', '처벌이나 벌금 가능성을 확인하고 싶다', '주의해야 할 표현이나 절차를 알고 싶다'],
+        outlines: ['핵심 요약', '관련 법률', '문제 되는 경우', '대응 방법', '주의사항', 'FAQ'],
+        reason: '법률 키워드는 단정하지 말고 관련 기준, 예외, 대응 방법을 차분히 정리해야 합니다.'
+      },
+      {
+        key: 'news',
+        name: '뉴스·이슈',
+        detect: /논란|사건|사고|이슈|속보|발표|정책발표|기자회견|폭발|화재|사망|구속|수사|재판|선거|투표|여론조사|출구조사|대통령|시장|도지사|국회의원|기업공시|인수|합병/,
+        intent: '이슈파악형',
+        suffixes: ['이유', '원인', '정리', '전망', '반응', '타임라인'],
+        needs: ['무슨 일이 있었는지 빠르게 알고 싶다', '원인과 쟁점을 정리해서 보고 싶다', '앞으로 어떻게 될지 전망을 알고 싶다', '관련 반응과 타임라인을 확인하고 싶다'],
+        outlines: ['핵심 요약', '사건 개요', '타임라인', '쟁점과 원인', '향후 전망', 'FAQ'],
+        reason: '뉴스·이슈 키워드는 개요, 타임라인, 쟁점, 전망을 분리해야 독자가 빠르게 이해할 수 있습니다.'
+      },
+      {
+        key: 'living',
+        name: '생활정보',
+        detect: /생활|방법|정리|꿀팁|청소|세탁|이사|인테리어|수리|전기|수도|가스|자동차|주차|관리비|요금|분리수거|폐기물|택배|배송|예약|민원|서류/,
+        intent: '생활해결형',
+        suffixes: ['방법', '비용', '주의사항', '후기', '비교', '체크리스트'],
+        needs: ['실제로 어떻게 해야 하는지 알고 싶다', '비용과 준비물을 알고 싶다', '주의사항과 실수하기 쉬운 부분을 확인하고 싶다', '비슷한 선택지를 비교하고 싶다'],
+        outlines: ['핵심 요약', '준비물', '진행 방법', '비용', '주의사항', 'FAQ'],
+        reason: '생활정보 키워드는 바로 따라 할 수 있는 절차와 비용, 주의사항을 함께 보여주는 글이 좋습니다.'
+      },
+      {
+        key: 'default',
+        name: '일반정보',
+        detect: /.*/,
+        intent: '정보탐색형',
+        suffixes: ['뜻', '방법', '비교', '추천', '후기', '주의사항'],
+        needs: ['핵심 의미를 빠르게 알고 싶다', '비슷한 개념과 차이를 확인하고 싶다', '실제로 어떻게 적용하는지 예시를 보고 싶다', '주의할 점을 미리 알고 싶다'],
+        outlines: ['핵심 요약', '뜻과 기본 개념', '방법과 실제 예시', '비교 포인트', '주의사항', 'FAQ'],
+        reason: '일반 정보 키워드는 정의보다 실제 예시와 주의사항을 함께 넣을 때 검색 의도에 더 잘 맞습니다.'
+      }
+    ];
 
     function getDataset(keyword) {
-  const normalizedKeyword = keyword.replace(/\s+/g, '');
+      const normalizedKeyword = keyword.replace(/\s+/g, '');
+      const template =
+        categoryTemplates.find(item => item.detect.test(normalizedKeyword)) ||
+        categoryTemplates[categoryTemplates.length - 1];
 
-const isEntertainmentKeyword =
-  /드라마|영화|출연진|몇부작|재방송|OTT|결말|시청률|예고|회차|다시보기|줄거리|인물관계도/.test(normalizedKeyword) ||
-  /\d+(화|회)/.test(normalizedKeyword) ||
-  /시즌\d+/.test(normalizedKeyword) ||
-  /강회장|신입사원/.test(normalizedKeyword);
+      const monthlyValues = [1200, 900, 1100, 700, 800, 550];
+      const pcValues = [240, 180, 220, 160, 170, 120];
+      const moValues = [960, 720, 880, 540, 630, 430];
+      const adValues = ['낮음', '중간', '중간', '낮음', '낮음', '낮음'];
+      const scoreValues = [82, 78, 80, 85, 83, 81];
 
-  if (isEntertainmentKeyword) {
-    return {
-      rows: [
-        { kw: `${keyword} 줄거리`, monthly: 1200, pc: 240, mo: 960, blog: 0, cafe: 0, ad: '낮음', score: 82 },
-        { kw: `${keyword} 재방송`, monthly: 900, pc: 180, mo: 720, blog: 0, cafe: 0, ad: '중간', score: 78 },
-        { kw: `${keyword} 다시보기`, monthly: 1100, pc: 220, mo: 880, blog: 0, cafe: 0, ad: '중간', score: 80 },
-        { kw: `${keyword} 결말`, monthly: 700, pc: 160, mo: 540, blog: 0, cafe: 0, ad: '낮음', score: 85 },
-        { kw: `${keyword} 출연진`, monthly: 800, pc: 170, mo: 630, blog: 0, cafe: 0, ad: '낮음', score: 83 },
-        { kw: `${keyword} 시청률`, monthly: 550, pc: 120, mo: 430, blog: 0, cafe: 0, ad: '낮음', score: 81 }
-      ],
-      related: ['줄거리', '재방송', '다시보기', '결말', '출연진', '시청률', '몇부작', 'OTT', '인물관계도', '예고'],
-      intent: '콘텐츠정보형',
-      needs: [
-        '이번 회차의 핵심 줄거리를 빠르게 알고 싶다',
-        '재방송과 다시보기 가능 여부를 확인하고 싶다',
-        '출연진과 인물 관계를 함께 보고 싶다',
-        '결말이나 다음 회차 예고가 궁금하다'
-      ],
-      outlines: [
-        `${keyword} 기본정보`,
-        `${keyword} 줄거리 요약`,
-        `${keyword} 출연진과 인물 관계`,
-        `${keyword} 재방송·다시보기 정보`,
-        `${keyword} 결말과 다음 회차 예고`,
-        '시청자가 궁금해하는 질문'
-      ],
-      reason: '드라마 회차형 키워드는 검색 수명이 짧지만 방영 직후 유입 가능성이 있습니다. 줄거리·재방송·다시보기·결말 정보를 빠르게 묶는 글이 유리합니다.'
-    };
-  }
+      const makeKeyword = (suffix) => {
+        const normalizedSuffix = suffix.replace(/\s+/g, '');
+        if (normalizedKeyword.includes(normalizedSuffix)) return keyword;
+        return `${keyword} ${suffix}`;
+      };
 
-  const found = Object.values(presetData).find(item => item && item.match.test(keyword));
-  if (found) return found;
+      return {
+        rows: template.suffixes.map((suffix, index) => ({
+          kw: makeKeyword(suffix),
+          monthly: monthlyValues[index] || 600,
+          pc: pcValues[index] || 100,
+          mo: moValues[index] || 500,
+          blog: 0,
+          cafe: 0,
+          ad: adValues[index] || '낮음',
+          score: scoreValues[index] || 70
+        })),
+        related: template.suffixes.concat(['FAQ', '정리', '주의사항', '후기']).slice(0, 10),
+        intent: template.intent,
+        needs: template.needs,
+        outlines: template.outlines.map(item => `${keyword} ${item}`),
+        reason: template.reason,
+        categoryName: template.name
+      };
+    }
 
-  return {
-    rows: [
-      { kw: `${keyword} 뜻`, monthly: 1200, pc: 240, mo: 960, blog: 0, cafe: 0, ad: '낮음', score: 82 },
-      { kw: `${keyword} 방법`, monthly: 900, pc: 180, mo: 720, blog: 0, cafe: 0, ad: '중간', score: 78 },
-      { kw: `${keyword} 비교`, monthly: 700, pc: 160, mo: 540, blog: 0, cafe: 0, ad: '낮음', score: 85 },
-      { kw: `${keyword} 추천`, monthly: 1500, pc: 310, mo: 1190, blog: 0, cafe: 0, ad: '높음', score: 61 },
-      { kw: `${keyword} 주의사항`, monthly: 550, pc: 120, mo: 430, blog: 0, cafe: 0, ad: '낮음', score: 91 }
-    ],
-    related: ['뜻', '방법', '비교', '추천', '후기', '가격', '주의사항', '장점', '단점', 'FAQ'],
-    intent: '정보탐색형',
-    needs: [
-      '핵심 의미를 빠르게 알고 싶다',
-      '비슷한 개념과 차이를 확인하고 싶다',
-      '실제로 어떻게 적용하는지 예시를 보고 싶다',
-      '주의할 점을 미리 알고 싶다'
-    ],
-    outlines: [
-      `${keyword} 핵심 요약`,
-      `${keyword}의 뜻과 기본 개념`,
-      `${keyword} 방법과 실제 예시`,
-      `${keyword} 비교 포인트`,
-      `${keyword} 주의사항`,
-      '자주 묻는 질문'
-    ],
-    reason: '일반 정보 키워드는 정의보다 실제 예시와 주의사항을 함께 넣을 때 검색 의도에 더 잘 맞습니다.'
-  };
-}
     let currentData = null;
     let selectedIndex = 0;
 
-    function scoreClass(score) {
-      if (score >= 85) return 'score';
-      if (score >= 70) return 'score mid';
-      return 'score low';
+    function cleanTitle(text) {
+      return text
+        .replace(/\s+/g, ' ')
+        .replace(/하는 방법|알아보기|정리해봤습니다|꼭 확인하세요|무엇일까|어떻게 될까|좋은 이유/g, '')
+        .trim();
     }
 
     function makeTitles(keyword, intent) {
-      if (intent === '즉답형') return [
-        `${keyword} 가능할까? 사용 전 꼭 확인할 기준`,
-        `${keyword} 총정리 | 가능 여부와 예외 조건`,
-        `${keyword}, 결제 전 먼저 봐야 할 사용처 기준`
-      ];
-      if (intent === '조건확인형') return [
-        `${keyword} 조건·서류·신청방법 총정리`,
-        `${keyword}, 내가 받을 수 있는지 확인하는 법`,
-        `${keyword} 신청 전 꼭 봐야 할 조건과 부결 사유`
-      ];
-      if (intent === '투자판단형') return [
-        `${keyword} 전망 | 실적·수급·리스크로 보는 핵심 구간`,
-        `${keyword}, 지금 가격에서 봐야 할 숫자들`,
-        `${keyword} 분석 | 상승 요인과 하락 리스크 정리`
-      ];
-      return [
-        `${keyword} 뜻과 핵심 정보 총정리`,
-        `${keyword} 방법·비교·주의사항 한 번에 보기`,
-        `${keyword} 선택 전 알아야 할 장점과 단점`
-      ];
+      const map = {
+        '콘텐츠정보형': [`${keyword} 줄거리 | 재방송·다시보기`, `${keyword} 결말 | 출연진·시청률`, `${keyword} 기본정보 | 관전 포인트`],
+        '조건확인형': [`${keyword} 조건 | 대상·신청·지급일`, `${keyword} 신청 기준 | 사용처·서류`, `${keyword} 핵심 정리 | 제외 조건`],
+        '조건비교형': [`${keyword} 조건 | 한도·금리·서류`, `${keyword} 신청 기준 | 부결 사유`, `${keyword} 비교 | 금리와 상환`],
+        '투자판단형': [`${keyword} 전망 | 실적·수급·리스크`, `${keyword} 분석 | 가격 판단 기준`, `${keyword} | 상승 요인과 하락 리스크`],
+        '구매탐색형': [`${keyword} 추천 | 가격·후기 비교`, `${keyword} 브랜드 비교 | 사이즈·구매 팁`, `${keyword} 후기 | 구매 전 체크`],
+        '방문탐색형': [`${keyword} 위치 | 주차·영업시간`, `${keyword} 후기 | 예약·방문 팁`, `${keyword} 근처 정보 | 교통·요금`],
+        '실행방법형': [`${keyword} 레시피 | 재료·비율·순서`, `${keyword} 만드는법 | 양념장·보관법`, `${keyword} 핵심 팁 | 맛내기와 칼로리`],
+        '문제해결형': [`${keyword} 해결 | 사용법·오류`, `${keyword} 설정 | 설치·비교·가격`, `${keyword} 사용법 | 문제 해결 체크`],
+        '건강정보형': [`${keyword} 효능 | 부작용·주의사항`, `${keyword} 먹는법 | 영양소·보관법`, `${keyword} 정리 | 효과와 주의점`],
+        '학습정보형': [`${keyword} 일정 | 접수·준비물`, `${keyword} 기출 | 난이도·합격률`, `${keyword} 준비법 | 체크리스트`],
+        '위험확인형': [`${keyword} 법률 | 신고·대응방법`, `${keyword} 처벌 | 판례·주의사항`, `${keyword} 대응 | 기준과 절차`],
+        '이슈파악형': [`${keyword} 정리 | 원인·타임라인`, `${keyword} 이유 | 쟁점과 전망`, `${keyword} 반응 | 앞으로 달라질 점`],
+        '생활해결형': [`${keyword} 방법 | 비용·주의사항`, `${keyword} 체크리스트 | 준비물·절차`, `${keyword} 비교 | 후기·팁`]
+      };
+      return (map[intent] || [`${keyword} 핵심 정리`, `${keyword} | 뜻·방법·주의사항`, `${keyword} 비교 | 장점·단점`]).map(cleanTitle);
     }
 
-   function renderTable() {
-  try {
-    if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
-      keywordTable.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align:center; padding:24px; color:#64748b;">
-            키워드를 분석하면 경쟁강도 결과가 표시됩니다.
-          </td>
-        </tr>
-      `;
-      return;
-    }
+    function renderTable() {
+      if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+        keywordTable.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 분석하면 경쟁강도 결과가 표시됩니다.</td></tr>';
+        return;
+      }
 
-    keywordTable.innerHTML = currentData.rows.map((row, index) => {
-      const selectedClass = index === selectedIndex ? 'selected' : '';
-      const score = Number(row.score || 0);
-      const scoreClassName = score >= 85 ? 'score' : score >= 70 ? 'score mid' : 'score low';
+      keywordTable.innerHTML = currentData.rows.map((row, index) => {
+        const selectedClass = index === selectedIndex ? 'selected' : '';
+        const score = Number(row.score || 0);
+        const scoreClassName = score >= 85 ? 'score' : score >= 70 ? 'score mid' : 'score low';
+        return `
+          <tr class="${selectedClass}">
+            <td><button class="pick-btn" data-index="${index}">선택</button></td>
+            <td>${row.kw || '-'}</td>
+            <td>${Number(row.monthly || 0).toLocaleString('ko-KR')}</td>
+            <td>${Number(row.pc || 0).toLocaleString('ko-KR')}</td>
+            <td>${Number(row.mo || 0).toLocaleString('ko-KR')}</td>
+            <td>${Number(row.blog || 0).toLocaleString('ko-KR')}</td>
+            <td>${Number(row.cafe || 0).toLocaleString('ko-KR')}</td>
+            <td>${row.ad || '-'}</td>
+            <td><span class="${scoreClassName}">${score}</span></td>
+          </tr>
+        `;
+      }).join('');
 
-      return `
-        <tr class="${selectedClass}">
-          <td>
-            <button class="pick-btn" data-index="${index}">선택</button>
-          </td>
-          <td>${row.kw || '-'}</td>
-          <td>${Number(row.monthly || 0).toLocaleString('ko-KR')}</td>
-          <td>${Number(row.pc || 0).toLocaleString('ko-KR')}</td>
-          <td>${Number(row.mo || 0).toLocaleString('ko-KR')}</td>
-          <td>${Number(row.blog || 0).toLocaleString('ko-KR')}</td>
-          <td>${Number(row.cafe || 0).toLocaleString('ko-KR')}</td>
-          <td>${row.ad || '-'}</td>
-          <td>
-            <span class="${scoreClassName}">${score}</span>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    keywordTable.querySelectorAll('.pick-btn').forEach(button => {
-      button.addEventListener('click', () => {
-        selectedIndex = Number(button.dataset.index);
-        renderTable();
-        renderSelected();
+      keywordTable.querySelectorAll('.pick-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          selectedIndex = Number(button.dataset.index);
+          renderTable();
+          renderSelected();
+        });
       });
-    });
-  } catch (error) {
-    console.error('renderTable 오류:', error);
-    keywordTable.innerHTML = `
-      <tr>
-        <td colspan="9" style="text-align:center; padding:24px; color:#ef4444;">
-          표를 그리는 중 오류가 발생했습니다.
-        </td>
-      </tr>
-    `;
-  }
-}
+    }
 
     function renderSelected() {
-  try {
-    if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
-      if (typeof selectedKeywordText !== 'undefined') selectedKeywordText.textContent = '-';
-      if (typeof selectedIntentText !== 'undefined') selectedIntentText.textContent = '대기';
-      if (typeof selectedScoreText !== 'undefined') selectedScoreText.textContent = '0';
-      if (typeof draftPrompt !== 'undefined') draftPrompt.value = '';
-      return;
-    }
+      if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+        sideKeyword.textContent = '-';
+        sideBadge.textContent = '대기';
+        sideScore.textContent = '0';
+        draftPrompt.value = '';
+        return;
+      }
 
-    if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
-      selectedIndex = 0;
-    }
+      if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) selectedIndex = 0;
 
-    const row = currentData.rows[selectedIndex];
-    const selectedKeyword = row.kw || '-';
-    const intent = currentData.intent || '정보탐색형';
+      const row = currentData.rows[selectedIndex];
+      const selectedKeyword = row.kw || '-';
+      const intent = currentData.intent || '정보탐색형';
+      const categoryName = currentData.categoryName || '일반정보';
+      const titles = makeTitles(selectedKeyword, intent);
+      const related = Array.isArray(currentData.related) ? currentData.related : [];
+      const needs = Array.isArray(currentData.needs) ? currentData.needs : [];
+      const outlines = Array.isArray(currentData.outlines) ? currentData.outlines : [];
 
-    if (typeof selectedKeywordText !== 'undefined') selectedKeywordText.textContent = selectedKeyword;
-    if (typeof selectedIntentText !== 'undefined') selectedIntentText.textContent = intent;
-    if (typeof selectedScoreText !== 'undefined') selectedScoreText.textContent = row.score || 0;
+      selectedHint.textContent = selectedKeyword;
+      sideKeyword.textContent = selectedKeyword;
+      sideBadge.textContent = categoryName;
+      sideScore.textContent = row.score || 0;
+      sideReason.textContent = currentData.reason || '키워드 의도와 발행량을 기준으로 판단합니다.';
+      intentShortText.textContent = intent;
 
-    const platform = typeof platformSelect !== 'undefined' ? platformSelect.value : '티스토리';
-    const tone = typeof toneSelect !== 'undefined' ? toneSelect.value : '정보형';
-    const length = typeof lengthSelect !== 'undefined' ? lengthSelect.value : '일반 1500자';
-    const output = typeof outputSelect !== 'undefined' ? outputSelect.value : '텍스트';
-    const includeTable = typeof tableCheck !== 'undefined' && tableCheck.checked ? '표 포함' : '표 제외';
-    const includeFaq = typeof faqCheck !== 'undefined' && faqCheck.checked ? 'FAQ 포함' : 'FAQ 제외';
+      sideMetrics.innerHTML = [
+        ['월간 검색수', Number(row.monthly || 0).toLocaleString('ko-KR')],
+        ['PC 검색수', Number(row.pc || 0).toLocaleString('ko-KR')],
+        ['MO 검색수', Number(row.mo || 0).toLocaleString('ko-KR')],
+        ['블로그 발행수', Number(row.blog || 0).toLocaleString('ko-KR')],
+        ['카페 발행수', Number(row.cafe || 0).toLocaleString('ko-KR')],
+        ['광고 경쟁도', row.ad || '-']
+      ].map(item => `<div><span>${item[0]}</span><b>${item[1]}</b></div>`).join('');
 
-    const titles = typeof makeTitles === 'function'
-      ? makeTitles(selectedKeyword, intent)
-      : [
-          `${selectedKeyword} 줄거리와 재방송 정보 정리`,
-          `${selectedKeyword} 다시보기·결말·출연진 한 번에 보기`,
-          `${selectedKeyword} 시청 전 알아야 할 핵심 정보`
-        ];
+      relatedChips.innerHTML = related.map((item, index) => `<span class="chip ${index < 4 ? 'hot' : ''}">${item}</span>`).join('');
+      readerNeeds.innerHTML = needs.map(item => `<div class="title-item">${item}</div>`).join('');
+      titleList.innerHTML = titles.map(item => `<div class="title-item">${item}</div>`).join('');
+      outlineList.innerHTML = outlines.map((item, index) => `<div class="outline-item"><span>${index + 1}</span><div>${item}</div></div>`).join('');
 
-    const needs = Array.isArray(currentData.needs) ? currentData.needs : [];
-    const outlines = Array.isArray(currentData.outlines) ? currentData.outlines : [];
-    const related = Array.isArray(currentData.related) ? currentData.related : [];
+      const platform = platformSelect.value;
+      const tone = toneSelect.value;
+      const length = lengthSelect.value;
+      const output = outputSelect.value;
+      const includeTable = tableCheck.checked ? '표 포함' : '표 제외';
+      const includeFaq = faqCheck.checked ? 'FAQ 포함' : 'FAQ 제외';
+      const needsText = needs.map((item, i) => `${i + 1}. ${item}`).join('\n');
+      const titlesText = titles.map((item, i) => `${i + 1}. ${item}`).join('\n');
+      const outlinesText = outlines.map((item, i) => `${i + 1}. ${item}`).join('\n');
 
-    const needsText = needs.length
-      ? needs.map((item, i) => `${i + 1}. ${item}`).join('\n')
-      : '1. 검색자가 가장 먼저 알고 싶은 답을 첫 문단에서 바로 전달한다.';
+      draftPrompt.value = `키워드: ${selectedKeyword}
 
-    const outlinesText = outlines.length
-      ? outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')
-      : `1. ${selectedKeyword} 핵심 요약
-2. ${selectedKeyword} 기본 정보
-3. ${selectedKeyword}에서 사람들이 가장 궁금해하는 내용
-4. ${selectedKeyword} 관련 주의사항
-5. 자주 묻는 질문`;
-
-    const titleText = Array.isArray(titles)
-      ? titles.map((item, i) => `${i + 1}. ${item}`).join('\n')
-      : `${selectedKeyword} 핵심 정보 정리`;
-
-    const promptText = `키워드: ${selectedKeyword}
+카테고리: ${categoryName}
+검색의도: ${intent}
 
 플랫폼: ${platform}
 문체: ${tone}
 분량: ${length}
 출력 형식: ${output}
 추가 조건: ${includeTable}, ${includeFaq}
-
-검색의도: ${intent}
 
 경쟁 데이터:
 - 월간 검색수: ${Number(row.monthly || 0).toLocaleString('ko-KR')}
@@ -882,7 +912,7 @@ ${related.join(', ')}
 ${needsText}
 
 제목 후보:
-${titleText}
+${titlesText}
 
 목차:
 ${outlinesText}
@@ -892,123 +922,72 @@ ${outlinesText}
 기계적인 표현은 쓰지 말고 작가가 독자에게 직접 설명하는 자연어 문체로 써줘.
 문장은 주체와 대상을 분명히 넣어 자연스럽게 써줘.
 마지막에는 자료출처와 태그 10개를 붙여줘.`;
-
-    if (typeof draftPrompt !== 'undefined') {
-      draftPrompt.value = promptText;
     }
 
-  } catch (error) {
-    console.error('renderSelected 오류:', error);
-
-    if (typeof draftPrompt !== 'undefined') {
-      draftPrompt.value = '프롬프트 생성 중 오류가 발생했습니다. Console 오류를 확인하세요.';
-    }
-  }
-}
-
-          async function fetchNaverTotals(keyword) {
+    async function fetchNaverTotals(keyword) {
       const response = await fetch(`/api/keyword?keyword=${encodeURIComponent(keyword)}`);
-
-      if (!response.ok) {
-        throw new Error('네이버 API 호출 실패');
-      }
-
+      if (!response.ok) throw new Error('네이버 API 호출 실패');
       return response.json();
     }
 
-   async function renderAll(resetSelection = true) {
-  const keyword = keywordInput.value.trim() || '키워드';
-  currentData = getDataset(keyword);
+    async function renderAll(resetSelection = true) {
+      const keyword = keywordInput.value.trim() || '키워드';
+      currentData = getDataset(keyword);
 
-  if (!currentData || !Array.isArray(currentData.rows)) {
-    currentData = {
-      rows: [],
-      related: [],
-      intent: '대기',
-      needs: [],
-      outlines: [],
-      reason: '키워드를 분석하면 결과가 표시됩니다.'
-    };
-  }
+      try {
+        const updatedRows = await Promise.all(
+          currentData.rows.map(async (row) => {
+            try {
+              const apiData = await fetchNaverTotals(row.kw);
+              const realBlog = apiData.blogTotal || 0;
+              const realCafe = apiData.cafeTotal || 0;
+              const totalContent = realBlog + realCafe;
 
-  try {
-    const updatedRows = await Promise.all(
-      currentData.rows.map(async (row) => {
-        try {
-          const apiData = await fetchNaverTotals(row.kw);
+              let newScore = row.score || 50;
+              if (totalContent > 0 && row.monthly > 0) {
+                const rawScore = Math.round((row.monthly / totalContent) * 100);
+                newScore = Math.max(1, Math.min(95, rawScore));
+              }
 
-          const realBlog = apiData.blogTotal || 0;
-          const realCafe = apiData.cafeTotal || 0;
-          const totalContent = realBlog + realCafe;
+              return { ...row, blog: realBlog, cafe: realCafe, score: newScore };
+            } catch (error) {
+              console.error(`${row.kw} API 호출 실패`, error);
+              return { ...row, score: row.score || 50 };
+            }
+          })
+        );
 
-          let newScore = row.score || 50;
-
-          if (totalContent > 0 && row.monthly > 0) {
-            const rawScore = Math.round((row.monthly / totalContent) * 100);
-            newScore = Math.max(1, Math.min(95, rawScore));
-          }
-
-          return {
-            ...row,
-            blog: realBlog,
-            cafe: realCafe,
-            score: newScore
-          };
-        } catch (error) {
-          console.error(`${row.kw} API 호출 실패`, error);
-          return {
-            ...row,
-            score: row.score || 50
-          };
-        }
-      })
-    );
-
-    currentData.rows = updatedRows;
-  } catch (error) {
-    console.error(error);
-  }
-
-  if (!currentData.rows.length) {
-    selectedIndex = 0;
-    totalKeywords.textContent = '0개';
-    bestKeywordText.textContent = '-';
-    bestScoreText.textContent = '0';
-    renderTable();
-    renderSelected();
-    return;
-  }
-
-  if (resetSelection) {
-    let bestIndex = 0;
-    let bestScore = currentData.rows[0].score || 0;
-
-    currentData.rows.forEach((row, index) => {
-      if ((row.score || 0) > bestScore) {
-        bestScore = row.score || 0;
-        bestIndex = index;
+        currentData.rows = updatedRows;
+      } catch (error) {
+        console.error(error);
       }
-    });
 
-    selectedIndex = bestIndex;
-  }
+      if (!currentData.rows.length) {
+        selectedIndex = 0;
+        totalKeywords.textContent = '0개';
+        bestKeywordText.textContent = '-';
+        bestScoreText.textContent = '0';
+        renderTable();
+        renderSelected();
+        return;
+      }
 
-  if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
-    selectedIndex = 0;
-  }
+      if (resetSelection) {
+        selectedIndex = currentData.rows.reduce((bestIndex, row, index, rows) => {
+          return (row.score || 0) > (rows[bestIndex].score || 0) ? index : bestIndex;
+        }, 0);
+      }
 
-  const bestRow = currentData.rows[selectedIndex];
+      const bestRow = currentData.rows[selectedIndex];
 
-  totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
-  bestKeywordText.textContent = bestRow.kw;
-  bestScoreText.textContent = bestRow.score;
+      totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
+      bestKeywordText.textContent = bestRow.kw;
+      bestScoreText.textContent = bestRow.score;
+      intentShortText.textContent = currentData.intent;
 
-    renderTable();
-
-  setTimeout(() => {
-    renderSelected();
-  }, 0);
-}
+      renderTable();
+      setTimeout(() => renderSelected(), 0);
+    }
 
     function copyText(text, button, label) {
       navigator.clipboard.writeText(text).then(() => {
@@ -1020,36 +999,25 @@ ${outlinesText}
       });
     }
 
-    analyzeBtn.addEventListener('click', () => {
-      renderAll(true);
-    });
-
+    analyzeBtn.addEventListener('click', () => renderAll(true));
     keywordInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter') {
-        renderAll(true);
-      }
+      if (event.key === 'Enter') renderAll(true);
     });
-
-    copyPromptBtn.addEventListener('click', () => {
-      copyText(draftPrompt.value, copyPromptBtn, '원고 프롬프트 복사');
-    });
-
+    copyPromptBtn.addEventListener('click', () => copyText(draftPrompt.value, copyPromptBtn, '원고 프롬프트 복사'));
     [platformSelect, toneSelect, lengthSelect, outputSelect, tableCheck, faqCheck].forEach(control => {
       control.addEventListener('change', () => renderSelected());
     });
-
     copyKeywordsBtn.addEventListener('click', () => {
+      if (!currentData || !currentData.rows || !currentData.rows.length) return;
       const row = currentData.rows[selectedIndex];
       const text = `선택 키워드: ${row.kw}
 관련 키워드: ${currentData.related.join(', ')}
 검색의도: ${currentData.intent}
 기회점수: ${row.score}`;
-
       copyText(text, copyKeywordsBtn, '키워드 복사');
     });
-
     resetBtn.addEventListener('click', () => {
-      keywordInput.value = '고유가 지원금';
+      keywordInput.value = '';
       renderAll(true);
     });
 

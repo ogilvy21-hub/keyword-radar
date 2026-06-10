@@ -930,67 +930,152 @@ ${outlinesText}
       return response.json();
     }
 
-    async function renderAll(resetSelection = true) {
-      const keyword = keywordInput.value.trim() || '키워드';
-      currentData = getDataset(keyword);
+   async function renderAll(resetSelection = true) {
+  const keyword = keywordInput.value.trim() || '키워드';
+  currentData = getDataset(keyword);
 
-      try {
-        const updatedRows = await Promise.all(
-          currentData.rows.map(async (row) => {
-            try {
-              const apiData = await fetchNaverTotals(row.kw);
-              const realBlog = apiData.blogTotal || 0;
-              const realCafe = apiData.cafeTotal || 0;
-              const totalContent = realBlog + realCafe;
+  if (!currentData || !Array.isArray(currentData.rows)) {
+    currentData = {
+      rows: [],
+      related: [],
+      intent: '대기',
+      needs: [],
+      outlines: [],
+      reason: '키워드를 분석하면 결과가 표시됩니다.'
+    };
+  }
 
-              let newScore = row.score || 50;
+  try {
+    const apiRows = await Promise.all(
+      currentData.rows.map(async (row) => {
+        try {
+          const apiData = await fetchNaverTotals(row.kw);
 
-if (totalContent === 0) {
-  newScore = 40;
-} else if (row.monthly > 0) {
-  const rawScore = Math.round((row.monthly / totalContent) * 100);
-  newScore = Math.max(1, Math.min(95, rawScore));
-}
+          const realBlog = Number(apiData.blogTotal || 0);
+          const realCafe = Number(apiData.cafeTotal || 0);
+          const totalContent = realBlog + realCafe;
 
-              return { ...row, blog: realBlog, cafe: realCafe, score: newScore };
-            } catch (error) {
-              console.error(`${row.kw} API 호출 실패`, error);
-             return { ...row, blog: 0, cafe: 0, score: 40 };
-            }
-          })
-        );
+          return {
+            ...row,
+            blog: realBlog,
+            cafe: realCafe,
+            totalContent
+          };
+        } catch (error) {
+          console.error(`${row.kw} API 호출 실패`, error);
 
-        currentData.rows = updatedRows;
-      } catch (error) {
-        console.error(error);
-      }
+          return {
+            ...row,
+            blog: 0,
+            cafe: 0,
+            totalContent: 0,
+            score: 40
+          };
+        }
+      })
+    );
 
-      if (!currentData.rows.length) {
-        selectedIndex = 0;
-        totalKeywords.textContent = '0개';
-        bestKeywordText.textContent = '-';
-        bestScoreText.textContent = '0';
-        renderTable();
-        renderSelected();
-        return;
-      }
+    const rowsWithContent = apiRows.filter(row => Number(row.totalContent || 0) > 0);
+    const maxMonthly = Math.max(...apiRows.map(row => Number(row.monthly || 0)), 1);
 
-      if (resetSelection) {
-        selectedIndex = currentData.rows.reduce((bestIndex, row, index, rows) => {
-          return (row.score || 0) > (rows[bestIndex].score || 0) ? index : bestIndex;
-        }, 0);
-      }
+    let minContent = 0;
+    let maxContent = 0;
 
-      const bestRow = currentData.rows[selectedIndex];
-
-      totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
-      bestKeywordText.textContent = bestRow.kw;
-      bestScoreText.textContent = bestRow.score;
-      intentShortText.textContent = currentData.intent;
-
-      renderTable();
-      setTimeout(() => renderSelected(), 0);
+    if (rowsWithContent.length > 0) {
+      minContent = Math.min(...rowsWithContent.map(row => Number(row.totalContent || 0)));
+      maxContent = Math.max(...rowsWithContent.map(row => Number(row.totalContent || 0)));
     }
+
+    const scoredRows = apiRows.map(row => {
+      const totalContent = Number(row.totalContent || 0);
+
+      if (totalContent === 0) {
+        return {
+          ...row,
+          score: 40
+        };
+      }
+
+      let competitionScore = 70;
+
+      if (maxContent > minContent) {
+        const position = (totalContent - minContent) / (maxContent - minContent);
+        competitionScore = 95 - Math.round(position * 70);
+      }
+
+      const demandBonus = Math.round((Number(row.monthly || 0) / maxMonthly) * 10);
+
+      let adPenalty = 0;
+      if (row.ad === '높음') adPenalty = 8;
+      if (row.ad === '중간') adPenalty = 4;
+
+      let volumePenalty = 0;
+      if (totalContent >= 500000) volumePenalty = 18;
+      else if (totalContent >= 300000) volumePenalty = 12;
+      else if (totalContent >= 100000) volumePenalty = 7;
+      else if (totalContent >= 50000) volumePenalty = 4;
+
+      const finalScore = Math.max(
+        1,
+        Math.min(
+          95,
+          Math.round(competitionScore + demandBonus - adPenalty - volumePenalty)
+        )
+      );
+
+      return {
+        ...row,
+        score: finalScore
+      };
+    });
+
+    currentData.rows = scoredRows;
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (!currentData.rows.length) {
+    selectedIndex = 0;
+    totalKeywords.textContent = '0개';
+    bestKeywordText.textContent = '-';
+    bestScoreText.textContent = '0';
+    intentShortText.textContent = currentData.intent || '-';
+    renderTable();
+    renderSelected();
+    return;
+  }
+
+  if (resetSelection) {
+    let bestIndex = 0;
+    let bestScore = currentData.rows[0].score || 0;
+
+    currentData.rows.forEach((row, index) => {
+      if ((row.score || 0) > bestScore) {
+        bestScore = row.score || 0;
+        bestIndex = index;
+      }
+    });
+
+    selectedIndex = bestIndex;
+  }
+
+  if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
+    selectedIndex = 0;
+  }
+
+  const bestRow = currentData.rows[selectedIndex];
+
+  totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
+  bestKeywordText.textContent = bestRow.kw;
+  bestScoreText.textContent = bestRow.score;
+  intentShortText.textContent = currentData.intent || '-';
+
+  renderTable();
+
+  setTimeout(() => {
+    renderSelected();
+  }, 0);
+}
 
     function copyText(text, button, label) {
       navigator.clipboard.writeText(text).then(() => {

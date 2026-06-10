@@ -744,27 +744,49 @@ const isEntertainmentKeyword =
       ];
     }
 
-    function renderTable() {
-      keywordTable.innerHTML = currentData.rows.map((row, index) => `
-        <tr class="${index === selectedIndex ? 'selected' : ''}">
-          <td><button class="pick-btn" data-index="${index}">선택</button></td>
-          <td>${row.kw}</td>
-          <td>${formatNum(row.monthly)}</td>
-          <td>${formatNum(row.pc)}</td>
-          <td>${formatNum(row.mo)}</td>
-          <td>${formatNum(row.blog)}</td>
-          <td>${formatNum(row.cafe)}</td>
-          <td>${row.ad}</td>
-          <td><span class="${scoreClass(row.score)}">${row.score}</span></td>
-        </tr>
-      `).join('');
-      document.querySelectorAll('.pick-btn').forEach(button => {
-        button.addEventListener('click', () => {
-          selectedIndex = Number(button.dataset.index);
-          renderAll(false);
-        });
-      });
-    }
+   function renderTable() {
+  if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+    keywordTable.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align:center; padding:24px; color:#64748b;">
+          키워드를 분석하면 경쟁강도 결과가 표시됩니다.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  keywordTable.innerHTML = currentData.rows.map((row, index) => {
+    const isSelected = index === selectedIndex ? 'selected' : '';
+
+    return `
+      <tr class="${isSelected}">
+        <td><button class="pick-btn" data-index="${index}">선택</button></td>
+        <td>${row.kw || '-'}</td>
+        <td>${formatNum(row.monthly || 0)}</td>
+        <td>${formatNum(row.pc || 0)}</td>
+        <td>${formatNum(row.mo || 0)}</td>
+        <td>${formatNum(row.blog || 0)}</td>
+        <td>${formatNum(row.cafe || 0)}</td>
+        <td>${row.ad || '-'}</td>
+        <td><span class="${scoreClass(row.score || 0)}">${row.score || 0}</span></td>
+      </tr>
+    `;
+  }).join('');
+
+  keywordTable.querySelectorAll('.pick-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      selectedIndex = Number(button.dataset.index);
+
+      if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
+        selectedIndex = 0;
+      }
+
+      renderTable();
+      renderSelected();
+    });
+  });
+}
 
     function renderSelected() {
       const row = currentData.rows[selectedIndex];

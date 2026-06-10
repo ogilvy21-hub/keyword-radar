@@ -1290,8 +1290,56 @@ ${outlinesText}
 
   return response.json();
 }
-    
+    const keywordApiCache = new Map();
+
+async function fetchKeywordDataCached(keyword) {
+  const cacheKey = keyword.replace(/\s+/g, ' ').trim();
+
+  if (keywordApiCache.has(cacheKey)) {
+    return keywordApiCache.get(cacheKey);
+  }
+
+  const result = {
+    blog: 0,
+    cafe: 0,
+    totalContent: 0,
+    monthly: 0,
+    pc: 0,
+    mo: 0,
+    ad: '낮음',
+    relKeyword: keyword,
+    contentOk: false,
+    searchOk: false
+  };
+
+  try {
+    const contentData = await fetchNaverTotals(keyword);
+    result.blog = Number(contentData.blogTotal || 0);
+    result.cafe = Number(contentData.cafeTotal || 0);
+    result.totalContent = result.blog + result.cafe;
+    result.contentOk = true;
+  } catch (error) {
+    console.error(`${keyword} 블로그/카페 API 호출 실패`, error);
+  }
+
+  try {
+    const searchAdData = await fetchSearchAdData(keyword);
+    result.pc = Number(searchAdData.monthlyPc || 0);
+    result.mo = Number(searchAdData.monthlyMobile || 0);
+    result.monthly = Number(searchAdData.monthlyTotal || 0);
+    result.ad = searchAdData.competition || result.ad;
+    result.relKeyword = searchAdData.relKeyword || keyword;
+    result.searchOk = true;
+  } catch (error) {
+    console.error(`${keyword} 검색광고 API 호출 실패`, error);
+  }
+
+  keywordApiCache.set(cacheKey, result);
+  return result;
+}
   async function renderAll(resetSelection = true) {
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = '분석 중';
   const keyword = keywordInput.value.trim() || '키워드';
   currentData = getDataset(keyword);
 
@@ -1308,48 +1356,26 @@ ${outlinesText}
   }
 
   try {
-    const apiRows = await Promise.all(
-  currentData.rows.map(async (row) => {
-    let realBlog = 0;
-    let realCafe = 0;
-    let monthlyPc = 0;
-    let monthlyMobile = 0;
-    let monthlyTotal = 0;
-    let adCompetition = row.ad || '낮음';
-    let relKeyword = row.kw;
+   const targetRows = currentData.rows.slice(0, 12);
+const apiRows = [];
 
-    try {
-      const contentData = await fetchNaverTotals(row.kw);
-      realBlog = Number(contentData.blogTotal || 0);
-      realCafe = Number(contentData.cafeTotal || 0);
-    } catch (error) {
-      console.error(`${row.kw} 블로그/카페 API 호출 실패`, error);
-    }
+for (const row of targetRows) {
+  const apiData = await fetchKeywordDataCached(row.kw);
 
-    try {
-      const searchAdData = await fetchSearchAdData(row.kw);
-      monthlyPc = Number(searchAdData.monthlyPc || 0);
-      monthlyMobile = Number(searchAdData.monthlyMobile || 0);
-      monthlyTotal = Number(searchAdData.monthlyTotal || 0);
-      adCompetition = searchAdData.competition || adCompetition;
-      relKeyword = searchAdData.relKeyword || row.kw;
-    } catch (error) {
-      console.error(`${row.kw} 검색광고 API 호출 실패`, error);
-    }
-
-    return {
-      ...row,
-      monthly: monthlyTotal,
-      pc: monthlyPc,
-      mo: monthlyMobile,
-      blog: realBlog,
-      cafe: realCafe,
-      totalContent: realBlog + realCafe,
-      ad: adCompetition,
-      relKeyword
-    };
-  })
-);
+  apiRows.push({
+    ...row,
+    monthly: apiData.monthly,
+    pc: apiData.pc,
+    mo: apiData.mo,
+    blog: apiData.blog,
+    cafe: apiData.cafe,
+    totalContent: apiData.totalContent,
+    ad: apiData.ad || row.ad || '낮음',
+    relKeyword: apiData.relKeyword || row.kw,
+    contentOk: apiData.contentOk,
+    searchOk: apiData.searchOk
+  });
+}
 
   const scoredRows = apiRows.map(row => {
   const monthlyTotal = Number(row.monthly || 0);
@@ -1523,6 +1549,8 @@ const sortedRows = [...scoredRows].sort((a, b) => {
     bestKeywordText.textContent = '-';
     bestScoreText.textContent = '0';
     intentShortText.textContent = currentData.intent || '-';
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = '분석';
     renderTable();
     renderSelected();
     return;
@@ -1551,11 +1579,12 @@ const sortedRows = [...scoredRows].sort((a, b) => {
 
   renderTable();
 
-  setTimeout(() => {
-    renderSelected();
-  }, 0);
+setTimeout(() => {
+  renderSelected();
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = '분석';
+}, 0);
 }
-
     function copyText(text, button, label) {
       navigator.clipboard.writeText(text).then(() => {
         button.textContent = '복사 완료';

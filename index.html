@@ -1382,12 +1382,18 @@ ${outlinesText}
     });
 
     const sortedRows = [...scoredRows].sort((a, b) => {
-      if ((b.score || 0) !== (a.score || 0)) {
-        return (b.score || 0) - (a.score || 0);
-      }
+  const aContent = Number(a.totalContent || 0);
+  const bContent = Number(b.totalContent || 0);
 
-      return Number(a.totalContent || 0) - Number(b.totalContent || 0);
-    });
+  if (aContent === 0 && bContent > 0) return 1;
+  if (aContent > 0 && bContent === 0) return -1;
+
+  if ((b.score || 0) !== (a.score || 0)) {
+    return (b.score || 0) - (a.score || 0);
+  }
+
+  return aContent - bContent;
+});
 
     currentData.allRows = scoredRows;
     currentData.rows = sortedRows.slice(0, 6);

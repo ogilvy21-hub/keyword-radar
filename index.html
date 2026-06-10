@@ -16,7 +16,7 @@
     button, input, select { font: inherit; }
     .app {
       min-height: 100vh;
-      padding: 32px;
+      padding: 24px;
       background:
         radial-gradient(circle at 8% 0%, rgba(37,99,235,.35), transparent 34%),
         radial-gradient(circle at 100% 20%, rgba(16,185,129,.22), transparent 30%),
@@ -24,7 +24,7 @@
     }
     .hero {
       max-width: 1360px;
-      margin: 0 auto 24px;
+      margin: 0 auto 18px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) 380px;
       gap: 24px;
@@ -105,78 +105,98 @@
       font-weight: 900;
     }
     .search-zone {
-      padding: 36px;
+      padding: 22px 28px;
       background: #fff;
       border-bottom: 1px solid #e5e7eb;
     }
-    .search-zone h2 { margin: 0 0 18px; font-size: 28px; letter-spacing: -.6px; }
+    .search-zone h2 { margin: 0 0 12px; font-size: 23px; letter-spacing: -.5px; }
     .search-row {
       display: grid;
-      grid-template-columns: minmax(0,1fr) 130px;
+      grid-template-columns: minmax(0,1fr) 124px;
       gap: 10px;
-      max-width: 860px;
+      max-width: none;
     }
     .search-row input {
       width: 100%;
       border: 2px solid #dbeafe;
       outline: 0;
-      padding: 17px 18px;
-      border-radius: 18px;
-      font-size: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      font-size: 17px;
       box-shadow: 0 14px 36px rgba(37,99,235,.10);
     }
     .search-row button {
       border: 0;
-      border-radius: 18px;
+      border-radius: 16px;
       background: #111827;
       color: #fff;
       font-weight: 900;
       cursor: pointer;
     }
     .steps {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin-top: 18px;
-      max-width: 860px;
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      max-width: none;
     }
     .step {
-      padding: 13px;
-      border-radius: 16px;
+      flex: 1 1 0;
+      padding: 8px 10px;
+      border-radius: 12px;
       background: #f8fafc;
       border: 1px solid #e5e7eb;
       color: #64748b;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 900;
-      line-height: 1.35;
+      line-height: 1.2;
+      text-align: center;
+      white-space: nowrap;
     }
     .step.active { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-    .content-zone { padding: 28px 36px 36px; background: #f8fafc; }
+    .content-zone { padding: 20px 28px 30px; background: #f8fafc; }
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 18px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
     }
     .metric {
-      padding: 18px;
-      border-radius: 22px;
+      padding: 13px 15px;
+      border-radius: 16px;
       background: #111827;
       color: #fff;
     }
-    .metric p { margin: 0 0 8px; color: #93c5fd; font-size: 12px; font-weight: 900; }
-    .metric strong { display:block; font-size: 24px; letter-spacing: -.5px; word-break: keep-all; }
+    .metric p { margin: 0 0 6px; color: #93c5fd; font-size: 11px; font-weight: 900; }
+    .metric strong { display:block; font-size: 19px; line-height: 1.25; letter-spacing: -.4px; word-break: keep-all; overflow-wrap: anywhere; }
     .section-title {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 24px 0 12px;
+      margin: 18px 0 8px;
     }
     .section-title h3 { margin: 0; font-size: 18px; letter-spacing: -.3px; }
-    .hint { color: #64748b; font-size: 13px; font-weight: 800; }
+    .hint { color: #64748b; font-size: 12px; font-weight: 800; text-align:right; }
+    .micro-hint {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 9px;
+      border-radius:999px;
+      background:#eef2ff;
+      color:#3730a3;
+      font-size:11px;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .table-caption {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
     .table-wrap { overflow: auto; border-radius: 22px; border: 1px solid #e5e7eb; background: #fff; }
     table { width: 100%; border-collapse: collapse; min-width: 850px; }
-    th, td { padding: 14px 13px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 13px; white-space: nowrap; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 12px; white-space: nowrap; }
     th { background: #f1f5f9; color: #475569; font-weight: 900; }
     td { color: #334155; font-weight: 700; }
     tr.selected td { background: #eff6ff; }
@@ -209,8 +229,8 @@
       gap: 14px;
     }
     .card {
-      padding: 18px;
-      border-radius: 22px;
+      padding: 13px 15px;
+      border-radius: 16px;
       background: #fff;
       border: 1px solid #e5e7eb;
     }
@@ -237,8 +257,8 @@
       background: #f8fafc;
       border: 1px solid #e5e7eb;
       color: #334155;
-      font-size: 13px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.45;
       font-weight: 800;
     }
     .outline-item { display: flex; gap: 10px; }
@@ -369,63 +389,69 @@
     .check-item input { accent-color: #2563eb; }
 
     .judgement-card {
-      margin: 0 0 18px;
-      padding: 24px;
-      border-radius: 26px;
+      margin: 0 0 12px;
+      padding: 18px 20px;
+      border-radius: 22px;
       background: linear-gradient(135deg, #111827, #1e3a8a);
       color: #fff;
       box-shadow: 0 18px 46px rgba(15,23,42,.22);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, .72fr);
+      gap: 12px 18px;
+      align-items: start;
     }
     .judgement-label {
-      margin: 0 0 8px;
+      margin: 0 0 6px;
       color: #93c5fd;
       font-size: 12px;
       font-weight: 900;
       letter-spacing: .12em;
     }
     .judgement-card h3 {
-      margin: 0 0 10px;
-      font-size: 25px;
+      margin: 0 0 8px;
+      font-size: 22px;
       line-height: 1.35;
       letter-spacing: -.4px;
     }
     .judgement-card p {
       margin: 0;
       color: #dbeafe;
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 12px;
+      line-height: 1.45;
       font-weight: 700;
     }
+    .judgement-label, .judgement-card h3, .judgement-card > p:not(.judgement-label) { grid-column: 1; }
+    .judgement-card .strategy-list { grid-column: 2; grid-row: 1 / span 3; }
     .strategy-list {
       display: grid;
-      gap: 8px;
-      margin-top: 16px;
+      gap: 7px;
+      margin-top: 0;
     }
     .strategy-item {
-      padding: 11px 13px;
-      border-radius: 15px;
+      padding: 9px 11px;
+      border-radius: 13px;
       background: rgba(255,255,255,.1);
       border: 1px solid rgba(255,255,255,.14);
       color: #f8fafc;
-      font-size: 13px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.45;
       font-weight: 800;
     }
     .proof-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
     .proof-item {
-      padding: 16px;
-      border-radius: 20px;
+      padding: 13px 14px;
+      border-radius: 16px;
       background: #fff;
       border: 1px solid #e5e7eb;
     }
     .proof-item span {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       color: #64748b;
       font-size: 12px;
       font-weight: 900;
@@ -433,7 +459,7 @@
     .proof-item strong {
       display: block;
       color: #111827;
-      font-size: 20px;
+      font-size: 18px;
       letter-spacing: -.4px;
     }
     .pill {
@@ -460,17 +486,34 @@
     }
     .detail-table table { min-width: 1180px; }
     .table-caption {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
       color: #64748b;
-      font-size: 13px;
-      line-height: 1.6;
-      font-weight: 700;
-      margin: -4px 0 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      font-weight: 800;
+      margin: -2px 0 8px;
     }
     @media (max-width: 1100px) {
       .hero, .layout { grid-template-columns: 1fr; }
       .side { position: static; }
       h1 { font-size: 36px; }
-      .summary-grid, .builder-grid, .steps, .proof-grid { grid-template-columns: 1fr; }
+      .builder-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .app { padding: 16px; }
+      .search-zone, .content-zone { padding-left: 18px; padding-right: 18px; }
+      .steps { overflow-x: auto; padding-bottom: 2px; }
+      .step { min-width: 118px; }
+      .summary-grid, .proof-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .judgement-card { display: block; }
+      .strategy-list { margin-top: 12px; }
+    }
+    @media (max-width: 520px) {
+      .summary-grid, .proof-grid { grid-template-columns: 1fr; }
+      .search-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -523,7 +566,7 @@
           <div class="judgement-card">
             <p class="judgement-label">GEULGAM RADAR DECISION</p>
             <h3 id="judgementTitle">키워드를 분석하면 글감 판단이 표시됩니다.</h3>
-            <p id="judgementReason">검색량, 블로그·카페 발행량, 검색의도, AI답변 적합도를 함께 보고 원고 작성 가능성을 판단합니다.</p>
+            <p id="judgementReason">검색량과 발행량뿐 아니라 AI가 요약하기 좋은 글감인지 함께 판단합니다.</p>
             <div class="strategy-list" id="strategyList"></div>
           </div>
 
@@ -531,14 +574,14 @@
             <div class="proof-item"><span>월간 검색수</span><strong id="proofMonthly">0</strong></div>
             <div class="proof-item"><span>블로그·카페 발행량</span><strong id="proofContent">0</strong></div>
             <div class="proof-item"><span>입력어 관련도</span><strong id="proofRelevance">-</strong></div>
-            <div class="proof-item"><span>AI답변 적합도</span><strong id="proofAiFit">-</strong></div>
+            <div class="proof-item"><span>AI 호감도</span><strong id="proofAiFit">-</strong></div>
           </div>
 
           <div class="section-title">
             <h3>추천 글감 TOP 6</h3>
-            <span class="hint">입력어 유사도보다 글감 가능성이 높은 순서로 정렬</span>
+            <span class="micro-hint">유사도보다 글감 가능성 우선</span>
           </div>
-          <p class="table-caption">추천 글감은 검색광고 연관어, 자체 롱테일, 카테고리 확장 후보를 API 데이터로 검증한 뒤 선별합니다.</p>
+          <p class="table-caption">입력어와 바로 닮은 키워드보다, 실제 글로 만들 가능성이 높은 후보를 먼저 보여줍니다.</p>
           <div class="table-wrap">
             <table>
               <thead>
@@ -548,7 +591,7 @@
                   <th>판단</th>
                   <th>출처</th>
                   <th>관련도</th>
-                  <th>AI적합도</th>
+                  <th>AI 호감도</th>
                   <th>월간 검색수</th>
                   <th>발행량</th>
                   <th>점수</th>
@@ -560,9 +603,9 @@
 
           <div class="section-title">
             <h3>상세 후보 검증표</h3>
-            <span class="hint">AI 추천을 검증하는 근거표</span>
+            <span class="micro-hint">추천을 검증하는 데이터표</span>
           </div>
-          <p class="table-caption">후보가 입력 키워드와 조금 달라 보여도 출처, 관련도, 검색량, 발행량, 추천 이유를 함께 확인할 수 있습니다.</p>
+          <p class="table-caption">AI가 추천한 글감 후보를 데이터로 확인하는 표입니다. 출처·관련도·검색량·발행량·추천 이유를 함께 봅니다.</p>
           <div class="table-wrap detail-table">
             <table>
               <thead>
@@ -570,7 +613,7 @@
                   <th>키워드</th>
                   <th>출처</th>
                   <th>관련도</th>
-                  <th>AI적합도</th>
+                  <th>AI 호감도</th>
                   <th>월간 검색수</th>
                   <th>블로그</th>
                   <th>카페</th>
@@ -1295,6 +1338,47 @@ function makeCategoryBoostRows(keyword, currentData) {
   return [];
 }
 
+function getSeedTokens(seedKeyword) {
+  return String(seedKeyword || '')
+    .trim()
+    .split(/\s+/)
+    .map(token => normalizeKeywordKey(token))
+    .filter(token => token.length >= 2);
+}
+
+function isCandidateContextSafe(row, seedKeyword, currentData) {
+  const rowKey = normalizeKeywordKey(row?.kw || '');
+  const seedKey = normalizeKeywordKey(seedKeyword || currentData?.seedKeyword || '');
+  const categoryName = currentData?.categoryName || '';
+
+  if (!rowKey || !seedKey) return false;
+  if (rowKey === seedKey || rowKey.includes(seedKey) || seedKey.includes(rowKey)) return true;
+
+  if (categoryName === '쇼핑·패션·뷰티') {
+    const core = getCommerceCoreFromKeyword(seedKeyword || currentData?.seedKeyword || '');
+    const coreKey = normalizeKeywordKey(core);
+    return Boolean(coreKey && rowKey.includes(coreKey));
+  }
+
+  const tokens = getSeedTokens(seedKeyword || currentData?.seedKeyword || '');
+  const matchedToken = tokens.some(token => rowKey.includes(token));
+
+  if (matchedToken) return true;
+
+  // 자체 확장 후보는 입력어를 바탕으로 만든 후보이므로 통과시킨다.
+  // 검색광고 related 후보가 입력어와 전혀 겹치지 않으면 TOP 추천에서 제외한다.
+  if (row.fromExpansion || row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) return true;
+
+  return false;
+}
+
+function filterContextSafeRows(rows, seedKeyword, currentData) {
+  const safeRows = (rows || []).filter(row => isCandidateContextSafe(row, seedKeyword, currentData));
+
+  // 필터가 너무 강해서 후보가 거의 사라지는 경우를 막기 위한 안전장치.
+  return safeRows.length >= 6 ? safeRows : (rows || []);
+}
+
 function interleaveRows(firstRows, secondRows) {
   const result = [];
   const maxLength = Math.max((firstRows || []).length, (secondRows || []).length);
@@ -1626,16 +1710,22 @@ function getDataset(keyword) {
       const highWords = ['기준', '방법', '해결', '비교', '조건', '대상', '서류', '지급일', '사용처', '후기', '주의사항', '체형커버', '코디', '브랜드', '주차', '영업시간', '예약', '끓이는법', '만드는법', '재료', '효능'];
       const midWords = ['추천', '가격', '사이즈', '원인', '정리', '전망', '맛집', '카페', '레시피'];
 
-      if (highWords.some(word => key.includes(normalizeKeywordKey(word)))) return '높음';
-      if (intent && ['조건확인형', '문제해결형', '실행방법형', '방문탐색형', '위험확인형'].includes(intent)) return '높음';
-      if (midWords.some(word => key.includes(normalizeKeywordKey(word)))) return '중간';
-      return '낮음';
+      if (highWords.some(word => key.includes(normalizeKeywordKey(word)))) return 'AI호감도 높음';
+      if (intent && ['조건확인형', '문제해결형', '실행방법형', '방문탐색형', '위험확인형'].includes(intent)) return 'AI호감도 높음';
+      if (midWords.some(word => key.includes(normalizeKeywordKey(word)))) return 'AI호감도 중간';
+
+      const wordCount = String(row.kw || '').trim().split(/\s+/).filter(Boolean).length;
+      const totalContent = Number(row.totalContent || 0);
+      const monthly = Number(row.monthly || 0);
+      if (wordCount <= 1 && totalContent > 100000 && monthly > 1000) return 'AI가 싫어함';
+
+      return 'AI호감도 낮음';
     }
 
     function getPillClass(value) {
-      if (['황금키워드', '준황금키워드', '우수키워드', '높음', '매우 가까움'].includes(value)) return 'pill green';
-      if (['도전키워드', '선점키워드', '소형기회', '가까움', '중간', '확장 후보'].includes(value)) return 'pill yellow';
-      if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요', '낮음', '넓은 관련'].includes(value)) return 'pill red';
+      if (['황금키워드', '준황금키워드', '우수키워드', 'AI호감도 높음', '매우 가까움'].includes(value)) return 'pill green';
+      if (['도전키워드', '선점키워드', '소형기회', '가까움', 'AI호감도 중간', '확장 후보'].includes(value)) return 'pill yellow';
+      if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요', 'AI호감도 낮음', 'AI가 싫어함', '넓은 관련'].includes(value)) return 'pill red';
       return 'pill';
     }
 
@@ -1659,7 +1749,7 @@ function getDataset(keyword) {
       }
 
       if (type === '선점키워드' || type === '선점후보' || type === '관찰키워드') {
-        return `검색량은 크지 않지만 경쟁이 낮아 먼저 잡아둘 수 있는 후보입니다. AI답변 적합도는 ${aiFit}입니다.`;
+        return `검색량은 크지 않지만 경쟁이 낮아 먼저 잡아둘 수 있는 후보입니다. AI 호감도은 ${aiFit}입니다.`;
       }
 
       if (type === '경쟁높음' || type === '경쟁과다') {
@@ -1681,15 +1771,15 @@ function getDataset(keyword) {
 
       if (type === '황금키워드' || type === '준황금키워드' || type === '우수키워드') {
         return {
-          title: `${keyword}는 글감 후보로 검토할 만합니다`,
+          title: `${keyword}, 글감 후보로 검토할 만합니다`,
           reason: `월간 검색수 ${monthly.toLocaleString('ko-KR')}회, 블로그·카페 발행량 ${totalContent.toLocaleString('ko-KR')}건입니다. 검색량 대비 경쟁 부담이 상대적으로 낮습니다.`,
-          strategy: ['첫 문단에서 검색자의 질문에 바로 답하세요.', '표와 FAQ로 확인 욕구를 줄이면 AI 검색 화면에 맞는 글이 됩니다.', '제목에는 대상·조건·상황을 구체적으로 넣어야 합니다.']
+          strategy: ['첫 문단에서 검색자의 질문에 바로 답하세요.', '표와 FAQ로 확인 욕구를 줄이면 AI가 요약하기 좋은 글이 됩니다.', '제목에는 대상·조건·상황을 구체적으로 넣어야 합니다.']
         };
       }
 
       if (type === '선점키워드' || type === '선점후보' || type === '관찰키워드' || type === '소형기회') {
         return {
-          title: `${keyword}는 선점형 글감으로 볼 수 있습니다`,
+          title: `${keyword}, 선점형 글감으로 볼 수 있습니다`,
           reason: `검색량은 아직 크지 않지만 경쟁이 낮거나 의도가 구체적입니다. 단기 유입보다 먼저 쌓아두는 글감에 가깝습니다.`,
           strategy: ['짧은 글보다 질문과 답변을 촘촘하게 넣으세요.', '관련 후보를 함께 묶어 하나의 완성형 글로 확장하세요.', '검색량이 커지는지 나중에 다시 분석하면 좋습니다.']
         };
@@ -1697,14 +1787,14 @@ function getDataset(keyword) {
 
       if (type === '경쟁높음' || type === '경쟁과다') {
         return {
-          title: `${keyword}는 바로 쓰기에는 경쟁이 높습니다`,
+          title: `${keyword}, 바로 쓰기에는 경쟁이 높습니다`,
           reason: `월간 검색수는 ${monthly.toLocaleString('ko-KR')}회지만 블로그·카페 발행량이 ${totalContent.toLocaleString('ko-KR')}건입니다. 단독 키워드보다 롱테일 전환이 필요합니다.`,
           strategy: ['입력어에 연령, 체형, 지역, 상황, 문제 조건을 붙이세요.', '검색량이 조금 낮아도 질문이 선명한 후보를 우선하세요.', '아래 상세 후보표에서 경쟁비율이 낮은 후보를 확인하세요.']
         };
       }
 
       return {
-        title: `${keyword}는 추천 강도가 낮습니다`,
+        title: `${keyword}, 추천 강도가 낮습니다`,
         reason: '검색량이 낮거나 API 데이터가 충분하지 않아 바로 쓰기에는 판단 근거가 약합니다.',
         strategy: ['더 구체적인 검색어로 다시 분석하세요.', '대상, 상황, 지역, 계절을 붙인 롱테일로 전환하세요.', '상세 후보표에서 확장 후보의 출처와 관련도를 확인하세요.']
       };
@@ -2002,12 +2092,14 @@ async function fetchKeywordDataCached(keyword) {
       currentData
     );
 
-    currentData.rows = mergedRows.slice(0, 50);
-    currentData.totalCandidateCount = mergedRows.length;
+    const contextSafeRows = filterContextSafeRows(mergedRows, keyword, currentData);
+
+    currentData.rows = contextSafeRows.slice(0, 50);
+    currentData.totalCandidateCount = contextSafeRows.length;
 
     // 3. 화면의 관련 키워드 칩도 병합 후보 기준으로 반영한다.
     currentData.related = uniqueByCompact([
-      ...mergedRows.map(row => row.kw),
+      ...contextSafeRows.map(row => row.kw),
       ...(currentData.related || [])
     ]).slice(0, 16);
 
@@ -2269,6 +2361,7 @@ async function fetchKeywordDataCached(keyword) {
   intentShortText.textContent = bestRow.opportunityType || currentData.intent || '-';
 
   renderTable();
+  renderDetailTable();
 
   setTimeout(() => {
     renderSelected();

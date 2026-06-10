@@ -1362,10 +1362,14 @@ ${outlinesText}
       if (row.ad === '중간') adPenalty = 4;
 
       let volumePenalty = 0;
-      if (totalContent >= 500000) volumePenalty = 18;
-      else if (totalContent >= 300000) volumePenalty = 12;
-      else if (totalContent >= 100000) volumePenalty = 7;
-      else if (totalContent >= 50000) volumePenalty = 4;
+
+if (totalContent >= 1000000) volumePenalty = 45;
+else if (totalContent >= 700000) volumePenalty = 38;
+else if (totalContent >= 500000) volumePenalty = 32;
+else if (totalContent >= 300000) volumePenalty = 25;
+else if (totalContent >= 100000) volumePenalty = 15;
+else if (totalContent >= 50000) volumePenalty = 8;
+else if (totalContent >= 10000) volumePenalty = 3;
 
       const finalScore = Math.max(
         1,

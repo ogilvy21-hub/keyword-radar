@@ -745,47 +745,59 @@ const isEntertainmentKeyword =
     }
 
    function renderTable() {
-  if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+  try {
+    if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+      keywordTable.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center; padding:24px; color:#64748b;">
+            키워드를 분석하면 경쟁강도 결과가 표시됩니다.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    keywordTable.innerHTML = currentData.rows.map((row, index) => {
+      const selectedClass = index === selectedIndex ? 'selected' : '';
+      const score = Number(row.score || 0);
+      const scoreClassName = score >= 85 ? 'score' : score >= 70 ? 'score mid' : 'score low';
+
+      return `
+        <tr class="${selectedClass}">
+          <td>
+            <button class="pick-btn" data-index="${index}">선택</button>
+          </td>
+          <td>${row.kw || '-'}</td>
+          <td>${Number(row.monthly || 0).toLocaleString('ko-KR')}</td>
+          <td>${Number(row.pc || 0).toLocaleString('ko-KR')}</td>
+          <td>${Number(row.mo || 0).toLocaleString('ko-KR')}</td>
+          <td>${Number(row.blog || 0).toLocaleString('ko-KR')}</td>
+          <td>${Number(row.cafe || 0).toLocaleString('ko-KR')}</td>
+          <td>${row.ad || '-'}</td>
+          <td>
+            <span class="${scoreClassName}">${score}</span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    keywordTable.querySelectorAll('.pick-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        selectedIndex = Number(button.dataset.index);
+        renderTable();
+        renderSelected();
+      });
+    });
+  } catch (error) {
+    console.error('renderTable 오류:', error);
     keywordTable.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align:center; padding:24px; color:#64748b;">
-          키워드를 분석하면 경쟁강도 결과가 표시됩니다.
+        <td colspan="9" style="text-align:center; padding:24px; color:#ef4444;">
+          표를 그리는 중 오류가 발생했습니다.
         </td>
       </tr>
     `;
-    return;
   }
-
-  keywordTable.innerHTML = currentData.rows.map((row, index) => {
-    const isSelected = index === selectedIndex ? 'selected' : '';
-
-    return `
-      <tr class="${isSelected}">
-        <td><button class="pick-btn" data-index="${index}">선택</button></td>
-        <td>${row.kw || '-'}</td>
-        <td>${formatNum(row.monthly || 0)}</td>
-        <td>${formatNum(row.pc || 0)}</td>
-        <td>${formatNum(row.mo || 0)}</td>
-        <td>${formatNum(row.blog || 0)}</td>
-        <td>${formatNum(row.cafe || 0)}</td>
-        <td>${row.ad || '-'}</td>
-        <td><span class="${scoreClass(row.score || 0)}">${row.score || 0}</span></td>
-      </tr>
-    `;
-  }).join('');
-
-  keywordTable.querySelectorAll('.pick-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      selectedIndex = Number(button.dataset.index);
-
-      if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
-        selectedIndex = 0;
-      }
-
-      renderTable();
-      renderSelected();
-    });
-  });
 }
 
     function renderSelected() {

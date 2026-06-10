@@ -888,6 +888,83 @@ function uniqueByCompact(list) {
   });
 }
 
+function normalizeKeywordKey(value) {
+  return String(value || '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+}
+
+function parseMetricValue(value) {
+  if (typeof value === 'number') return value;
+  const text = String(value || '').replace(/,/g, '').trim();
+
+  if (!text) return 0;
+  if (text.includes('<')) return 10;
+
+  const number = Number(text.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(number) ? number : 0;
+}
+
+function uniqueRowsByCompact(rows) {
+  const seen = new Set();
+
+  return (rows || []).filter(row => {
+    const key = normalizeKeywordKey(row && row.kw);
+
+    if (!key || seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function convertRelatedToRows(relatedList) {
+  return (relatedList || [])
+    .map(item => {
+      const source = typeof item === 'string' ? { relKeyword: item } : (item || {});
+      const kw = source.relKeyword || source.keyword || source.kw || '';
+
+      return {
+        kw,
+        monthly: parseMetricValue(source.monthlyTotal || source.monthly || source.monthlyCnt),
+        pc: parseMetricValue(source.monthlyPc || source.pc || source.monthlyPcQcCnt),
+        mo: parseMetricValue(source.monthlyMobile || source.mo || source.monthlyMobileQcCnt),
+        blog: 0,
+        cafe: 0,
+        totalContent: 0,
+        ad: source.competition || source.ad || source.compIdx || '낮음',
+        score: 0,
+        fromRelated: true
+      };
+    })
+    .filter(row => row.kw);
+}
+
+function filterRelatedRows(rows, seedKeyword) {
+  const seedKey = normalizeKeywordKey(seedKeyword);
+
+  return (rows || []).filter(row => {
+    const key = normalizeKeywordKey(row.kw);
+
+    if (!key || key.length < 2) return false;
+
+    // 검색광고 API가 준 연관어는 우선 살린다.
+    // 단, 너무 짧거나 빈 값인 키워드는 제외한다.
+    if (seedKey && key.includes(seedKey)) return true;
+
+    return true;
+  });
+}
+
+function mergeCandidateRows(baseRows, relatedRows) {
+  const mergedRows = uniqueRowsByCompact([
+    ...(relatedRows || []),
+    ...(baseRows || [])
+  ]);
+
+  return mergedRows;
+}
+
 function stripTrailingIntentWords(keyword, rule) {
   let base = keyword.trim().replace(/\s+/g, ' ');
   const removeWords = [...new Set([...(rule.removeWords || []), ...(rule.intents || [])])]
@@ -1340,6 +1417,7 @@ async function fetchKeywordDataCached(keyword) {
   async function renderAll(resetSelection = true) {
   analyzeBtn.disabled = true;
   analyzeBtn.textContent = '분석 중';
+
   const keyword = keywordInput.value.trim() || '키워드';
   currentData = getDataset(keyword);
 
@@ -1356,189 +1434,215 @@ async function fetchKeywordDataCached(keyword) {
   }
 
   try {
-   const targetRows = currentData.rows.slice(0, 12);
-const apiRows = [];
+    // 1. 원 키워드로 검색광고 API를 먼저 호출해서 실제 연관키워드를 확보한다.
+    let seedAdData = null;
 
-for (const row of targetRows) {
-  const apiData = await fetchKeywordDataCached(row.kw);
+    try {
+      seedAdData = await fetchSearchAdData(keyword);
+    } catch (error) {
+      console.warn(`${keyword} 원 키워드 검색광고 API 호출 실패`, error);
+    }
 
-  apiRows.push({
-    ...row,
-    monthly: apiData.monthly,
-    pc: apiData.pc,
-    mo: apiData.mo,
-    blog: apiData.blog,
-    cafe: apiData.cafe,
-    totalContent: apiData.totalContent,
-    ad: apiData.ad || row.ad || '낮음',
-    relKeyword: apiData.relKeyword || row.kw,
-    contentOk: apiData.contentOk,
-    searchOk: apiData.searchOk
-  });
-}
+    // 2. 검색광고 related 후보와 기존 자체 조합 후보를 합친다.
+    const relatedRows = convertRelatedToRows(seedAdData?.related || []);
+    const filteredRelatedRows = filterRelatedRows(relatedRows, keyword);
+    const mergedRows = mergeCandidateRows(currentData.rows, filteredRelatedRows);
 
-  const scoredRows = apiRows.map(row => {
-  const monthlyTotal = Number(row.monthly || 0);
-  const totalContent = Number(row.totalContent || 0);
+    currentData.rows = mergedRows.slice(0, 30);
+    currentData.totalCandidateCount = mergedRows.length;
 
-  let score = 1;
-  let opportunityType = '검증필요';
+    // 3. 화면의 관련 키워드 칩도 실제 related 후보를 우선 반영한다.
+    currentData.related = uniqueByCompact([
+      ...filteredRelatedRows.map(row => row.kw),
+      ...(currentData.related || [])
+    ]).slice(0, 16);
 
-  if (!row.contentOk || !row.searchOk) {
-    return {
-      ...row,
-      score: 20,
-      opportunityType: '검증필요'
+    // 4. API 검증 대상은 일단 12개로 유지한다.
+    const targetRows = currentData.rows.slice(0, 12);
+    const apiRows = [];
+
+    for (const row of targetRows) {
+      const apiData = await fetchKeywordDataCached(row.kw);
+
+      apiRows.push({
+        ...row,
+        monthly: parseMetricValue(apiData.monthly || row.monthly || 0),
+        pc: parseMetricValue(apiData.pc || row.pc || 0),
+        mo: parseMetricValue(apiData.mo || row.mo || 0),
+        blog: parseMetricValue(apiData.blog || row.blog || 0),
+        cafe: parseMetricValue(apiData.cafe || row.cafe || 0),
+        totalContent: parseMetricValue(apiData.totalContent || ((apiData.blog || 0) + (apiData.cafe || 0)) || row.totalContent || 0),
+        ad: apiData.ad || row.ad || '낮음',
+        relKeyword: apiData.relKeyword || row.relKeyword || row.kw,
+        contentOk: Boolean(apiData.contentOk),
+        searchOk: Boolean(apiData.searchOk),
+        fromRelated: Boolean(row.fromRelated)
+      });
+    }
+
+    const scoredRows = apiRows.map(row => {
+      const monthlyTotal = Number(row.monthly || 0);
+      const totalContent = Number(row.totalContent || 0);
+
+      let score = 1;
+      let opportunityType = '검증필요';
+
+      if (!row.contentOk || !row.searchOk) {
+        return {
+          ...row,
+          score: 20,
+          opportunityType: '검증필요'
+        };
+      }
+
+      // 검색량이 거의 없는 키워드는 황금키워드가 아님
+      if (monthlyTotal === 0) {
+        score = 5;
+        opportunityType = '검색량없음';
+      } else if (monthlyTotal < 100) {
+        score = totalContent === 0 ? 18 : 10;
+        opportunityType = '관찰키워드';
+      } else if (monthlyTotal < 300) {
+        score = totalContent === 0 ? 28 : 18;
+        opportunityType = '선점후보';
+      } else if (monthlyTotal < 1000) {
+        if (totalContent === 0) {
+          score = 38;
+          opportunityType = '선점키워드';
+        } else if (totalContent <= 1000) {
+          score = 55;
+          opportunityType = '소형기회';
+        } else if (totalContent <= 10000) {
+          score = 42;
+          opportunityType = '도전키워드';
+        } else {
+          score = 20;
+          opportunityType = '경쟁높음';
+        }
+      } else if (monthlyTotal < 3000) {
+        if (totalContent === 0) {
+          score = 50;
+          opportunityType = '선점키워드';
+        } else if (totalContent <= 1000) {
+          score = 78;
+          opportunityType = '준황금키워드';
+        } else if (totalContent <= 3000) {
+          score = 70;
+          opportunityType = '우수키워드';
+        } else if (totalContent <= 10000) {
+          score = 58;
+          opportunityType = '도전키워드';
+        } else if (totalContent <= 30000) {
+          score = 40;
+          opportunityType = '경쟁높음';
+        } else {
+          score = 18;
+          opportunityType = '경쟁과다';
+        }
+      } else if (monthlyTotal < 10000) {
+        if (totalContent === 0) {
+          score = 58;
+          opportunityType = '선점키워드';
+        } else if (totalContent <= 1000) {
+          score = 90;
+          opportunityType = '황금키워드';
+        } else if (totalContent <= 3000) {
+          score = 84;
+          opportunityType = '황금키워드';
+        } else if (totalContent <= 10000) {
+          score = 72;
+          opportunityType = '준황금키워드';
+        } else if (totalContent <= 30000) {
+          score = 55;
+          opportunityType = '도전키워드';
+        } else if (totalContent <= 100000) {
+          score = 32;
+          opportunityType = '경쟁높음';
+        } else {
+          score = 12;
+          opportunityType = '경쟁과다';
+        }
+      } else {
+        if (totalContent === 0) {
+          score = 65;
+          opportunityType = '선점키워드';
+        } else if (totalContent <= 1000) {
+          score = 95;
+          opportunityType = '황금키워드';
+        } else if (totalContent <= 3000) {
+          score = 92;
+          opportunityType = '황금키워드';
+        } else if (totalContent <= 10000) {
+          score = 82;
+          opportunityType = '준황금키워드';
+        } else if (totalContent <= 30000) {
+          score = 65;
+          opportunityType = '도전키워드';
+        } else if (totalContent <= 100000) {
+          score = 42;
+          opportunityType = '경쟁높음';
+        } else {
+          score = 15;
+          opportunityType = '경쟁과다';
+        }
+      }
+
+      let adPenalty = 0;
+      if (row.ad === '높음') adPenalty = 8;
+      if (row.ad === '중간') adPenalty = 4;
+
+      const finalScore = Math.max(1, Math.min(95, score - adPenalty));
+
+      return {
+        ...row,
+        score: finalScore,
+        opportunityType
+      };
+    });
+
+    const typeRank = {
+      '황금키워드': 7,
+      '준황금키워드': 6,
+      '우수키워드': 5,
+      '도전키워드': 4,
+      '선점키워드': 3,
+      '소형기회': 3,
+      '선점후보': 2,
+      '관찰키워드': 1,
+      '경쟁높음': 0,
+      '경쟁과다': -1,
+      '검색량없음': -2,
+      '검증필요': -3
     };
-  }
 
-  // 검색량이 거의 없는 키워드는 황금키워드가 아님
-  if (monthlyTotal === 0) {
-    score = 5;
-    opportunityType = '검색량없음';
-  } else if (monthlyTotal < 100) {
-    score = totalContent === 0 ? 18 : 10;
-    opportunityType = '관찰키워드';
-  } else if (monthlyTotal < 300) {
-    score = totalContent === 0 ? 28 : 18;
-    opportunityType = '선점후보';
-  } else if (monthlyTotal < 1000) {
-    if (totalContent === 0) {
-      score = 38;
-      opportunityType = '선점키워드';
-    } else if (totalContent <= 1000) {
-      score = 55;
-      opportunityType = '소형기회';
-    } else if (totalContent <= 10000) {
-      score = 42;
-      opportunityType = '도전키워드';
-    } else {
-      score = 20;
-      opportunityType = '경쟁높음';
-    }
-  } else if (monthlyTotal < 3000) {
-    if (totalContent === 0) {
-      score = 50;
-      opportunityType = '선점키워드';
-    } else if (totalContent <= 1000) {
-      score = 78;
-      opportunityType = '준황금키워드';
-    } else if (totalContent <= 3000) {
-      score = 70;
-      opportunityType = '우수키워드';
-    } else if (totalContent <= 10000) {
-      score = 58;
-      opportunityType = '도전키워드';
-    } else if (totalContent <= 30000) {
-      score = 40;
-      opportunityType = '경쟁높음';
-    } else {
-      score = 18;
-      opportunityType = '경쟁과다';
-    }
-  } else if (monthlyTotal < 10000) {
-    if (totalContent === 0) {
-      score = 58;
-      opportunityType = '선점키워드';
-    } else if (totalContent <= 1000) {
-      score = 90;
-      opportunityType = '황금키워드';
-    } else if (totalContent <= 3000) {
-      score = 84;
-      opportunityType = '황금키워드';
-    } else if (totalContent <= 10000) {
-      score = 72;
-      opportunityType = '준황금키워드';
-    } else if (totalContent <= 30000) {
-      score = 55;
-      opportunityType = '도전키워드';
-    } else if (totalContent <= 100000) {
-      score = 32;
-      opportunityType = '경쟁높음';
-    } else {
-      score = 12;
-      opportunityType = '경쟁과다';
-    }
-  } else {
-    if (totalContent === 0) {
-      score = 65;
-      opportunityType = '선점키워드';
-    } else if (totalContent <= 1000) {
-      score = 95;
-      opportunityType = '황금키워드';
-    } else if (totalContent <= 3000) {
-      score = 92;
-      opportunityType = '황금키워드';
-    } else if (totalContent <= 10000) {
-      score = 82;
-      opportunityType = '준황금키워드';
-    } else if (totalContent <= 30000) {
-      score = 65;
-      opportunityType = '도전키워드';
-    } else if (totalContent <= 100000) {
-      score = 42;
-      opportunityType = '경쟁높음';
-    } else {
-      score = 15;
-      opportunityType = '경쟁과다';
-    }
-  }
+    const sortedRows = [...scoredRows].sort((a, b) => {
+      const aRank = typeRank[a.opportunityType] ?? 0;
+      const bRank = typeRank[b.opportunityType] ?? 0;
 
-  let adPenalty = 0;
-  if (row.ad === '높음') adPenalty = 8;
-  if (row.ad === '중간') adPenalty = 4;
+      if (bRank !== aRank) {
+        return bRank - aRank;
+      }
 
-  const finalScore = Math.max(1, Math.min(95, score - adPenalty));
+      if ((b.score || 0) !== (a.score || 0)) {
+        return (b.score || 0) - (a.score || 0);
+      }
 
-  return {
-    ...row,
-    score: finalScore,
-    opportunityType
-  };
-});
+      const aMonthly = Number(a.monthly || 0);
+      const bMonthly = Number(b.monthly || 0);
 
-const typeRank = {
-  '황금키워드': 7,
-  '준황금키워드': 6,
-  '우수키워드': 5,
-  '도전키워드': 4,
-  '선점키워드': 3,
-  '소형기회': 3,
-  '선점후보': 2,
-  '관찰키워드': 1,
-  '경쟁높음': 0,
-  '경쟁과다': -1,
-  '검색량없음': -2,
-  '검증필요': -3
-};
+      if (bMonthly !== aMonthly) {
+        return bMonthly - aMonthly;
+      }
 
-const sortedRows = [...scoredRows].sort((a, b) => {
-  const aRank = typeRank[a.opportunityType] ?? 0;
-  const bRank = typeRank[b.opportunityType] ?? 0;
+      const aContent = Number(a.totalContent || 0);
+      const bContent = Number(b.totalContent || 0);
 
-  if (bRank !== aRank) {
-    return bRank - aRank;
-  }
+      return aContent - bContent;
+    });
 
-  if ((b.score || 0) !== (a.score || 0)) {
-    return (b.score || 0) - (a.score || 0);
-  }
-
-  const aMonthly = Number(a.monthly || 0);
-  const bMonthly = Number(b.monthly || 0);
-
-  if (bMonthly !== aMonthly) {
-    return bMonthly - aMonthly;
-  }
-
-  const aContent = Number(a.totalContent || 0);
-  const bContent = Number(b.totalContent || 0);
-
-  return aContent - bContent;
-});
-    
     currentData.allRows = scoredRows;
     currentData.rows = sortedRows.slice(0, 6);
+
   } catch (error) {
     console.error(error);
   }
@@ -1549,10 +1653,10 @@ const sortedRows = [...scoredRows].sort((a, b) => {
     bestKeywordText.textContent = '-';
     bestScoreText.textContent = '0';
     intentShortText.textContent = currentData.intent || '-';
-    analyzeBtn.disabled = false;
-    analyzeBtn.textContent = '분석';
     renderTable();
     renderSelected();
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = '분석';
     return;
   }
 
@@ -1579,11 +1683,11 @@ const sortedRows = [...scoredRows].sort((a, b) => {
 
   renderTable();
 
-setTimeout(() => {
-  renderSelected();
-  analyzeBtn.disabled = false;
-  analyzeBtn.textContent = '분석';
-}, 0);
+  setTimeout(() => {
+    renderSelected();
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = '분석';
+  }, 0);
 }
     function copyText(text, button, label) {
       navigator.clipboard.writeText(text).then(() => {

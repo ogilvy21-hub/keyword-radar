@@ -484,7 +484,7 @@
       color: #475569;
       font-weight: 700;
     }
-    .detail-table table { min-width: 1180px; }
+    .detail-table table { min-width: 1280px; }
     .recommend-empty {
       padding: 22px 20px;
       border-radius: 22px;
@@ -626,6 +626,7 @@
               <thead>
                 <tr>
                   <th>키워드</th>
+                  <th>맥락</th>
                   <th>출처</th>
                   <th>관련도</th>
                   <th>AI 호감도</th>
@@ -930,11 +931,21 @@
         reason: '생활정보 키워드는 바로 따라 할 수 있는 절차와 비용, 주의사항을 함께 보여주는 글이 좋습니다.'
       },
       {
+        key: 'career',
+        name: '직장·채용',
+        detect: /신입사원|신입|채용|취업|면접|자소서|이력서|직장인|회사생활|퇴사|연봉|인턴|입사|온보딩|교육|직무|커리어|인사|HR/i,
+        intent: '직장정보형',
+        suffixes: ['교육', '온보딩', '면접', '자소서', '후기', '준비물'],
+        needs: ['지원이나 입사 전에 무엇을 준비해야 하는지 알고 싶다', '회사 생활이나 교육 과정의 실제 정보를 확인하고 싶다', '면접·자소서·후기처럼 바로 필요한 답을 찾고 싶다', '실수하기 쉬운 부분과 체크리스트를 보고 싶다'],
+        outlines: ['핵심 요약', '대상과 상황', '준비해야 할 것', '실제 절차', '주의사항', 'FAQ'],
+        reason: '직장·채용 키워드는 대상, 절차, 준비물, 실제 후기, 주의사항이 검색 의도의 중심입니다.'
+      },
+      {
         key: 'default',
         name: '일반정보',
         detect: /.*/,
         intent: '정보탐색형',
-        suffixes: ['뜻', '방법', '비교', '추천', '후기', '주의사항'],
+        suffixes: [],
         needs: ['핵심 의미를 빠르게 알고 싶다', '비슷한 개념과 차이를 확인하고 싶다', '실제로 어떻게 적용하는지 예시를 보고 싶다', '주의할 점을 미리 알고 싶다'],
         outlines: ['핵심 요약', '뜻과 기본 개념', '방법과 실제 예시', '비교 포인트', '주의사항', 'FAQ'],
         reason: '일반 정보 키워드는 정의보다 실제 예시와 주의사항을 함께 넣을 때 검색 의도에 더 잘 맞습니다.'
@@ -1071,12 +1082,23 @@
     intents: ['방법', '비용', '주의사항', '후기', '비교', '체크리스트'],
     removeWords: ['방법', '비용', '주의사항', '후기', '비교', '체크리스트']
   },
+  career: {
+    coreHints: ['신입사원', '채용', '취업', '면접', '자소서', '이력서', '직장인', '회사생활', '인턴', '온보딩'],
+    modifiers: {
+      target: ['신입', '경력', '중고신입', '인턴', '직장인'],
+      situation: ['첫출근', '입사', '교육', '면접', '자소서']
+    },
+    intents: ['준비물', '후기', '체크리스트', '교육', '면접', '자소서'],
+    removeWords: ['준비물', '후기', '체크리스트', '교육', '면접', '자소서']
+  },
 
   default: {
     coreHints: [],
     modifiers: {},
-    intents: ['뜻', '방법', '비교', '추천', '후기', '주의사항'],
-    removeWords: ['뜻', '방법', '비교', '추천', '후기', '주의사항']
+    // 일반정보는 맥락이 확정되지 않으면 자체 접미어 조합을 만들지 않는다.
+    // 예: 임의 키워드 입력 시 '뜻/방법/비교/추천'이 붙어 어색해지는 문제 방지.
+    intents: [],
+    removeWords: []
   }
 };
 
@@ -1199,6 +1221,10 @@ function getCandidatePriorityScore(row, currentData) {
   const categoryName = currentData?.categoryName || '';
   let priority = 0;
 
+  if (row.fromDisambiguation) priority += 35;
+  if (row.contextType === 'broadcast') priority += 10;
+  if (row.contextType === 'meaning') priority -= 5;
+
   if (row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) priority += 40;
   if (row.fromExpansion) priority += 20;
   if (row.fromRelated) priority += 5;
@@ -1232,7 +1258,8 @@ function getCandidatePriorityMode(currentData) {
     '뉴스·이슈',
     '방송·콘텐츠',
     '교육·시험',
-    '법률·계약'
+    '법률·계약',
+    '직장·채용'
   ];
 
   if (expansionFirstCategories.includes(categoryName)) return 'expansionFirst';
@@ -1254,6 +1281,160 @@ function makeRowFromKeyword(kw, extra = {}) {
     score: 0,
     ...extra
   };
+}
+
+
+const DISAMBIGUATION_CONTEXTS = [
+  {
+    type: 'broadcast',
+    label: '방송·드라마',
+    terms: ['드라마', '출연진', '등장인물', '줄거리', '몇부작', '재방송', 'OTT', 'JTBC', 'ENA', '티빙', '넷플릭스']
+  },
+  {
+    type: 'webtoon',
+    label: '웹툰·원작',
+    terms: ['웹툰', '원작', '작가', '결말', '회차', '네이버웹툰']
+  },
+  {
+    type: 'meaning',
+    label: '용어·의미',
+    terms: ['뜻', '의미', '유래', '사례']
+  },
+  {
+    type: 'event',
+    label: '행사·이벤트',
+    terms: ['이벤트', '행사', '캠페인', '2016', '2026']
+  },
+  {
+    type: 'person',
+    label: '인물·프로필',
+    terms: ['프로필', '나이', '학력', '고향', '인스타', '소속사']
+  },
+  {
+    type: 'brand',
+    label: '브랜드·기업',
+    terms: ['브랜드', '회사', '기업', '가격', '후기', '고객센터']
+  }
+];
+
+function hasKnownAmbiguousPattern(keyword) {
+  const key = normalizeKeywordKey(keyword);
+  const known = ['참교육', '원피스', '마스크걸', '무빙', '카지노', '폭싹속았수다', '트리거', '굿보이'];
+  return known.some(item => key === normalizeKeywordKey(item));
+}
+
+function needsDisambiguation(keyword, template) {
+  const clean = String(keyword || '').trim().replace(/\s+/g, ' ');
+  const compact = clean.replace(/\s+/g, '');
+  const tokens = clean.split(/\s+/).filter(Boolean);
+
+  if (!clean) return false;
+  if (hasKnownAmbiguousPattern(clean)) return true;
+  if (template?.key === 'default' && tokens.length === 1 && compact.length <= 8) return true;
+  if (tokens.length === 1 && compact.length <= 5) return true;
+
+  return false;
+}
+
+function makeDisambiguationRows(keyword, template) {
+  const base = String(keyword || '').trim().replace(/\s+/g, ' ');
+  if (!base || !needsDisambiguation(base, template)) return [];
+
+  const rows = [];
+
+  DISAMBIGUATION_CONTEXTS.forEach(context => {
+    context.terms.forEach(term => {
+      const suffixKeyword = `${base} ${term}`.replace(/\s+/g, ' ').trim();
+      rows.push(makeRowFromKeyword(suffixKeyword, {
+        fromExpansion: true,
+        fromDisambiguation: true,
+        contextType: context.type,
+        contextLabel: context.label
+      }));
+
+      // 실제 검색에서는 앞붙임과 뒤붙임을 모두 쓰는 경우가 있다.
+      // 예: 참교육 드라마 / 드라마 참교육, 참교육 JTBC / JTBC 참교육
+      if (/^(드라마|웹툰|JTBC|ENA|OTT|티빙|넷플릭스|이벤트|행사|브랜드)$/i.test(term)) {
+        const prefixKeyword = `${term} ${base}`.replace(/\s+/g, ' ').trim();
+        rows.push(makeRowFromKeyword(prefixKeyword, {
+          fromExpansion: true,
+          fromDisambiguation: true,
+          contextType: context.type,
+          contextLabel: context.label
+        }));
+      }
+    });
+  });
+
+  return uniqueRowsByCompact(rows).slice(0, 36);
+}
+
+function getBaseKeywordCloseness(row, seedKeyword) {
+  const seed = normalizeKeywordKey(seedKeyword || '');
+  const kw = normalizeKeywordKey(row?.kw || '');
+
+  if (!seed || !kw) return 0;
+  if (kw === seed) return 100;
+  if (kw.includes(seed)) return 90;
+  if (seed.includes(kw)) return 75;
+
+  const seedTokens = getSeedTokens(seedKeyword || '');
+  const matched = seedTokens.filter(token => kw.includes(token)).length;
+
+  if (seedTokens.length && matched === seedTokens.length) return 80;
+  if (matched >= 1) return 55;
+
+  return 10;
+}
+
+function getContextLabel(row, currentData) {
+  if (row?.contextLabel) return row.contextLabel;
+  if (row?.fromDisambiguation) return '맥락 분리';
+  if (row?.kw && currentData?.seedKeyword && normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData.seedKeyword)) return '원 키워드';
+  return currentData?.categoryName || '일반정보';
+}
+
+
+function getEffectiveIntent(row, currentData) {
+  if (!row?.fromDisambiguation) return currentData?.intent || '정보탐색형';
+
+  const map = {
+    broadcast: '콘텐츠정보형',
+    webtoon: '콘텐츠정보형',
+    meaning: '정보탐색형',
+    event: '이슈파악형',
+    person: '정보탐색형',
+    brand: '구매탐색형'
+  };
+
+  return map[row.contextType] || currentData?.intent || '정보탐색형';
+}
+
+function getEffectiveCategoryName(row, currentData) {
+  return getContextLabel(row, currentData) || currentData?.categoryName || '일반정보';
+}
+
+function getEffectiveNeeds(row, currentData) {
+  if (!row?.fromDisambiguation) return Array.isArray(currentData?.needs) ? currentData.needs : [];
+
+  const needsByContext = {
+    broadcast: ['이 키워드가 어떤 작품인지 빠르게 알고 싶다', '출연진·등장인물·줄거리를 함께 확인하고 싶다', '방송 채널과 OTT, 재방송 정보를 알고 싶다', '동명이의어와 섞이지 않는 정확한 맥락을 확인하고 싶다'],
+    webtoon: ['원작 웹툰 여부를 확인하고 싶다', '작가·회차·결말 정보를 알고 싶다', '드라마나 다른 콘텐츠와의 차이를 구분하고 싶다', '처음 보는 사람이 이해할 수 있는 기본정보를 원한다'],
+    meaning: ['단어의 뜻과 실제 쓰임을 알고 싶다', '비슷한 표현과 차이를 구분하고 싶다', '사례와 주의할 맥락을 함께 보고 싶다', '과거 이슈나 콘텐츠명과 헷갈리지 않게 정리하고 싶다'],
+    event: ['언제 열린 이벤트인지 알고 싶다', '현재 검색되는 이슈와 과거 행사 맥락을 구분하고 싶다', '참여 방법이나 결과를 확인하고 싶다', '연도별 차이를 정리해서 보고 싶다'],
+    person: ['인물의 기본 프로필을 빠르게 알고 싶다', '나이·학력·소속 등 핵심 정보를 확인하고 싶다', '작품이나 사건과의 관련성을 알고 싶다', '불확실한 정보를 구분해서 보고 싶다'],
+    brand: ['브랜드나 기업 정보를 확인하고 싶다', '가격·후기·고객센터 같은 실사용 정보를 찾고 싶다', '동명이의어와 다른 맥락을 구분하고 싶다', '구매 전 비교 기준을 보고 싶다']
+  };
+
+  return needsByContext[row.contextType] || (Array.isArray(currentData?.needs) ? currentData.needs : []);
+}
+
+function getEffectiveReason(row, currentData) {
+  if (row?.fromDisambiguation) {
+    return `${getContextLabel(row, currentData)} 맥락을 붙여 단독 키워드의 중복 의미를 분리한 후보입니다.`;
+  }
+
+  return currentData?.reason || '키워드 의도와 발행량을 기준으로 판단합니다.';
 }
 
 function makeCommerceLongtailRows(keyword) {
@@ -1413,6 +1594,9 @@ function makeRecipeLongtailRows(keyword) {
 
 function makeCategoryBoostRows(keyword, currentData) {
   const categoryName = currentData?.categoryName || '';
+  const disambiguationRows = makeDisambiguationRows(keyword, currentData?.template);
+
+  if (disambiguationRows.length) return disambiguationRows;
 
   if (categoryName === '쇼핑·패션·뷰티') return makeCommerceLongtailRows(keyword);
   if (categoryName === '장소·여행·맛집') return makePlaceLongtailRows(keyword);
@@ -1436,6 +1620,7 @@ function isCandidateContextSafe(row, seedKeyword, currentData) {
 
   if (!rowKey || !seedKey) return false;
   if (rowKey === seedKey || rowKey.includes(seedKey) || seedKey.includes(rowKey)) return true;
+  if (row.fromDisambiguation) return true;
 
   if (categoryName === '쇼핑·패션·뷰티') {
     const core = getCommerceCoreFromKeyword(seedKeyword || currentData?.seedKeyword || '');
@@ -1457,6 +1642,15 @@ function isCandidateContextSafe(row, seedKeyword, currentData) {
 
 function filterContextSafeRows(rows, seedKeyword, currentData) {
   const safeRows = (rows || []).filter(row => isCandidateContextSafe(row, seedKeyword, currentData));
+  const categoryName = currentData?.categoryName || '';
+  const seedKey = normalizeKeywordKey(seedKeyword || currentData?.seedKeyword || '');
+
+  // 일반정보는 카테고리 맥락이 확정되지 않은 상태다.
+  // 이때는 검색광고 related라도 입력어와 겹치지 않으면 추천 후보로 쓰지 않는다.
+  if (categoryName === '일반정보') {
+    const seedRows = (rows || []).filter(row => normalizeKeywordKey(row?.kw || '') === seedKey);
+    return uniqueRowsByCompact([...(safeRows || []), ...(seedRows || [])]);
+  }
 
   // 필터가 너무 강해서 후보가 거의 사라지는 경우를 막기 위한 안전장치.
   return safeRows.length >= 6 ? safeRows : (rows || []);
@@ -1562,11 +1756,18 @@ function makeKeywordCandidate(modifier, core, intent) {
 function generateKeywordCandidates(keyword, template) {
   const rule = keywordExpansionRules[template.key] || keywordExpansionRules.default;
   const cleanKeyword = keyword.trim().replace(/\s+/g, ' ');
+
+  // 분류되지 않은 일반 키워드는 추측 조합을 만들지 않는다.
+  // 검색광고 related와 원 키워드 데이터만 검증하게 두어 생뚱맞은 후보를 막는다.
+  if (!template || template.key === 'default') {
+    return cleanKeyword ? [cleanKeyword] : [];
+  }
+
   const baseKeyword = stripTrailingIntentWords(cleanKeyword, rule);
   const coreKeyword = findCoreKeyword(baseKeyword, rule);
   const existingModifiers = findExistingModifiers(baseKeyword, coreKeyword, rule);
   const allModifiers = Object.values(rule.modifiers || {}).flat();
-  const intents = rule.intents || template.suffixes || ['방법', '비교', '추천'];
+  const intents = rule.intents || template.suffixes || [];
 
   const candidates = [];
 
@@ -1632,6 +1833,8 @@ function getDataset(keyword) {
     outlines: template.outlines.map(item => `${cleanKeyword} ${item}`.trim()),
     reason: template.reason,
     categoryName: template.name,
+    template,
+    needsDisambiguation: needsDisambiguation(cleanKeyword, template),
     totalCandidateCount: candidates.length
   };
 }
@@ -1763,6 +1966,7 @@ function makeOutlines(keyword, intent, categoryName) {
 
 
     function getSourceLabel(row) {
+      if (row.fromDisambiguation) return '맥락 확장';
       if (row.fromRelated && (row.fromExpansion || row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail)) return '혼합 후보';
       if (row.fromRelated) return '검색광고 연관어';
       if (row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) return '카테고리 확장';
@@ -1786,6 +1990,7 @@ function makeOutlines(keyword, intent, categoryName) {
       const seedParts = String(seedKeyword || currentData?.seedKeyword || '').split(/\s+/).filter(Boolean);
       const matched = seedParts.filter(part => rowKey.includes(normalizeKeywordKey(part))).length;
       if (matched >= 1) return '가까움';
+      if (row.fromDisambiguation) return '가까움';
       if (row.fromExpansion || row.fromCommerceLongtail || row.fromRecipeLongtail || row.fromPlaceLongtail) return '확장 후보';
       return '넓은 관련';
     }
@@ -1810,7 +2015,7 @@ function makeOutlines(keyword, intent, categoryName) {
 
     function getPillClass(value) {
       if (['황금키워드', '준황금키워드', '우수키워드', '높음', '매우 가까움'].includes(value)) return 'pill green';
-      if (['도전키워드', '선점키워드', '소형기회', '가까움', '중간', '확장 후보'].includes(value)) return 'pill yellow';
+      if (['도전키워드', '선점키워드', '의미혼합', '소형기회', '가까움', '중간', '확장 후보'].includes(value)) return 'pill yellow';
       if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요', '낮음', '싫어함', '넓은 관련'].includes(value)) return 'pill red';
       return 'pill';
     }
@@ -1852,12 +2057,13 @@ function makeOutlines(keyword, intent, categoryName) {
         '신청', '대상', '조건', '지급일', '사용처', '서류', '한도', '금리', '부결',
         '해결', '오류', '설정', '사용법', '원인', '방법',
         '재료', '비율', '끓이는법', '만드는법', '보관법', '효능', '부작용',
-        '줄거리', '출연진', '인물관계도', '결말', '재방송', '몇부작',
+        '줄거리', '출연진', '인물관계도', '등장인물', '결말', '재방송', '몇부작', '드라마', '웹툰', '원작', 'OTT', 'JTBC', 'ENA',
         '일정', '접수', '준비물', '난이도', '합격률', '판례', '신고방법', '타임라인', '쟁점'
       ];
 
       if (!keyword || relevance === '넓은 관련' || aiFit === '싫어함') return false;
       if (clearWords.some(word => key.includes(normalizeKeywordKey(word)))) return true;
+      if (row.fromDisambiguation && row.contextType && row.contextType !== 'meaning') return true;
       if (categoryName === '장소·여행·맛집' && /(카페|맛집|숙소|호텔|축제|전시)/.test(keyword) && wordCount >= 3) return true;
       return wordCount >= 3 && aiFit !== '낮음';
     }
@@ -1874,6 +2080,8 @@ function makeOutlines(keyword, intent, categoryName) {
         totalContent <= 3000 &&
         ratio < 5 &&
         ad === '낮음' &&
+        getBaseKeywordCloseness(row, currentData?.seedKeyword) >= 75 &&
+        !(currentData?.needsDisambiguation && normalizeKeywordKey(row?.kw || '') === normalizeKeywordKey(currentData?.seedKeyword || '')) &&
         hasClearSearchIntent(row, currentData)
       );
     }
@@ -1883,10 +2091,13 @@ function makeOutlines(keyword, intent, categoryName) {
       const totalContent = Number(row.totalContent || 0);
       const ratio = Number(row.competitionRatio || getCompetitionRatioValue(row) || 999999);
       const score = Number(row.score || 0);
+      const closeness = Number(row.baseCloseness || getBaseKeywordCloseness(row, currentData?.seedKeyword));
 
       if (score < 40) return false;
       if (monthly < 100) return false;
       if (ratio > 100) return false;
+      if (closeness < 55) return false;
+      if (currentData?.needsDisambiguation && normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData?.seedKeyword || '')) return false;
       if (totalContent > 50000 && monthly < 1000) return false;
       if (row.opportunityType === '황금키워드' && !isStrictGoldenCandidate(row, currentData)) return false;
       if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요'].includes(row.opportunityType)) return false;
@@ -1901,6 +2112,15 @@ function makeOutlines(keyword, intent, categoryName) {
       const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
       const monthly = Number(row.monthly || 0);
       const totalContent = Number(row.totalContent || 0);
+      const context = getContextLabel(row, currentData);
+
+      if (type === '의미혼합') {
+        return `단독 키워드는 여러 의미가 섞일 수 있습니다. ${context}처럼 맥락을 붙인 후보와 비교해 보세요.`;
+      }
+
+      if (row.fromDisambiguation) {
+        return `${context} 맥락을 붙여 검색의도를 분리한 후보입니다. 단독 키워드보다 독자가 원하는 답을 좁혀서 검증할 수 있습니다.`;
+      }
 
       if (type === '황금키워드') {
         return `월간 검색량이 높고 발행량·광고 경쟁도·검색의도가 함께 맞는 엄격한 황금 후보입니다. 출처는 ${source}, 입력어 관련도는 ${relevance}입니다.`;
@@ -1974,7 +2194,7 @@ function makeOutlines(keyword, intent, categoryName) {
       const rows = currentData?.detailRows || currentData?.allRows || [];
 
       if (!rows.length) {
-        detailKeywordTable.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:24px; color:#64748b;">상세 후보 데이터가 표시됩니다.</td></tr>';
+        detailKeywordTable.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:24px; color:#64748b;">상세 후보 데이터가 표시됩니다.</td></tr>';
         return;
       }
 
@@ -1982,6 +2202,7 @@ function makeOutlines(keyword, intent, categoryName) {
         const totalContent = Number(row.totalContent || 0);
         const score = Number(row.score || 0);
         const source = row.sourceType || getSourceLabel(row);
+        const context = getContextLabel(row, currentData);
         const relevance = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
         const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
         const type = row.opportunityType || '-';
@@ -1990,6 +2211,7 @@ function makeOutlines(keyword, intent, categoryName) {
         return `
           <tr>
             <td>${row.kw || '-'}</td>
+            <td><span class="pill">${context}</span></td>
             <td><span class="pill">${source}</span></td>
             <td><span class="${getPillClass(relevance)}">${relevance}</span></td>
             <td><span class="${getPillClass(aiFit)}">${aiFit}</span></td>
@@ -2021,6 +2243,7 @@ function makeOutlines(keyword, intent, categoryName) {
         const scoreClassName = score >= 85 ? 'score' : score >= 70 ? 'score mid' : 'score low';
         const totalContent = Number(row.totalContent || 0);
         const source = row.sourceType || getSourceLabel(row);
+        const context = getContextLabel(row, currentData);
         const relevance = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
         const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
         const type = row.opportunityType || '-';
@@ -2085,18 +2308,18 @@ function makeOutlines(keyword, intent, categoryName) {
       proofContent.textContent = totalContentForProof.toLocaleString('ko-KR');
       proofRelevance.textContent = relevanceForProof;
       proofAiFit.textContent = aiFitForProof;
-      const intent = currentData.intent || '정보탐색형';
-      const categoryName = currentData.categoryName || '일반정보';
+      const intent = getEffectiveIntent(row, currentData);
+      const categoryName = getEffectiveCategoryName(row, currentData);
       const titles = makeTitles(selectedKeyword, intent);
       const related = Array.isArray(currentData.related) ? currentData.related : [];
-      const needs = Array.isArray(currentData.needs) ? currentData.needs : [];
+      const needs = getEffectiveNeeds(row, currentData);
       const outlines = makeOutlines(selectedKeyword, intent, categoryName);
 
       selectedHint.textContent = selectedKeyword;
       sideKeyword.textContent = selectedKeyword;
       sideBadge.textContent = categoryName;
       sideScore.textContent = row.score || 0;
-      sideReason.textContent = currentData.reason || '키워드 의도와 발행량을 기준으로 판단합니다.';
+      sideReason.textContent = getEffectiveReason(row, currentData);
       intentShortText.textContent = intent;
 
       sideMetrics.innerHTML = [
@@ -2128,6 +2351,7 @@ function makeOutlines(keyword, intent, categoryName) {
 
 카테고리: ${categoryName}
 검색의도: ${intent}
+맥락: ${getContextLabel(row, currentData)}
 
 플랫폼: ${platform}
 문체: ${tone}
@@ -2265,7 +2489,7 @@ async function fetchKeywordDataCached(keyword) {
   proofRelevance.textContent = '-';
   proofAiFit.textContent = '-';
   keywordTable.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
-  detailKeywordTable.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:24px; color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
+  detailKeywordTable.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:24px; color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   selectedHint.textContent = '키워드를 입력하세요';
   relatedChips.innerHTML = '';
   readerNeeds.innerHTML = '';
@@ -2329,8 +2553,10 @@ async function fetchKeywordDataCached(keyword) {
     const relatedRows = convertRelatedToRows(seedAdData?.related || []);
     const filteredRelatedRows = filterRelatedRows(relatedRows, keyword, currentData);
     const categoryBoostRows = makeCategoryBoostRows(keyword, currentData);
+    const seedRow = makeRowFromKeyword(keyword, { contextLabel: '원 키워드' });
 
     const expansionRows = uniqueRowsByCompact([
+      seedRow,
       ...categoryBoostRows,
       ...(currentData.rows || [])
     ]);
@@ -2341,7 +2567,11 @@ async function fetchKeywordDataCached(keyword) {
       currentData
     );
 
-    const contextSafeRows = filterContextSafeRows(mergedRows, keyword, currentData);
+    let contextSafeRows = filterContextSafeRows(mergedRows, keyword, currentData);
+
+    if (!contextSafeRows.length) {
+      contextSafeRows = [makeRowFromKeyword(keyword, { fromExpansion: false })];
+    }
 
     currentData.rows = contextSafeRows.slice(0, 50);
     currentData.totalCandidateCount = contextSafeRows.length;
@@ -2376,7 +2606,10 @@ async function fetchKeywordDataCached(keyword) {
         fromExpansion: Boolean(row.fromExpansion),
         fromCommerceLongtail: Boolean(row.fromCommerceLongtail),
         fromRecipeLongtail: Boolean(row.fromRecipeLongtail),
-        fromPlaceLongtail: Boolean(row.fromPlaceLongtail)
+        fromPlaceLongtail: Boolean(row.fromPlaceLongtail),
+        fromDisambiguation: Boolean(row.fromDisambiguation),
+        contextType: row.contextType || '',
+        contextLabel: row.contextLabel || ''
       });
     }
 
@@ -2390,6 +2623,7 @@ async function fetchKeywordDataCached(keyword) {
           ...row,
           competitionRatio,
           competitionRatioLabel: getCompetitionRatioLabel(row),
+          baseCloseness: getBaseKeywordCloseness(row, currentData?.seedKeyword),
           score: 20,
           opportunityType: '검증필요'
         };
@@ -2441,6 +2675,7 @@ async function fetchKeywordDataCached(keyword) {
         ...row,
         competitionRatio,
         competitionRatioLabel: getCompetitionRatioLabel(row),
+        baseCloseness: getBaseKeywordCloseness(row, currentData?.seedKeyword),
         opportunityType
       };
 
@@ -2463,11 +2698,19 @@ async function fetchKeywordDataCached(keyword) {
         '넓은 관련': -4
       }[enrichedRowBase.relevanceType] ?? 0;
 
+      const contextBonus = enrichedRowBase.fromDisambiguation
+        ? (enrichedRowBase.contextType === 'meaning' ? 2 : 8)
+        : 0;
+
+      const ambiguousBasePenalty = currentData?.needsDisambiguation && normalizeKeywordKey(enrichedRowBase.kw) === normalizeKeywordKey(currentData?.seedKeyword || '')
+        ? 18
+        : 0;
+
       let adPenalty = 0;
       if (row.ad === '높음') adPenalty = 8;
       if (row.ad === '중간') adPenalty = 4;
 
-      score = Math.max(1, Math.min(95, score + aiFitBonus + relevanceBonus - adPenalty));
+      score = Math.max(1, Math.min(95, score + aiFitBonus + relevanceBonus + contextBonus - adPenalty - ambiguousBasePenalty));
 
       if (opportunityType === '황금키워드' && !isStrictGoldenCandidate({ ...enrichedRowBase, score }, currentData)) {
         opportunityType = '준황금키워드';
@@ -2508,6 +2751,11 @@ async function fetchKeywordDataCached(keyword) {
         opportunityType = '검색량없음';
       }
 
+      if (currentData?.needsDisambiguation && normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData?.seedKeyword || '')) {
+        score = Math.min(score, 30);
+        opportunityType = competitionRatio >= 100 ? '경쟁높음' : '의미혼합';
+      }
+
       const enrichedRow = {
         ...enrichedRowBase,
         score: Math.round(score),
@@ -2532,6 +2780,7 @@ async function fetchKeywordDataCached(keyword) {
       '경쟁높음': 1,
       '경쟁과다': 0,
       '검색량없음': -1,
+      '의미혼합': -1,
       '검증필요': -2
     };
 
@@ -2561,7 +2810,12 @@ async function fetchKeywordDataCached(keyword) {
       const bIntent = intentClarityRank(b);
       if (bIntent !== aIntent) return bIntent - aIntent;
 
-      // 5. 경쟁비율 낮은 순
+      // 5. 원 키워드 연결성
+      const aClose = Number(a.baseCloseness || getBaseKeywordCloseness(a, currentData?.seedKeyword));
+      const bClose = Number(b.baseCloseness || getBaseKeywordCloseness(b, currentData?.seedKeyword));
+      if (bClose !== aClose) return bClose - aClose;
+
+      // 6. 경쟁비율 낮은 순
       const aRatio = Number(a.competitionRatio || getCompetitionRatioValue(a));
       const bRatio = Number(b.competitionRatio || getCompetitionRatioValue(b));
       if (aRatio !== bRatio) return aRatio - bRatio;
@@ -2664,7 +2918,8 @@ async function fetchKeywordDataCached(keyword) {
       const row = currentData.rows[selectedIndex];
       const text = `선택 키워드: ${row.kw}
 관련 키워드: ${currentData.related.join(', ')}
-검색의도: ${currentData.intent}
+검색의도: ${getEffectiveIntent(row, currentData)}
+맥락: ${getContextLabel(row, currentData)}
 기회점수: ${row.score}`;
       copyText(text, copyKeywordsBtn, '키워드 복사');
     });

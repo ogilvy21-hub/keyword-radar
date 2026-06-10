@@ -1351,13 +1351,12 @@ ${outlinesText}
   })
 );
 
-    const scoredRows = apiRows.map(row => {
+  const scoredRows = apiRows.map(row => {
   const monthlyTotal = Number(row.monthly || 0);
   const totalContent = Number(row.totalContent || 0);
 
-  let searchScore = 0;
-  let contentScore = 0;
-  let opportunityType = '검토';
+  let score = 1;
+  let opportunityType = '검증필요';
 
   if (!row.contentOk || !row.searchOk) {
     return {
@@ -1367,52 +1366,103 @@ ${outlinesText}
     };
   }
 
-  if (monthlyTotal >= 100000) searchScore = 50;
-  else if (monthlyTotal >= 30000) searchScore = 45;
-  else if (monthlyTotal >= 10000) searchScore = 38;
-  else if (monthlyTotal >= 3000) searchScore = 30;
-  else if (monthlyTotal >= 1000) searchScore = 22;
-  else if (monthlyTotal >= 300) searchScore = 14;
-  else if (monthlyTotal > 0) searchScore = 8;
-  else searchScore = 0;
-
-  if (totalContent === 0) contentScore = monthlyTotal > 0 ? 35 : 10;
-  else if (totalContent <= 500) contentScore = 45;
-  else if (totalContent <= 1000) contentScore = 40;
-  else if (totalContent <= 3000) contentScore = 35;
-  else if (totalContent <= 10000) contentScore = 28;
-  else if (totalContent <= 30000) contentScore = 20;
-  else if (totalContent <= 50000) contentScore = 14;
-  else if (totalContent <= 100000) contentScore = 8;
-  else if (totalContent <= 300000) contentScore = 3;
-  else contentScore = 0;
+  // 검색량이 거의 없는 키워드는 황금키워드가 아님
+  if (monthlyTotal === 0) {
+    score = 5;
+    opportunityType = '검색량없음';
+  } else if (monthlyTotal < 100) {
+    score = totalContent === 0 ? 18 : 10;
+    opportunityType = '관찰키워드';
+  } else if (monthlyTotal < 300) {
+    score = totalContent === 0 ? 28 : 18;
+    opportunityType = '선점후보';
+  } else if (monthlyTotal < 1000) {
+    if (totalContent === 0) {
+      score = 38;
+      opportunityType = '선점키워드';
+    } else if (totalContent <= 1000) {
+      score = 55;
+      opportunityType = '소형기회';
+    } else if (totalContent <= 10000) {
+      score = 42;
+      opportunityType = '도전키워드';
+    } else {
+      score = 20;
+      opportunityType = '경쟁높음';
+    }
+  } else if (monthlyTotal < 3000) {
+    if (totalContent === 0) {
+      score = 50;
+      opportunityType = '선점키워드';
+    } else if (totalContent <= 1000) {
+      score = 78;
+      opportunityType = '준황금키워드';
+    } else if (totalContent <= 3000) {
+      score = 70;
+      opportunityType = '우수키워드';
+    } else if (totalContent <= 10000) {
+      score = 58;
+      opportunityType = '도전키워드';
+    } else if (totalContent <= 30000) {
+      score = 40;
+      opportunityType = '경쟁높음';
+    } else {
+      score = 18;
+      opportunityType = '경쟁과다';
+    }
+  } else if (monthlyTotal < 10000) {
+    if (totalContent === 0) {
+      score = 58;
+      opportunityType = '선점키워드';
+    } else if (totalContent <= 1000) {
+      score = 90;
+      opportunityType = '황금키워드';
+    } else if (totalContent <= 3000) {
+      score = 84;
+      opportunityType = '황금키워드';
+    } else if (totalContent <= 10000) {
+      score = 72;
+      opportunityType = '준황금키워드';
+    } else if (totalContent <= 30000) {
+      score = 55;
+      opportunityType = '도전키워드';
+    } else if (totalContent <= 100000) {
+      score = 32;
+      opportunityType = '경쟁높음';
+    } else {
+      score = 12;
+      opportunityType = '경쟁과다';
+    }
+  } else {
+    if (totalContent === 0) {
+      score = 65;
+      opportunityType = '선점키워드';
+    } else if (totalContent <= 1000) {
+      score = 95;
+      opportunityType = '황금키워드';
+    } else if (totalContent <= 3000) {
+      score = 92;
+      opportunityType = '황금키워드';
+    } else if (totalContent <= 10000) {
+      score = 82;
+      opportunityType = '준황금키워드';
+    } else if (totalContent <= 30000) {
+      score = 65;
+      opportunityType = '도전키워드';
+    } else if (totalContent <= 100000) {
+      score = 42;
+      opportunityType = '경쟁높음';
+    } else {
+      score = 15;
+      opportunityType = '경쟁과다';
+    }
+  }
 
   let adPenalty = 0;
   if (row.ad === '높음') adPenalty = 8;
   if (row.ad === '중간') adPenalty = 4;
 
-  let finalScore = Math.max(
-    1,
-    Math.min(95, Math.round(searchScore + contentScore - adPenalty))
-  );
-
-  if (monthlyTotal >= 3000 && totalContent > 0 && totalContent <= 3000) {
-    opportunityType = '황금키워드';
-  } else if (monthlyTotal >= 1000 && totalContent > 0 && totalContent <= 10000) {
-    opportunityType = '준황금키워드';
-  } else if (monthlyTotal > 0 && totalContent === 0) {
-    opportunityType = '선점키워드';
-    finalScore = Math.min(finalScore, 55);
-  } else if (monthlyTotal >= 3000 && totalContent <= 50000) {
-    opportunityType = '도전키워드';
-  } else if (monthlyTotal === 0 && totalContent === 0) {
-    opportunityType = '검증필요';
-    finalScore = 20;
-  } else if (totalContent >= 100000) {
-    opportunityType = '경쟁과다';
-  } else {
-    opportunityType = '보통키워드';
-  }
+  const finalScore = Math.max(1, Math.min(95, score - adPenalty));
 
   return {
     ...row,
@@ -1421,22 +1471,46 @@ ${outlinesText}
   };
 });
 
-    const sortedRows = [...scoredRows].sort((a, b) => {
-      const aMonthly = Number(a.monthly || 0);
-      const bMonthly = Number(b.monthly || 0);
-      const aContent = Number(a.totalContent || 0);
-      const bContent = Number(b.totalContent || 0);
+const typeRank = {
+  '황금키워드': 7,
+  '준황금키워드': 6,
+  '우수키워드': 5,
+  '도전키워드': 4,
+  '선점키워드': 3,
+  '소형기회': 3,
+  '선점후보': 2,
+  '관찰키워드': 1,
+  '경쟁높음': 0,
+  '경쟁과다': -1,
+  '검색량없음': -2,
+  '검증필요': -3
+};
 
-      if (aMonthly === 0 && bMonthly > 0) return 1;
-      if (aMonthly > 0 && bMonthly === 0) return -1;
+const sortedRows = [...scoredRows].sort((a, b) => {
+  const aRank = typeRank[a.opportunityType] ?? 0;
+  const bRank = typeRank[b.opportunityType] ?? 0;
 
-      if ((b.score || 0) !== (a.score || 0)) {
-        return (b.score || 0) - (a.score || 0);
-      }
+  if (bRank !== aRank) {
+    return bRank - aRank;
+  }
 
-      return aContent - bContent;
-    });
+  if ((b.score || 0) !== (a.score || 0)) {
+    return (b.score || 0) - (a.score || 0);
+  }
 
+  const aMonthly = Number(a.monthly || 0);
+  const bMonthly = Number(b.monthly || 0);
+
+  if (bMonthly !== aMonthly) {
+    return bMonthly - aMonthly;
+  }
+
+  const aContent = Number(a.totalContent || 0);
+  const bContent = Number(b.totalContent || 0);
+
+  return aContent - bContent;
+});
+    
     currentData.allRows = scoredRows;
     currentData.rows = sortedRows.slice(0, 6);
   } catch (error) {

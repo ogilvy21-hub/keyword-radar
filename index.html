@@ -801,51 +801,88 @@ const isEntertainmentKeyword =
 }
 
     function renderSelected() {
-      const row = currentData.rows[selectedIndex];
-      const titles = makeTitles(row.kw, currentData.intent);
-      selectedHint.textContent = row.kw;
-      sideKeyword.textContent = row.kw;
-      sideBadge.textContent = currentData.intent;
-      sideScore.textContent = row.score;
-      sideReason.textContent = currentData.reason;
-      intentShortText.textContent = currentData.intent;
+  if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {
+    selectedKeywordText.textContent = '-';
+    selectedIntentText.textContent = '대기';
+    selectedScoreText.textContent = '0';
+    draftPrompt.value = '';
+    return;
+  }
 
-      relatedChips.innerHTML = currentData.related.map((item, index) => `<span class="chip ${index < 4 ? 'hot' : ''}">${item}</span>`).join('');
-      readerNeeds.innerHTML = currentData.needs.map(item => `<div class="title-item">${item}</div>`).join('');
-      titleList.innerHTML = titles.map(item => `<div class="title-item">${item}</div>`).join('');
-      outlineList.innerHTML = currentData.outlines.map((item, index) => `<div class="outline-item"><span>${index + 1}</span><div>${item}</div></div>`).join('');
-      sideMetrics.innerHTML = [
-        ['월간 검색수', formatNum(row.monthly)],
-        ['PC 검색수', formatNum(row.pc)],
-        ['MO 검색수', formatNum(row.mo)],
-        ['블로그 발행수', formatNum(row.blog)],
-        ['카페 발행수', formatNum(row.cafe)],
-        ['광고 경쟁도', row.ad]
-      ].map(item => `<div><span>${item[0]}</span><b>${item[1]}</b></div>`).join('');
+  if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
+    selectedIndex = 0;
+  }
 
-      const formatExtras = [
-        tableCheck.checked ? '표 포함' : null,
-        faqCheck.checked ? 'FAQ 포함' : null
-      ].filter(Boolean).join(', ') || '기본 형식';
+  const row = currentData.rows[selectedIndex];
+  const selectedKeyword = row.kw || '-';
+  const intent = currentData.intent || '정보탐색형';
 
-      draftPrompt.value = `플랫폼: ${platformSelect.value}
-문체: ${toneSelect.value}
-분량: ${lengthSelect.value}
-출력 형식: ${outputSelect.value}
-추가 형식: ${formatExtras}
+  selectedKeywordText.textContent = selectedKeyword;
+  selectedIntentText.textContent = intent;
+  selectedScoreText.textContent = row.score || 0;
 
-제목: ${titles[0]}
+  const platform = platformSelect.value;
+  const tone = toneSelect.value;
+  const length = lengthSelect.value;
+  const output = outputSelect.value;
+  const includeTable = tableCheck.checked ? '표 포함' : '표 제외';
+  const includeFaq = faqCheck.checked ? 'FAQ 포함' : 'FAQ 제외';
 
-기준 키워드: ${row.kw}
-함께 넣을 키워드: ${currentData.related.join(', ')}
-검색의도: ${currentData.intent}
-독자가 원하는 답: ${currentData.needs.join(' / ')}
+  const titles = makeTitles(selectedKeyword, intent);
+  const needs = Array.isArray(currentData.needs) ? currentData.needs : [];
+  const outlines = Array.isArray(currentData.outlines) ? currentData.outlines : [];
+  const related = Array.isArray(currentData.related) ? currentData.related : [];
+
+  const needsText = needs.length
+    ? needs.map((item, i) => `${i + 1}. ${item}`).join('\n')
+    : '1. 검색자가 가장 먼저 알고 싶은 답을 첫 문단에서 바로 전달한다.';
+
+  const outlinesText = outlines.length
+    ? outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')
+    : `1. ${selectedKeyword} 핵심 요약
+2. ${selectedKeyword} 기본 정보
+3. ${selectedKeyword}에서 사람들이 가장 궁금해하는 내용
+4. ${selectedKeyword} 관련 주의사항
+5. 자주 묻는 질문`;
+
+  const titleText = titles.map((item, i) => `${i + 1}. ${item}`).join('\n');
+
+  draftPrompt.value = `키워드: ${selectedKeyword}
+
+플랫폼: ${platform}
+문체: ${tone}
+분량: ${length}
+출력 형식: ${output}
+추가 조건: ${includeTable}, ${includeFaq}
+
+검색의도: ${intent}
+
+경쟁 데이터:
+- 월간 검색수: ${Number(row.monthly || 0).toLocaleString('ko-KR')}
+- PC 검색수: ${Number(row.pc || 0).toLocaleString('ko-KR')}
+- 모바일 검색수: ${Number(row.mo || 0).toLocaleString('ko-KR')}
+- 블로그 발행수: ${Number(row.blog || 0).toLocaleString('ko-KR')}
+- 카페 발행수: ${Number(row.cafe || 0).toLocaleString('ko-KR')}
+- 기회점수: ${row.score || 0}
+
+함께 넣을 키워드:
+${related.join(', ')}
+
+검색자가 원하는 답:
+${needsText}
+
+제목 후보:
+${titleText}
 
 목차:
-${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
+${outlinesText}
 
-위 내용을 바탕으로 티스토리 원고를 작성해줘. 첫 문단에서 검색자가 원하는 답을 바로 전달하고, 필요한 부분은 표로 정리해줘. 기계적인 표현은 쓰지 말고 작가가 독자에게 직접 설명하는 자연어 문체로 써줘. 마지막에는 자료출처와 태그 10개를 붙여줘.`;
-    }
+위 내용을 바탕으로 ${platform} 원고를 작성해줘.
+첫 문단에서 검색자가 원하는 답을 바로 전달하고, 필요한 부분은 표로 정리해줘.
+기계적인 표현은 쓰지 말고 작가가 독자에게 직접 설명하는 자연어 문체로 써줘.
+문장은 주체와 대상을 분명히 넣어 자연스럽게 써줘.
+마지막에는 자료출처와 태그 10개를 붙여줘.`;
+}
 
           async function fetchNaverTotals(keyword) {
       const response = await fetch(`/api/keyword?keyword=${encodeURIComponent(keyword)}`);

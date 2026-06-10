@@ -778,33 +778,58 @@ ${currentData.outlines.map((item, i) => `${i + 1}. ${item}`).join('\n')}
     }
 
     async function renderAll(resetSelection = true) {
-      const keyword = keywordInput.value.trim() || '키워드';
-      currentData = getDataset(keyword);
+  const keyword = keywordInput.value.trim() || '키워드';
+  currentData = getDataset(keyword);
 
-      try {
-        const apiData = await fetchNaverTotals(keyword);
+  try {
+    const updatedRows = await Promise.all(
+      currentData.rows.map(async (row) => {
+        try {
+          const apiData = await fetchNaverTotals(row.kw);
 
-        currentData.rows[0].blog = apiData.blogTotal;
-        currentData.rows[0].cafe = apiData.cafeTotal;
-        currentData.rows[0].kw = apiData.keyword;
-      } catch (error) {
-        console.error(error);
-      }
+          const realBlog = apiData.blogTotal || 0;
+          const realCafe = apiData.cafeTotal || 0;
+          const totalContent = realBlog + realCafe;
 
-      if (resetSelection) {
-        const best = Math.max(...currentData.rows.map(row => row.score));
-        selectedIndex = currentData.rows.findIndex(row => row.score === best);
-      }
+          let newScore = row.score;
 
-      const bestRow = currentData.rows[selectedIndex];
+          if (totalContent > 0 && row.monthly > 0) {
+            const rawScore = Math.round((row.monthly / totalContent) * 100);
+            newScore = Math.max(1, Math.min(95, rawScore));
+          }
 
-      totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
-      bestKeywordText.textContent = bestRow.kw;
-      bestScoreText.textContent = bestRow.score;
+          return {
+            ...row,
+            blog: realBlog,
+            cafe: realCafe,
+            score: newScore
+          };
+        } catch (error) {
+          console.error(`${row.kw} API 호출 실패`, error);
+          return row;
+        }
+      })
+    );
 
-      renderTable();
-      renderSelected();
-    }
+    currentData.rows = updatedRows;
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (resetSelection) {
+    const best = Math.max(...currentData.rows.map(row => row.score));
+    selectedIndex = currentData.rows.findIndex(row => row.score === best);
+  }
+
+  const bestRow = currentData.rows[selectedIndex];
+
+  totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
+  bestKeywordText.textContent = bestRow.kw;
+  bestScoreText.textContent = bestRow.score;
+
+  renderTable();
+  renderSelected();
+}
 
     function copyText(text, button, label) {
       navigator.clipboard.writeText(text).then(() => {

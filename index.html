@@ -643,44 +643,41 @@
       default: null
     };
 
-    function formatNum(num) {
-      return num.toLocaleString('ko-KR');
-    }
-
     function getDataset(keyword) {
-     const isEntertainmentKeyword =
-  /드라마|영화|출연진|몇부작|재방송|OTT|결말|시청률|예고|[0-9]+화|회차|다시보기|줄거리/.test(keyword);
+  const isEntertainmentKeyword =
+    /드라마|영화|출연진|몇부작|재방송|OTT|결말|시청률|예고|[0-9]+화|회차|다시보기|줄거리/.test(keyword);
 
-if (isEntertainmentKeyword) {
-  return {
-    rows: [
-      { kw: `${keyword} 줄거리`, monthly: 1200, pc: 240, mo: 960, blog: 0, cafe: 0, ad: '낮음', score: 82 },
-      { kw: `${keyword} 재방송`, monthly: 900, pc: 180, mo: 720, blog: 0, cafe: 0, ad: '중간', score: 78 },
-      { kw: `${keyword} 다시보기`, monthly: 1100, pc: 220, mo: 880, blog: 0, cafe: 0, ad: '중간', score: 80 },
-      { kw: `${keyword} 결말`, monthly: 700, pc: 160, mo: 540, blog: 0, cafe: 0, ad: '낮음', score: 85 },
-      { kw: `${keyword} 출연진`, monthly: 800, pc: 170, mo: 630, blog: 0, cafe: 0, ad: '낮음', score: 83 },
-      { kw: `${keyword} 시청률`, monthly: 550, pc: 120, mo: 430, blog: 0, cafe: 0, ad: '낮음', score: 81 }
-    ],
-    related: ['줄거리', '재방송', '다시보기', '결말', '출연진', '시청률', '몇부작', 'OTT', '인물관계도', '예고'],
-    intent: '콘텐츠정보형',
-    needs: [
-      '이번 회차의 핵심 줄거리를 빠르게 알고 싶다',
-      '재방송과 다시보기 가능 여부를 확인하고 싶다',
-      '출연진과 인물 관계를 함께 보고 싶다',
-      '결말이나 다음 회차 예고가 궁금하다'
-    ],
-    outlines: [
-      `${keyword} 기본정보`,
-      `${keyword} 줄거리 요약`,
-      `${keyword} 출연진과 인물 관계`,
-      `${keyword} 재방송·다시보기 정보`,
-      `${keyword} 결말과 다음 회차 예고`,
-      '시청자가 궁금해하는 질문'
-    ],
-    reason: '드라마 회차형 키워드는 검색 수명이 짧지만 방영 직후 유입 가능성이 있습니다. 줄거리·재방송·다시보기·결말 정보를 빠르게 묶는 글이 유리합니다.'
-  };
-}
-        const found = Object.values(presetData).find(item => item && item.match.test(keyword));
+  if (isEntertainmentKeyword) {
+    return {
+      rows: [
+        { kw: `${keyword} 줄거리`, monthly: 1200, pc: 240, mo: 960, blog: 0, cafe: 0, ad: '낮음', score: 82 },
+        { kw: `${keyword} 재방송`, monthly: 900, pc: 180, mo: 720, blog: 0, cafe: 0, ad: '중간', score: 78 },
+        { kw: `${keyword} 다시보기`, monthly: 1100, pc: 220, mo: 880, blog: 0, cafe: 0, ad: '중간', score: 80 },
+        { kw: `${keyword} 결말`, monthly: 700, pc: 160, mo: 540, blog: 0, cafe: 0, ad: '낮음', score: 85 },
+        { kw: `${keyword} 출연진`, monthly: 800, pc: 170, mo: 630, blog: 0, cafe: 0, ad: '낮음', score: 83 },
+        { kw: `${keyword} 시청률`, monthly: 550, pc: 120, mo: 430, blog: 0, cafe: 0, ad: '낮음', score: 81 }
+      ],
+      related: ['줄거리', '재방송', '다시보기', '결말', '출연진', '시청률', '몇부작', 'OTT', '인물관계도', '예고'],
+      intent: '콘텐츠정보형',
+      needs: [
+        '이번 회차의 핵심 줄거리를 빠르게 알고 싶다',
+        '재방송과 다시보기 가능 여부를 확인하고 싶다',
+        '출연진과 인물 관계를 함께 보고 싶다',
+        '결말이나 다음 회차 예고가 궁금하다'
+      ],
+      outlines: [
+        `${keyword} 기본정보`,
+        `${keyword} 줄거리 요약`,
+        `${keyword} 출연진과 인물 관계`,
+        `${keyword} 재방송·다시보기 정보`,
+        `${keyword} 결말과 다음 회차 예고`,
+        '시청자가 궁금해하는 질문'
+      ],
+      reason: '드라마 회차형 키워드는 검색 수명이 짧지만 방영 직후 유입 가능성이 있습니다. 줄거리·재방송·다시보기·결말 정보를 빠르게 묶는 글이 유리합니다.'
+    };
+  }
+
+  const found = Object.values(presetData).find(item => item && item.match.test(keyword));
   if (found) return found;
 
   return {
@@ -709,7 +706,7 @@ if (isEntertainmentKeyword) {
     ],
     reason: '일반 정보 키워드는 정의보다 실제 예시와 주의사항을 함께 넣을 때 검색 의도에 더 잘 맞습니다.'
   };
-      }
+}
     let currentData = null;
     let selectedIndex = 0;
 

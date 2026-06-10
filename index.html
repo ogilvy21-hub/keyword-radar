@@ -734,43 +734,301 @@
       }
     ];
 
-    function getDataset(keyword) {
-      const normalizedKeyword = keyword.replace(/\s+/g, '');
-      const template =
-        categoryTemplates.find(item => item.detect.test(normalizedKeyword)) ||
-        categoryTemplates[categoryTemplates.length - 1];
+   const keywordExpansionRules = {
+  commerce: {
+    coreHints: ['원피스', '가방', '운동화', '스니커즈', '자켓', '재킷', '셔츠', '니트', '청바지', '바지', '향수', '쿠션', '립스틱', '선크림'],
+    modifiers: {
+      season: ['봄', '여름', '가을', '겨울'],
+      length: ['롱', '미니', '미디', '긴', '짧은'],
+      situation: ['하객', '출근', '데이트', '휴가', '바캉스', '여행'],
+      target: ['20대', '30대', '40대', '50대', '키작녀', '통통'],
+      material: ['린넨', '쉬폰', '니트', '데님', '플라워']
+    },
+    intents: ['추천', '후기', '가격', '코디', '브랜드', '사이즈', '비교', '쇼핑몰'],
+    removeWords: ['추천', '후기', '가격', '코디', '브랜드', '사이즈', '비교', '쇼핑몰', '구매', '리뷰']
+  },
 
-      const monthlyValues = [1200, 900, 1100, 700, 800, 550];
-      const pcValues = [240, 180, 220, 160, 170, 120];
-      const moValues = [960, 720, 880, 540, 630, 430];
-      const adValues = ['낮음', '중간', '중간', '낮음', '낮음', '낮음'];
-      const scoreValues = [82, 78, 80, 85, 83, 81];
+  recipe: {
+    coreHints: ['쑥국', '비빔밥', '찌개', '국', '조림', '볶음', '무침', '반찬', '양념장', '소스', '샐러드', '도시락'],
+    modifiers: {
+      ingredient: ['봄동', '마늘쫑', '양파', '오이', '병어', '쑥', '두부', '김치'],
+      style: ['간단한', '백종원', '알토란', '집밥', '초간단']
+    },
+    intents: ['레시피', '재료', '끓이는법', '만드는법', '보관법', '효능', '칼로리'],
+    removeWords: ['레시피', '재료', '양념장', '만드는법', '만드는 법', '끓이는법', '끓이는 법', '보관법', '효능', '칼로리']
+  },
 
-      const makeKeyword = (suffix) => {
-        const normalizedSuffix = suffix.replace(/\s+/g, '');
-        if (normalizedKeyword.includes(normalizedSuffix)) return keyword;
-        return `${keyword} ${suffix}`;
-      };
+  tech: {
+    coreHints: ['아이폰 오류', '갤럭시 오류', '로그인 오류', '비밀번호 오류', '앱 오류', '크롬 오류', '네이버 오류', '구글 오류', '챗GPT 오류', 'API 오류'],
+    modifiers: {
+      device: ['아이폰', '갤럭시', '맥북', '윈도우', '크롬', '앱'],
+      problem: ['로그인', '비밀번호', '업데이트', '설치', '결제', '인증']
+    },
+    intents: ['해결', '해결 방법', '원인', '조치', '초기화', '고객센터', '설정'],
+    removeWords: ['사용법', '설치', '해결', '해결 방법', '원인', '조치', '초기화', '고객센터', '설정', '비교', '가격']
+  },
 
-      return {
-        rows: template.suffixes.map((suffix, index) => ({
-          kw: makeKeyword(suffix),
-          monthly: monthlyValues[index] || 600,
-          pc: pcValues[index] || 100,
-          mo: moValues[index] || 500,
-          blog: 0,
-          cafe: 0,
-          ad: adValues[index] || '낮음',
-          score: scoreValues[index] || 70
-        })),
-        related: template.suffixes.concat(['FAQ', '정리', '주의사항', '후기']).slice(0, 10),
-        intent: template.intent,
-        needs: template.needs,
-        outlines: template.outlines.map(item => `${keyword} ${item}`),
-        reason: template.reason,
-        categoryName: template.name
-      };
+  finance: {
+    coreHints: ['대출', '전세대출', '청약', '예금', '적금', '카드', '보험', '환율', '연말정산', '세금'],
+    modifiers: {
+      target: ['청년', '신혼부부', '무직자', '직장인', '소상공인', '자영업자'],
+      type: ['전세', '월세', '주택담보', '신용', '비상금']
+    },
+    intents: ['조건', '한도', '금리', '서류', '신청방법', '부결사유', '상환방법'],
+    removeWords: ['조건', '한도', '금리', '서류', '신청방법', '신청 방법', '부결사유', '부결 사유', '상환방법', '상환 방법']
+  },
+
+  policy: {
+    coreHints: ['지원금', '보조금', '환급금', '장려금', '수당', '바우처', '쿠폰', '복지'],
+    modifiers: {
+      target: ['청년', '소상공인', '자영업자', '근로자', '저소득', '취약계층'],
+      topic: ['교통비', '난방비', '전기요금', '유류비', '에너지', '민생']
+    },
+    intents: ['신청', '대상', '조건', '지급일', '사용처', '서류', '조회'],
+    removeWords: ['신청', '대상', '조건', '지급일', '사용처', '서류', '조회', '방법']
+  },
+
+  stock: {
+    coreHints: ['공모주', '주가', '관련주', '상장', 'ETF', '반도체', '방산', '로봇', 'AI', '양자', '비트코인', '데이터센터'],
+    modifiers: {
+      market: ['국내', '미국', '코스피', '코스닥', '나스닥'],
+      issue: ['실적', '수급', '배당', '수요예측', '보호예수']
+    },
+    intents: ['주가', '전망', '실적', '관련주', '상장일', '공모가', '리스크'],
+    removeWords: ['주가', '전망', '실적', '관련주', '상장일', '공모가', '리스크', '분석']
+  },
+
+  place: {
+    coreHints: ['맛집', '카페', '숙소', '호텔', '펜션', '리조트', '축제', '전시', '팝업', '가볼만한곳'],
+    modifiers: {
+      area: ['강남역', '홍대', '성수', '잠실', '부산', '제주', '서울', '경기'],
+      situation: ['데이트', '가족', '아이와', '혼자', '주말']
+    },
+    intents: ['위치', '주차', '영업시간', '예약', '후기', '근처', '가격'],
+    removeWords: ['위치', '주차', '영업시간', '예약', '후기', '근처', '가격', '주소']
+  },
+
+  entertainment: {
+    coreHints: ['드라마', '영화', '예능', '방송', 'OTT', '넷플릭스', '티빙', '웨이브'],
+    modifiers: {
+      episode: ['1화', '2화', '3화', '4화', '5화', '6화', '7화', '8화', '9화', '10화'],
+      season: ['시즌1', '시즌2', '시즌3']
+    },
+    intents: ['줄거리', '재방송', '다시보기', '결말', '출연진', '시청률', '몇부작'],
+    removeWords: ['줄거리', '재방송', '다시보기', '결말', '출연진', '시청률', '몇부작', '예고']
+  },
+
+  health: {
+    coreHints: ['건강', '다이어트', '혈당', '혈압', '피부', '탈모', '운동', '영양제', '수면', '스트레스'],
+    modifiers: {
+      target: ['남자', '여자', '40대', '50대', '노인', '아이'],
+      topic: ['면역력', '장건강', '피로', '체중', '근육']
+    },
+    intents: ['효능', '부작용', '먹는법', '주의사항', '영양소', '원인', '예방'],
+    removeWords: ['효능', '부작용', '먹는법', '먹는 법', '주의사항', '영양소', '원인', '예방']
+  },
+
+  education: {
+    coreHints: ['시험', '자격증', '수능', '공무원', '입시', '강의', '인강', '기출'],
+    modifiers: {
+      target: ['국가', '민간', '온라인', '무료', '초보'],
+      time: ['2026', '상반기', '하반기']
+    },
+    intents: ['일정', '접수', '준비물', '기출', '난이도', '합격률', '공부법'],
+    removeWords: ['일정', '접수', '준비물', '기출', '난이도', '합격률', '공부법']
+  },
+
+  legal: {
+    coreHints: ['계약', '환불', '고소', '신고', '소송', '저작권', '개인정보', '명예훼손', '임대차'],
+    modifiers: {
+      situation: ['계약종료', '위약금', '분쟁', '피해', '약관']
+    },
+    intents: ['법률', '신고방법', '처벌', '판례', '주의사항', '대응방법'],
+    removeWords: ['법률', '신고방법', '신고 방법', '처벌', '판례', '주의사항', '대응방법', '대응 방법']
+  },
+
+  news: {
+    coreHints: ['사건', '사고', '논란', '이슈', '발표', '선거', '투표', '화재', '폭발', '수사'],
+    modifiers: {
+      angle: ['원인', '배경', '쟁점', '반응', '전망']
+    },
+    intents: ['이유', '원인', '정리', '전망', '반응', '타임라인'],
+    removeWords: ['이유', '원인', '정리', '전망', '반응', '타임라인']
+  },
+
+  living: {
+    coreHints: ['청소', '세탁', '이사', '인테리어', '수리', '자동차', '관리비', '요금', '민원', '서류'],
+    modifiers: {
+      situation: ['셀프', '초보', '원룸', '아파트', '자동차', '가정']
+    },
+    intents: ['방법', '비용', '주의사항', '후기', '비교', '체크리스트'],
+    removeWords: ['방법', '비용', '주의사항', '후기', '비교', '체크리스트']
+  },
+
+  default: {
+    coreHints: [],
+    modifiers: {},
+    intents: ['뜻', '방법', '비교', '추천', '후기', '주의사항'],
+    removeWords: ['뜻', '방법', '비교', '추천', '후기', '주의사항']
+  }
+};
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function uniqueByCompact(list) {
+  const seen = new Set();
+
+  return list.filter(item => {
+    const key = item.replace(/\s+/g, '');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function stripTrailingIntentWords(keyword, rule) {
+  let base = keyword.trim().replace(/\s+/g, ' ');
+  const removeWords = [...new Set([...(rule.removeWords || []), ...(rule.intents || [])])]
+    .sort((a, b) => b.length - a.length);
+
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (const word of removeWords) {
+      const pattern = new RegExp(`\\s*${escapeRegExp(word)}\\s*$`, 'i');
+
+      if (pattern.test(base)) {
+        base = base.replace(pattern, '').trim();
+        changed = true;
+      }
     }
+  }
+
+  return base || keyword.trim();
+}
+
+function findCoreKeyword(baseKeyword, rule) {
+  const compactBase = baseKeyword.replace(/\s+/g, '');
+  const sortedCores = [...(rule.coreHints || [])].sort((a, b) => b.length - a.length);
+
+  for (const core of sortedCores) {
+    const compactCore = core.replace(/\s+/g, '');
+
+    if (compactBase.includes(compactCore)) {
+      return core;
+    }
+  }
+
+  return baseKeyword;
+}
+
+function findExistingModifiers(baseKeyword, coreKeyword, rule) {
+  const compactBase = baseKeyword.replace(/\s+/g, '');
+  const compactCore = coreKeyword.replace(/\s+/g, '');
+  const found = [];
+
+  Object.values(rule.modifiers || {}).flat().forEach(modifier => {
+    const compactModifier = modifier.replace(/\s+/g, '');
+
+    if (
+      compactModifier !== compactCore &&
+      compactBase.includes(compactModifier)
+    ) {
+      found.push(modifier);
+    }
+  });
+
+  return [...new Set(found)];
+}
+
+function makeKeywordCandidate(modifier, core, intent) {
+  return [modifier, core, intent]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function generateKeywordCandidates(keyword, template) {
+  const rule = keywordExpansionRules[template.key] || keywordExpansionRules.default;
+  const cleanKeyword = keyword.trim().replace(/\s+/g, ' ');
+  const baseKeyword = stripTrailingIntentWords(cleanKeyword, rule);
+  const coreKeyword = findCoreKeyword(baseKeyword, rule);
+  const existingModifiers = findExistingModifiers(baseKeyword, coreKeyword, rule);
+  const allModifiers = Object.values(rule.modifiers || {}).flat();
+  const intents = rule.intents || template.suffixes || ['방법', '비교', '추천'];
+
+  const candidates = [];
+
+  if (existingModifiers.length) {
+    existingModifiers.forEach(modifier => {
+      intents.forEach(intent => {
+        candidates.push(makeKeywordCandidate(modifier, coreKeyword, intent));
+      });
+    });
+  }
+
+  intents.forEach(intent => {
+    candidates.push(makeKeywordCandidate('', baseKeyword, intent));
+  });
+
+  intents.forEach(intent => {
+    candidates.push(makeKeywordCandidate('', coreKeyword, intent));
+  });
+
+  allModifiers.forEach(modifier => {
+    intents.slice(0, 3).forEach(intent => {
+      candidates.push(makeKeywordCandidate(modifier, coreKeyword, intent));
+    });
+  });
+
+  const cleanedCandidates = uniqueByCompact(candidates)
+    .filter(item => item.length >= 2)
+    .slice(0, 30);
+
+  return cleanedCandidates;
+}
+
+function getDataset(keyword) {
+  const cleanKeyword = keyword.trim().replace(/\s+/g, ' ');
+  const compactKeyword = cleanKeyword.replace(/\s+/g, '');
+
+  const template =
+    categoryTemplates.find(item => item.detect.test(compactKeyword)) ||
+    categoryTemplates[categoryTemplates.length - 1];
+
+  const candidates = generateKeywordCandidates(cleanKeyword, template);
+
+  const monthlyValues = [1200, 900, 1100, 700, 800, 550, 1000, 760, 640, 520, 480, 430];
+  const pcValues = [240, 180, 220, 160, 170, 120, 210, 150, 130, 110, 90, 80];
+  const moValues = [960, 720, 880, 540, 630, 430, 790, 610, 510, 410, 390, 350];
+  const adValues = ['낮음', '중간', '중간', '낮음', '낮음', '낮음', '중간', '낮음', '낮음', '중간', '낮음', '낮음'];
+  const scoreValues = [82, 78, 80, 85, 83, 81, 76, 74, 72, 70, 68, 66];
+
+  return {
+    rows: candidates.map((candidate, index) => ({
+      kw: candidate,
+      monthly: monthlyValues[index % monthlyValues.length],
+      pc: pcValues[index % pcValues.length],
+      mo: moValues[index % moValues.length],
+      blog: 0,
+      cafe: 0,
+      ad: adValues[index % adValues.length],
+      score: scoreValues[index % scoreValues.length]
+    })),
+    related: uniqueByCompact(candidates.concat(template.suffixes || [])).slice(0, 16),
+    intent: template.intent,
+    needs: template.needs,
+    outlines: template.outlines.map(item => `${cleanKeyword} ${item}`.trim()),
+    reason: template.reason,
+    categoryName: template.name,
+    totalCandidateCount: candidates.length
+  };
+}
 
     let currentData = null;
     let selectedIndex = 0;
@@ -1034,7 +1292,8 @@ ${outlinesText}
       intent: '대기',
       needs: [],
       outlines: [],
-      reason: '키워드를 분석하면 결과가 표시됩니다.'
+      reason: '키워드를 분석하면 결과가 표시됩니다.',
+      totalCandidateCount: 0
     };
   }
 
@@ -1122,7 +1381,16 @@ ${outlinesText}
       };
     });
 
-    currentData.rows = scoredRows;
+    const sortedRows = [...scoredRows].sort((a, b) => {
+      if ((b.score || 0) !== (a.score || 0)) {
+        return (b.score || 0) - (a.score || 0);
+      }
+
+      return Number(a.totalContent || 0) - Number(b.totalContent || 0);
+    });
+
+    currentData.allRows = scoredRows;
+    currentData.rows = sortedRows.slice(0, 6);
   } catch (error) {
     console.error(error);
   }
@@ -1139,17 +1407,7 @@ ${outlinesText}
   }
 
   if (resetSelection) {
-    let bestIndex = 0;
-    let bestScore = currentData.rows[0].score || 0;
-
-    currentData.rows.forEach((row, index) => {
-      if ((row.score || 0) > bestScore) {
-        bestScore = row.score || 0;
-        bestIndex = index;
-      }
-    });
-
-    selectedIndex = bestIndex;
+    selectedIndex = 0;
   }
 
   if (selectedIndex < 0 || selectedIndex >= currentData.rows.length) {
@@ -1158,7 +1416,7 @@ ${outlinesText}
 
   const bestRow = currentData.rows[selectedIndex];
 
-  totalKeywords.textContent = `${currentData.rows.length + currentData.related.length}개`;
+  totalKeywords.textContent = `${currentData.totalCandidateCount || currentData.rows.length}개`;
   bestKeywordText.textContent = bestRow.kw;
   bestScoreText.textContent = bestRow.score;
   intentShortText.textContent = currentData.intent || '-';

@@ -782,24 +782,117 @@
         .trim();
     }
 
-    function makeTitles(keyword, intent) {
-      const map = {
-        '콘텐츠정보형': [`${keyword} 줄거리 | 재방송·다시보기`, `${keyword} 결말 | 출연진·시청률`, `${keyword} 기본정보 | 관전 포인트`],
-        '조건확인형': [`${keyword} 조건 | 대상·신청·지급일`, `${keyword} 신청 기준 | 사용처·서류`, `${keyword} 핵심 정리 | 제외 조건`],
-        '조건비교형': [`${keyword} 조건 | 한도·금리·서류`, `${keyword} 신청 기준 | 부결 사유`, `${keyword} 비교 | 금리와 상환`],
-        '투자판단형': [`${keyword} 전망 | 실적·수급·리스크`, `${keyword} 분석 | 가격 판단 기준`, `${keyword} | 상승 요인과 하락 리스크`],
-        '구매탐색형': [`${keyword} 추천 | 가격·후기 비교`, `${keyword} 브랜드 비교 | 사이즈·구매 팁`, `${keyword} 후기 | 구매 전 체크`],
-        '방문탐색형': [`${keyword} 위치 | 주차·영업시간`, `${keyword} 후기 | 예약·방문 팁`, `${keyword} 근처 정보 | 교통·요금`],
-        '실행방법형': [`${keyword} 레시피 | 재료·비율·순서`, `${keyword} 만드는법 | 양념장·보관법`, `${keyword} 핵심 팁 | 맛내기와 칼로리`],
-        '문제해결형': [`${keyword} 해결 | 사용법·오류`, `${keyword} 설정 | 설치·비교·가격`, `${keyword} 사용법 | 문제 해결 체크`],
-        '건강정보형': [`${keyword} 효능 | 부작용·주의사항`, `${keyword} 먹는법 | 영양소·보관법`, `${keyword} 정리 | 효과와 주의점`],
-        '학습정보형': [`${keyword} 일정 | 접수·준비물`, `${keyword} 기출 | 난이도·합격률`, `${keyword} 준비법 | 체크리스트`],
-        '위험확인형': [`${keyword} 법률 | 신고·대응방법`, `${keyword} 처벌 | 판례·주의사항`, `${keyword} 대응 | 기준과 절차`],
-        '이슈파악형': [`${keyword} 정리 | 원인·타임라인`, `${keyword} 이유 | 쟁점과 전망`, `${keyword} 반응 | 앞으로 달라질 점`],
-        '생활해결형': [`${keyword} 방법 | 비용·주의사항`, `${keyword} 체크리스트 | 준비물·절차`, `${keyword} 비교 | 후기·팁`]
-      };
-      return (map[intent] || [`${keyword} 핵심 정리`, `${keyword} | 뜻·방법·주의사항`, `${keyword} 비교 | 장점·단점`]).map(cleanTitle);
-    }
+   function makeTitles(keyword, intent) {
+  if (intent === '콘텐츠정보형') {
+    return [
+      `${keyword} 줄거리·출연진·재방송 정보 총정리`,
+      `${keyword} 다시보기 전 알아야 할 핵심 내용`,
+      `${keyword} 결말과 인물관계, 시청자가 궁금한 포인트`
+    ];
+  }
+
+  if (intent === '조건확인형') {
+    return [
+      `${keyword} 신청 대상·조건·지급일 총정리`,
+      `${keyword}, 내가 받을 수 있는지 확인하는 법`,
+      `${keyword} 신청 전 꼭 봐야 할 사용처와 제외 조건`
+    ];
+  }
+
+  if (intent === '조건비교형') {
+    return [
+      `${keyword} 조건·한도·금리 한 번에 정리`,
+      `${keyword} 신청 전 확인해야 할 서류와 부결 사유`,
+      `${keyword}, 나에게 맞는 조건인지 확인하는 법`
+    ];
+  }
+
+  if (intent === '투자판단형') {
+    return [
+      `${keyword} 전망 | 실적·수급·리스크로 보는 핵심 구간`,
+      `${keyword}, 지금 가격에서 봐야 할 숫자들`,
+      `${keyword} 분석 | 상승 요인과 하락 리스크 정리`
+    ];
+  }
+
+  if (intent === '구매탐색형') {
+    return [
+      `${keyword} 추천 전 꼭 봐야 할 가격·후기·사이즈 기준`,
+      `${keyword} 비교 | 브랜드별 장단점과 구매 포인트`,
+      `${keyword} 고르기 전 확인해야 할 후기와 주의사항`
+    ];
+  }
+
+  if (intent === '방문탐색형') {
+    return [
+      `${keyword} 위치·주차·영업시간 한 번에 정리`,
+      `${keyword} 방문 전 확인해야 할 예약·후기·근처 정보`,
+      `${keyword} 가기 전 꼭 봐야 할 교통과 이용 팁`
+    ];
+  }
+
+  if (intent === '실행방법형') {
+    return [
+      `${keyword} 재료·비율·만드는법 한 번에 정리`,
+      `${keyword} 실패하지 않는 순서와 맛내기 팁`,
+      `${keyword} 보관법까지 알아두면 좋은 조리 포인트`
+    ];
+  }
+
+  if (intent === '문제해결형') {
+    return [
+      `${keyword} 해결 방법 | 원인부터 설정까지 정리`,
+      `${keyword} 안 될 때 먼저 확인해야 할 체크리스트`,
+      `${keyword} 사용법과 오류 해결 방법 총정리`
+    ];
+  }
+
+  if (intent === '건강정보형') {
+    return [
+      `${keyword} 효능·부작용·주의사항 총정리`,
+      `${keyword} 먹는법과 영양소, 조심해야 할 사람`,
+      `${keyword} 제대로 알기 | 효과와 근거, 주의할 점`
+    ];
+  }
+
+  if (intent === '학습정보형') {
+    return [
+      `${keyword} 일정·접수·준비물 총정리`,
+      `${keyword} 준비 전 알아야 할 난이도와 합격 기준`,
+      `${keyword} 기출·공부법·접수 방법 한 번에 보기`
+    ];
+  }
+
+  if (intent === '위험확인형') {
+    return [
+      `${keyword} 법적 기준과 대응 방법 정리`,
+      `${keyword} 문제 되는 경우와 주의사항`,
+      `${keyword} 신고·처벌·판례 기준으로 보는 핵심 정리`
+    ];
+  }
+
+  if (intent === '이슈파악형') {
+    return [
+      `${keyword} 무슨 일인가 | 사건 개요와 타임라인`,
+      `${keyword} 원인·쟁점·향후 전망 총정리`,
+      `${keyword} 핵심 쟁점과 반응을 한 번에 정리`
+    ];
+  }
+
+  if (intent === '생활해결형') {
+    return [
+      `${keyword} 방법·비용·주의사항 총정리`,
+      `${keyword} 실제로 할 때 필요한 준비물과 순서`,
+      `${keyword} 실수하기 쉬운 부분과 체크리스트`
+    ];
+  }
+
+  return [
+    `${keyword} 뜻과 핵심 정보 총정리`,
+    `${keyword} 방법·비교·주의사항 한 번에 보기`,
+    `${keyword} 선택 전 알아야 할 장점과 단점`
+  ];
+}
 
     function renderTable() {
       if (!currentData || !Array.isArray(currentData.rows) || currentData.rows.length === 0) {

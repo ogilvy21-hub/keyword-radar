@@ -1309,49 +1309,47 @@ ${outlinesText}
 
   try {
     const apiRows = await Promise.all(
-      currentData.rows.map(async (row) => {
-        try {
-          const [contentData, searchAdData] = await Promise.all([
-            fetchNaverTotals(row.kw),
-            fetchSearchAdData(row.kw)
-          ]);
+  currentData.rows.map(async (row) => {
+    let realBlog = 0;
+    let realCafe = 0;
+    let monthlyPc = 0;
+    let monthlyMobile = 0;
+    let monthlyTotal = 0;
+    let adCompetition = row.ad || '낮음';
+    let relKeyword = row.kw;
 
-          const realBlog = Number(contentData.blogTotal || 0);
-          const realCafe = Number(contentData.cafeTotal || 0);
-          const totalContent = realBlog + realCafe;
+    try {
+      const contentData = await fetchNaverTotals(row.kw);
+      realBlog = Number(contentData.blogTotal || 0);
+      realCafe = Number(contentData.cafeTotal || 0);
+    } catch (error) {
+      console.error(`${row.kw} 블로그/카페 API 호출 실패`, error);
+    }
 
-          const monthlyPc = Number(searchAdData.monthlyPc || 0);
-          const monthlyMobile = Number(searchAdData.monthlyMobile || 0);
-          const monthlyTotal = Number(searchAdData.monthlyTotal || 0);
+    try {
+      const searchAdData = await fetchSearchAdData(row.kw);
+      monthlyPc = Number(searchAdData.monthlyPc || 0);
+      monthlyMobile = Number(searchAdData.monthlyMobile || 0);
+      monthlyTotal = Number(searchAdData.monthlyTotal || 0);
+      adCompetition = searchAdData.competition || adCompetition;
+      relKeyword = searchAdData.relKeyword || row.kw;
+    } catch (error) {
+      console.error(`${row.kw} 검색광고 API 호출 실패`, error);
+    }
 
-          return {
-            ...row,
-            monthly: monthlyTotal,
-            pc: monthlyPc,
-            mo: monthlyMobile,
-            blog: realBlog,
-            cafe: realCafe,
-            totalContent,
-            ad: searchAdData.competition || row.ad || '낮음',
-            relKeyword: searchAdData.relKeyword || row.kw
-          };
-        } catch (error) {
-          console.error(`${row.kw} API 호출 실패`, error);
-
-          return {
-            ...row,
-            monthly: 0,
-            pc: 0,
-            mo: 0,
-            blog: 0,
-            cafe: 0,
-            totalContent: 0,
-            score: 25,
-            opportunityType: '검증필요'
-          };
-        }
-      })
-    );
+    return {
+      ...row,
+      monthly: monthlyTotal,
+      pc: monthlyPc,
+      mo: monthlyMobile,
+      blog: realBlog,
+      cafe: realCafe,
+      totalContent: realBlog + realCafe,
+      ad: adCompetition,
+      relKeyword
+    };
+  })
+);
 
     const scoredRows = apiRows.map(row => {
       const monthlyTotal = Number(row.monthly || 0);

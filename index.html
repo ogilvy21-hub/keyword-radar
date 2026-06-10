@@ -1646,117 +1646,120 @@ function getDataset(keyword) {
         .trim();
     }
 
+   function compactTitle(text) {
+      return String(text || '')
+        .replace(/\s+/g, ' ')
+        .replace(/,|\?|!/g, '')
+        .replace(/하는 방법|확인하는 법|알아보기|총정리|한 번에 보기|꼭 봐야 할|방문 전|신청 전|제대로 알기|무슨 일인가/g, '')
+        .replace(/\b(입니다|합니다|좋은|필요한)\b/g, '')
+        .trim();
+    }
+
    function makeTitles(keyword, intent) {
-  if (intent === '콘텐츠정보형') {
-    return [
-      `${keyword} 줄거리·출연진·재방송 정보 총정리`,
-      `${keyword} 다시보기 전 알아야 할 핵심 내용`,
-      `${keyword} 결말과 인물관계, 시청자가 궁금한 포인트`
-    ];
-  }
+  const titleMap = {
+    '콘텐츠정보형': [
+      `${keyword} 줄거리 출연진 재방송 핵심`,
+      `${keyword} 결말 인물관계도 관전포인트`,
+      `${keyword} 다시보기 OTT 회차 정보`
+    ],
+    '조건확인형': [
+      `${keyword} 대상 조건 지급일 핵심`,
+      `${keyword} 신청방법 사용처 제외대상`,
+      `${keyword} 서류 기간 금액 체크`
+    ],
+    '조건비교형': [
+      `${keyword} 조건 한도 금리 핵심`,
+      `${keyword} 서류 승인기간 부결사유`,
+      `${keyword} 비교 상환 신용점수 체크`
+    ],
+    '투자판단형': [
+      `${keyword} 실적 수급 리스크 핵심`,
+      `${keyword} 관련주 전망 체크포인트`,
+      `${keyword} 재료 일정 가격 구간`
+    ],
+    '구매탐색형': [
+      `${keyword} 가격 후기 사이즈 기준`,
+      `${keyword} 브랜드 비교 구매 포인트`,
+      `${keyword} 추천 대상 실패 줄이는 체크`
+    ],
+    '방문탐색형': [
+      `${keyword} 주차 영업시간 예약 핵심`,
+      `${keyword} 후기 메뉴 가격 체크`,
+      `${keyword} 데이트 혼자 노트북 기준`
+    ],
+    '실행방법형': [
+      `${keyword} 재료 비율 순서 핵심`,
+      `${keyword} 실패 줄이는 맛내기 포인트`,
+      `${keyword} 보관법 응용법 체크`
+    ],
+    '문제해결형': [
+      `${keyword} 원인 해결 설정 핵심`,
+      `${keyword} 오류 체크리스트 조치 순서`,
+      `${keyword} 사용법 고객센터 대안`
+    ],
+    '건강정보형': [
+      `${keyword} 효능 부작용 주의사항`,
+      `${keyword} 먹는법 섭취량 영양성분`,
+      `${keyword} 피해야 할 사람 체크`
+    ],
+    '학습정보형': [
+      `${keyword} 일정 접수 준비물 핵심`,
+      `${keyword} 난이도 합격률 기출 체크`,
+      `${keyword} 공부법 발표일 시험장 정보`
+    ],
+    '위험확인형': [
+      `${keyword} 법적 기준 대응 절차`,
+      `${keyword} 신고 처벌 판례 핵심`,
+      `${keyword} 계약해지 손해배상 체크`
+    ],
+    '이슈파악형': [
+      `${keyword} 원인 쟁점 타임라인`,
+      `${keyword} 배경 반응 전망 핵심`,
+      `${keyword} 영향 관련주 후속 일정`
+    ],
+    '생활해결형': [
+      `${keyword} 방법 비용 준비물 핵심`,
+      `${keyword} 순서 주의사항 체크리스트`,
+      `${keyword} 변경 해지 환불 기준`
+    ]
+  };
 
-  if (intent === '조건확인형') {
-    return [
-      `${keyword} 신청 대상·조건·지급일 총정리`,
-      `${keyword}, 내가 받을 수 있는지 확인하는 법`,
-      `${keyword} 신청 전 꼭 봐야 할 사용처와 제외 조건`
-    ];
-  }
+  const titles = titleMap[intent] || [
+    `${keyword} 뜻 기준 핵심 정보`,
+    `${keyword} 방법 비교 주의사항`,
+    `${keyword} 장단점 선택 기준`
+  ];
 
-  if (intent === '조건비교형') {
-    return [
-      `${keyword} 조건·한도·금리 한 번에 정리`,
-      `${keyword} 신청 전 확인해야 할 서류와 부결 사유`,
-      `${keyword}, 나에게 맞는 조건인지 확인하는 법`
-    ];
-  }
+  return titles.map(compactTitle);
+}
 
-  if (intent === '투자판단형') {
-    return [
-      `${keyword} 전망 | 실적·수급·리스크로 보는 핵심 구간`,
-      `${keyword}, 지금 가격에서 봐야 할 숫자들`,
-      `${keyword} 분석 | 상승 요인과 하락 리스크 정리`
-    ];
-  }
+function makeOutlines(keyword, intent, categoryName) {
+  const intentLabel = intent || '정보탐색형';
 
-  if (intent === '구매탐색형') {
-    return [
-      `${keyword} 추천 전 꼭 봐야 할 가격·후기·사이즈 기준`,
-      `${keyword} 비교 | 브랜드별 장단점과 구매 포인트`,
-      `${keyword} 고르기 전 확인해야 할 후기와 주의사항`
-    ];
-  }
-
-  if (intent === '방문탐색형') {
-    return [
-      `${keyword} 위치·주차·영업시간 한 번에 정리`,
-      `${keyword} 방문 전 확인해야 할 예약·후기·근처 정보`,
-      `${keyword} 가기 전 꼭 봐야 할 교통과 이용 팁`
-    ];
-  }
-
-  if (intent === '실행방법형') {
-    return [
-      `${keyword} 재료·비율·만드는법 한 번에 정리`,
-      `${keyword} 실패하지 않는 순서와 맛내기 팁`,
-      `${keyword} 보관법까지 알아두면 좋은 조리 포인트`
-    ];
-  }
-
-  if (intent === '문제해결형') {
-    return [
-      `${keyword} 해결 방법 | 원인부터 설정까지 정리`,
-      `${keyword} 안 될 때 먼저 확인해야 할 체크리스트`,
-      `${keyword} 사용법과 오류 해결 방법 총정리`
-    ];
-  }
-
-  if (intent === '건강정보형') {
-    return [
-      `${keyword} 효능·부작용·주의사항 총정리`,
-      `${keyword} 먹는법과 영양소, 조심해야 할 사람`,
-      `${keyword} 제대로 알기 | 효과와 근거, 주의할 점`
-    ];
-  }
-
-  if (intent === '학습정보형') {
-    return [
-      `${keyword} 일정·접수·준비물 총정리`,
-      `${keyword} 준비 전 알아야 할 난이도와 합격 기준`,
-      `${keyword} 기출·공부법·접수 방법 한 번에 보기`
-    ];
-  }
-
-  if (intent === '위험확인형') {
-    return [
-      `${keyword} 법적 기준과 대응 방법 정리`,
-      `${keyword} 문제 되는 경우와 주의사항`,
-      `${keyword} 신고·처벌·판례 기준으로 보는 핵심 정리`
-    ];
-  }
-
-  if (intent === '이슈파악형') {
-    return [
-      `${keyword} 무슨 일인가 | 사건 개요와 타임라인`,
-      `${keyword} 원인·쟁점·향후 전망 총정리`,
-      `${keyword} 핵심 쟁점과 반응을 한 번에 정리`
-    ];
-  }
-
-  if (intent === '생활해결형') {
-    return [
-      `${keyword} 방법·비용·주의사항 총정리`,
-      `${keyword} 실제로 할 때 필요한 준비물과 순서`,
-      `${keyword} 실수하기 쉬운 부분과 체크리스트`
-    ];
-  }
+  const categoryMiddle = {
+    '방문탐색형': ['위치·주차·영업시간', '예약·메뉴·가격', '후기 기준과 추천 대상'],
+    '구매탐색형': ['가격·브랜드·사이즈', '후기와 비교 기준', '구매 전 체크리스트'],
+    '실행방법형': ['재료와 비율', '순서와 실패 방지 포인트', '보관법과 응용법'],
+    '조건확인형': ['대상·조건·금액', '신청방법·서류·기간', '사용처와 제외대상'],
+    '조건비교형': ['조건·한도·금리', '서류·승인기간·부결사유', '상환 방식과 비교 기준'],
+    '문제해결형': ['원인과 먼저 볼 설정', '해결 순서', '안 될 때 대안'],
+    '건강정보형': ['효능과 근거', '먹는법과 섭취량', '부작용과 피해야 할 사람'],
+    '콘텐츠정보형': ['기본정보와 줄거리', '출연진·등장인물·관계도', '재방송·OTT·결말 포인트'],
+    '투자판단형': ['기업·테마 기본정보', '실적·수급·재료', '리스크와 체크 구간'],
+    '이슈파악형': ['사건 개요와 타임라인', '원인·쟁점·반응', '향후 영향과 전망'],
+    '위험확인형': ['법적 기준', '대응 절차와 필요 서류', '주의사항과 예외'],
+    '학습정보형': ['일정·접수·준비물', '난이도·합격률·기출', '공부방법과 발표일'],
+    '생활해결형': ['준비물과 비용', '진행 순서', '주의사항과 체크리스트']
+  }[intentLabel] || ['기본 개념', '방법과 비교 기준', '주의사항과 체크리스트'];
 
   return [
-    `${keyword} 뜻과 핵심 정보 총정리`,
-    `${keyword} 방법·비교·주의사항 한 번에 보기`,
-    `${keyword} 선택 전 알아야 할 장점과 단점`
+    `${keyword} 핵심 답변`,
+    `${keyword} 에버그린 기준`,
+    ...categoryMiddle.map(item => `${keyword} ${item}`),
+    `${keyword} 최종 정리와 FAQ`
   ];
 }
+
 
 
     function getSourceLabel(row) {
@@ -1836,6 +1839,45 @@ function getDataset(keyword) {
       return `${(totalContent / monthly).toFixed(1)}배 · ${getCompetitionRatioLabel(row)}`;
     }
 
+    function hasClearSearchIntent(row, currentData) {
+      const keyword = String(row?.kw || '').trim();
+      const key = normalizeKeywordKey(keyword);
+      const relevance = row.relevanceType || getRelevanceLabel(row, currentData?.seedKeyword, currentData);
+      const aiFit = row.aiAnswerFit || getAiAnswerFitLabel(row, currentData);
+      const categoryName = currentData?.categoryName || '';
+      const wordCount = keyword.split(/\s+/).filter(Boolean).length;
+      const clearWords = [
+        '추천', '후기', '가격', '비교', '브랜드', '사이즈', '코디',
+        '주차', '영업시간', '예약', '메뉴', '위치', '조용한', '브런치', '디저트', '노트북', '데이트', '혼자', '대형', '늦게까지',
+        '신청', '대상', '조건', '지급일', '사용처', '서류', '한도', '금리', '부결',
+        '해결', '오류', '설정', '사용법', '원인', '방법',
+        '재료', '비율', '끓이는법', '만드는법', '보관법', '효능', '부작용',
+        '줄거리', '출연진', '인물관계도', '결말', '재방송', '몇부작',
+        '일정', '접수', '준비물', '난이도', '합격률', '판례', '신고방법', '타임라인', '쟁점'
+      ];
+
+      if (!keyword || relevance === '넓은 관련' || aiFit === '싫어함') return false;
+      if (clearWords.some(word => key.includes(normalizeKeywordKey(word)))) return true;
+      if (categoryName === '장소·여행·맛집' && /(카페|맛집|숙소|호텔|축제|전시)/.test(keyword) && wordCount >= 3) return true;
+      return wordCount >= 3 && aiFit !== '낮음';
+    }
+
+    function isStrictGoldenCandidate(row, currentData) {
+      const monthly = Number(row?.monthly || 0);
+      const totalContent = Number(row?.totalContent || 0);
+      const ratio = Number(row?.competitionRatio || getCompetitionRatioValue(row));
+      const ad = row?.ad || '낮음';
+
+      return (
+        monthly >= 3000 &&
+        totalContent > 0 &&
+        totalContent <= 3000 &&
+        ratio < 5 &&
+        ad === '낮음' &&
+        hasClearSearchIntent(row, currentData)
+      );
+    }
+
     function isRecommendable(row) {
       const monthly = Number(row.monthly || 0);
       const totalContent = Number(row.totalContent || 0);
@@ -1846,6 +1888,7 @@ function getDataset(keyword) {
       if (monthly < 100) return false;
       if (ratio > 100) return false;
       if (totalContent > 50000 && monthly < 1000) return false;
+      if (row.opportunityType === '황금키워드' && !isStrictGoldenCandidate(row, currentData)) return false;
       if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요'].includes(row.opportunityType)) return false;
 
       return true;
@@ -1859,8 +1902,12 @@ function getDataset(keyword) {
       const monthly = Number(row.monthly || 0);
       const totalContent = Number(row.totalContent || 0);
 
-      if (type === '황금키워드' || type === '준황금키워드') {
-        return `검색량 대비 발행량이 낮아 글감 후보로 검토할 만합니다. 출처는 ${source}, 입력어 관련도는 ${relevance}입니다.`;
+      if (type === '황금키워드') {
+        return `월간 검색량이 높고 발행량·광고 경쟁도·검색의도가 함께 맞는 엄격한 황금 후보입니다. 출처는 ${source}, 입력어 관련도는 ${relevance}입니다.`;
+      }
+
+      if (type === '준황금키워드') {
+        return `검색량 대비 발행량이 낮아 글감 후보로 검토할 만합니다. 다만 광고 경쟁도와 실제 상위노출 난도는 함께 확인해야 합니다.`;
       }
 
       if (type === '선점키워드' || type === '선점후보' || type === '관찰키워드') {
@@ -1884,7 +1931,15 @@ function getDataset(keyword) {
       const type = row.opportunityType || '검증필요';
       const keyword = row.kw || '선택 키워드';
 
-      if (type === '황금키워드' || type === '준황금키워드' || type === '우수키워드') {
+      if (type === '황금키워드') {
+        return {
+          title: `${keyword}, 황금키워드 조건에 가깝습니다`,
+          reason: `월간 검색수 ${monthly.toLocaleString('ko-KR')}회, 블로그·카페 발행량 ${totalContent.toLocaleString('ko-KR')}건입니다. 검색량, 발행량, 광고 경쟁도, 검색의도가 함께 맞는 후보입니다.`,
+          strategy: ['첫 문단에서 검색자의 질문에 바로 답하세요.', '표와 FAQ로 확인 욕구를 줄이면 AI가 요약하기 좋은 글이 됩니다.', '제목은 키워드와 핵심 후킹만 남기고 불필요한 표현을 줄이세요.']
+        };
+      }
+
+      if (type === '준황금키워드' || type === '우수키워드') {
         return {
           title: `${keyword}, 글감 후보로 검토할 만합니다`,
           reason: `월간 검색수 ${monthly.toLocaleString('ko-KR')}회, 블로그·카페 발행량 ${totalContent.toLocaleString('ko-KR')}건입니다. 검색량 대비 경쟁 부담이 상대적으로 낮습니다.`,
@@ -2035,7 +2090,7 @@ function getDataset(keyword) {
       const titles = makeTitles(selectedKeyword, intent);
       const related = Array.isArray(currentData.related) ? currentData.related : [];
       const needs = Array.isArray(currentData.needs) ? currentData.needs : [];
-      const outlines = Array.isArray(currentData.outlines) ? currentData.outlines : [];
+      const outlines = makeOutlines(selectedKeyword, intent, categoryName);
 
       selectedHint.textContent = selectedKeyword;
       sideKeyword.textContent = selectedKeyword;
@@ -2079,6 +2134,17 @@ function getDataset(keyword) {
 분량: ${length}
 출력 형식: ${output}
 추가 조건: ${includeTable}, ${includeFaq}
+
+원고 설계 원칙:
+1. 에버그린: 시간이 지나도 남는 기준, 조건, 체크리스트를 먼저 세운다.
+2. 제목: 키워드 + 후킹만 남기고 TMI를 제거한다. 불필요한 조사, 동사, 형용사, 설명형 문장을 줄인다.
+3. 해결형: 독자가 실제로 확인하거나 실행할 수 있는 순서로 쓴다.
+4. 완결형: 본문 안에서 핵심 답, 비교, 주의사항, FAQ까지 끝낸다.
+
+제목 작성 기준:
+- 메인 키워드는 제목 앞쪽에 둔다.
+- 후킹은 숫자, 조건, 대상, 비용, 주차, 지급일, 해결, 비교처럼 검색자가 바로 판단할 수 있는 단어로 만든다.
+- “알아보기”, “확인하는 법”, “좋은 이유”, “꼭 봐야 할” 같은 불필요한 말은 빼고 짧게 쓴다.
 
 경쟁 데이터:
 - 월간 검색수: ${Number(row.monthly || 0).toLocaleString('ko-KR')}
@@ -2298,11 +2364,15 @@ async function fetchKeywordDataCached(keyword) {
         else if (competitionRatio < 300) score += 8;
         else score += 0;
 
-        if (monthlyTotal >= 1000 && competitionRatio < 10) opportunityType = '황금키워드';
-        else if (monthlyTotal >= 1000 && competitionRatio < 30) opportunityType = '준황금키워드';
-        else if (monthlyTotal >= 300 && competitionRatio < 30) opportunityType = '우수키워드';
-        else if (monthlyTotal >= 100 && competitionRatio < 100) opportunityType = '도전키워드';
-        else if (monthlyTotal < 300 && competitionRatio < 30) opportunityType = '선점키워드';
+        const intentProbeRow = { ...row, competitionRatio };
+        const clearIntent = hasClearSearchIntent(intentProbeRow, currentData);
+
+        if (isStrictGoldenCandidate(intentProbeRow, currentData)) opportunityType = '황금키워드';
+        else if (monthlyTotal >= 1000 && totalContent > 0 && totalContent <= 10000 && competitionRatio < 10 && row.ad !== '높음' && clearIntent) opportunityType = '준황금키워드';
+        else if (monthlyTotal >= 1000 && competitionRatio < 15 && clearIntent) opportunityType = '우수키워드';
+        else if (monthlyTotal >= 300 && competitionRatio < 30 && clearIntent) opportunityType = '도전키워드';
+        else if (monthlyTotal >= 100 && competitionRatio < 100 && clearIntent) opportunityType = '도전키워드';
+        else if (monthlyTotal < 300 && competitionRatio < 30 && clearIntent) opportunityType = '선점키워드';
         else if (monthlyTotal < 100) opportunityType = '관찰키워드';
         else if (competitionRatio >= 100) opportunityType = '경쟁높음';
         else opportunityType = '검증필요';
@@ -2339,6 +2409,26 @@ async function fetchKeywordDataCached(keyword) {
       if (row.ad === '중간') adPenalty = 4;
 
       score = Math.max(1, Math.min(95, score + aiFitBonus + relevanceBonus - adPenalty));
+
+      if (opportunityType === '황금키워드' && !isStrictGoldenCandidate({ ...enrichedRowBase, score }, currentData)) {
+        opportunityType = '준황금키워드';
+        score = Math.min(score, 78);
+      }
+
+      if (currentData?.categoryName === '장소·여행·맛집') {
+        if (totalContent > 8000 && opportunityType === '황금키워드') {
+          opportunityType = '준황금키워드';
+          score = Math.min(score, 78);
+        }
+        if (totalContent > 10000 && monthlyTotal < 3000 && ['황금키워드', '준황금키워드', '우수키워드'].includes(opportunityType)) {
+          opportunityType = row.ad === '높음' ? '도전키워드' : '우수키워드';
+          score = Math.min(score, row.ad === '높음' ? 63 : 68);
+        }
+        if (row.ad === '높음' && ['황금키워드', '준황금키워드'].includes(opportunityType)) {
+          opportunityType = '도전키워드';
+          score = Math.min(score, 63);
+        }
+      }
 
       // 경쟁비율 상한선. 이 부분이 추천 여부를 최종적으로 막는다.
       if (competitionRatio >= 300) {

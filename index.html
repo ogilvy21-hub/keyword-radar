@@ -507,7 +507,7 @@ async function analyze(){
     if(!baseRows.length) baseRows = [{ kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback' }];
     console.log('[글감레이더 baseRows before content]', baseRows);
 
-    const hydrated = await mapLimit(baseRows, 5, async row => {
+    const hydrated = await mapLimit(baseRows, 3, async row => {
       const content = await fetchContentCached(row.kw);
       const blog = parseNumber(content.blogTotal ?? content.blog ?? 0);
       const cafe = parseNumber(content.cafeTotal ?? content.cafe ?? 0);

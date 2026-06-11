@@ -581,7 +581,38 @@
     }
     @media (max-width: 520px) {
       .summary-grid, .proof-grid { grid-template-columns: 1fr; }
-      .search-row { grid-template-columns: 1fr; }
+      .search-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .search-row input {
+        min-height: 58px;
+        padding: 16px 18px;
+        font-size: 18px;
+        border-radius: 18px;
+      }
+      .search-row button {
+        min-height: 56px;
+        width: 100%;
+        border-radius: 18px;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: -0.2px;
+        box-shadow: 0 14px 28px rgba(17, 24, 39, 0.22);
+      }
+      .search-row button::before {
+        content: "🔍 ";
+      }
+      .steps {
+        gap: 6px;
+        margin-top: 14px;
+      }
+      .step {
+        min-width: 105px;
+        padding: 9px 8px;
+        font-size: 11px;
+        border-radius: 14px;
+      }
     }
   </style>
 </head>
@@ -612,7 +643,7 @@
           <h2>1차: 키워드 검색 → 경쟁강도 확인</h2>
           <div class="search-row">
             <input id="keywordInput" value="" placeholder="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
-            <button id="analyzeBtn">분석</button>
+            <button id="analyzeBtn">키워드 분석하기</button>
           </div>
           <div class="steps">
             <div class="step active">STEP 1<br>키워드 수집</div>
@@ -2397,6 +2428,84 @@ function makeOutlines(keyword, intent, categoryName) {
       return `${(totalContent / monthly).toFixed(1)}배 · ${getCompetitionRatioLabel(row)}`;
     }
 
+
+    function getApiKeywordMatchScore(requestKeyword, responseKeyword) {
+      const req = normalizeKeywordKey(requestKeyword);
+      const res = normalizeKeywordKey(responseKeyword);
+
+      if (!req || !res) return 0;
+      if (req === res) return 100;
+      if (res.includes(req) || req.includes(res)) return 80;
+
+      const reqTokens = String(requestKeyword || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(normalizeKeywordKey);
+
+      if (!reqTokens.length) return 0;
+
+      const matched = reqTokens.filter(token => res.includes(token)).length;
+      return Math.round((matched / reqTokens.length) * 100);
+    }
+
+    function isApiKeywordMismatch(row) {
+      const requestKey = normalizeKeywordKey(row?.kw || '');
+      const apiKey = normalizeKeywordKey(row?.apiRelKeyword || row?.relKeyword || row?.kw || '');
+
+      if (!requestKey || !apiKey) return true;
+      if (requestKey === apiKey) return false;
+
+      const matchScore = Number(row?.apiKeywordMatchScore || 0);
+      return matchScore < 80;
+    }
+
+    function isPowerfulSeedKeyword(seedRow) {
+      const monthly = Number(seedRow?.monthly || 0);
+      const totalContent = Number(seedRow?.totalContent || 0);
+      const ratio = seedRow ? getCompetitionRatioValue(seedRow) : 999999;
+
+      return (
+        monthly >= 10000 &&
+        totalContent > 0 &&
+        totalContent <= 20000 &&
+        ratio < 5
+      );
+    }
+
+    function isTooWeakComparedToSeed(row, currentData) {
+      const seedRow = currentData?.seedApiRow;
+      if (!seedRow) return false;
+
+      const seedMonthly = Number(seedRow.monthly || 0);
+      const rowMonthly = Number(row?.monthly || 0);
+
+      if (seedMonthly < 10000) return false;
+      if (normalizeKeywordKey(row?.kw || '') === normalizeKeywordKey(currentData?.seedKeyword || '')) return false;
+
+      // 출연진·OTT·줄거리처럼 콘텐츠 의도가 선명한 후보는 검색량이 작아도 보조 후보로 남긴다.
+      if (hasContentIntentWord(row?.kw || '')) return false;
+
+      return rowMonthly < seedMonthly * 0.005;
+    }
+
+    function shouldDropCareerExpansion(row, currentData) {
+      const seedKey = normalizeKeywordKey(currentData?.seedKeyword || '');
+      const rowKey = normalizeKeywordKey(row?.kw || '');
+
+      if (!seedKey || !rowKey.includes(seedKey)) return false;
+
+      const seedLooksLikeContent = isPowerfulSeedKeyword(currentData?.seedApiRow);
+      if (!seedLooksLikeContent) return false;
+
+      const careerOnlyWords = [
+        '준비물', '자소서', '면접', '체크리스트', '첫출근', '온보딩',
+        '이력서', '채용', '공채', '입사', '퇴사', '연봉', '직무'
+      ];
+
+      return careerOnlyWords.some(word => rowKey.includes(normalizeKeywordKey(word)));
+    }
+
     function hasClearSearchIntent(row, currentData) {
       const keyword = String(row?.kw || '').trim();
       const key = normalizeKeywordKey(keyword);
@@ -2451,7 +2560,14 @@ function makeOutlines(keyword, intent, categoryName) {
       if (monthly < 100) return false;
       if (ratio > 100) return false;
       if (closeness < 55) return false;
-      if (currentData?.needsDisambiguation && normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData?.seedKeyword || '')) return false;
+      if (isApiKeywordMismatch(row)) return false;
+      if (shouldDropCareerExpansion(row, currentData)) return false;
+      if (isTooWeakComparedToSeed(row, currentData)) return false;
+      if (currentData?.needsDisambiguation &&
+        normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData?.seedKeyword || '') &&
+        !looksLikeProperContentKeyword(row, currentData) &&
+        !isPowerfulSeedKeyword(row)
+      ) return false;
       if (totalContent > 50000 && monthly < 1000) return false;
       if (row.opportunityType === '황금키워드' && !isStrictGoldenCandidate(row, currentData)) return false;
       if (['경쟁과다', '경쟁높음', '검색량없음', '검증필요'].includes(row.opportunityType)) return false;
@@ -2794,6 +2910,8 @@ async function fetchKeywordDataCached(keyword) {
     mo: 0,
     ad: '낮음',
     relKeyword: keyword,
+    apiRelKeyword: keyword,
+    apiKeywordMatchScore: 100,
     contentOk: false,
     searchOk: false
   };
@@ -2815,6 +2933,8 @@ async function fetchKeywordDataCached(keyword) {
     result.monthly = Number(searchAdData.monthlyTotal || 0);
     result.ad = searchAdData.competition || result.ad;
     result.relKeyword = searchAdData.relKeyword || keyword;
+    result.apiRelKeyword = result.relKeyword;
+    result.apiKeywordMatchScore = getApiKeywordMatchScore(keyword, result.relKeyword);
     result.searchOk = true;
   } catch (error) {
     console.error(`${keyword} 검색광고 API 호출 실패`, error);
@@ -2877,7 +2997,7 @@ async function fetchKeywordDataCached(keyword) {
   ].map(item => `<div><span>${item[0]}</span><b>${item[1]}</b></div>`).join('');
   draftPrompt.value = '';
   analyzeBtn.disabled = false;
-  analyzeBtn.textContent = '분석';
+  analyzeBtn.textContent = '키워드 분석하기';
 }
 
   async function renderAll(resetSelection = true) {
@@ -2890,7 +3010,7 @@ async function fetchKeywordDataCached(keyword) {
   }
 
   analyzeBtn.disabled = true;
-  analyzeBtn.textContent = '분석 중';
+  analyzeBtn.textContent = '분석 중...';
 
   currentData = getDataset(keyword);
   currentData.seedKeyword = keyword;
@@ -2968,6 +3088,8 @@ async function fetchKeywordDataCached(keyword) {
         totalContent: parseMetricValue(apiData.totalContent || ((apiData.blog || 0) + (apiData.cafe || 0)) || row.totalContent || 0),
         ad: apiData.ad || row.ad || '낮음',
         relKeyword: apiData.relKeyword || row.relKeyword || row.kw,
+        apiRelKeyword: apiData.apiRelKeyword || apiData.relKeyword || row.relKeyword || row.kw,
+        apiKeywordMatchScore: Number(apiData.apiKeywordMatchScore || 0),
         contentOk: Boolean(apiData.contentOk),
         searchOk: Boolean(apiData.searchOk),
         fromRelated: Boolean(row.fromRelated),
@@ -2998,6 +3120,10 @@ async function fetchKeywordDataCached(keyword) {
         failedRow.sourceType = getSourceLabel(failedRow);
         failedRow.relevanceType = getRelevanceLabel(failedRow, currentData?.seedKeyword, currentData);
         failedRow.aiAnswerFit = getAiAnswerFitLabel(failedRow, currentData);
+        if (isApiKeywordMismatch(failedRow)) {
+          failedRow.opportunityType = '검증필요';
+          failedRow.score = 10;
+        }
         failedRow.whyRecommended = 'API 응답이 불완전해 검증이 필요한 후보입니다.';
         return failedRow;
       }
@@ -3147,6 +3273,64 @@ async function fetchKeywordDataCached(keyword) {
       return enrichedRow;
     });
 
+    currentData.seedApiRow = scoredRows.find(row =>
+      normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData.seedKeyword)
+    ) || null;
+
+    const seedIsPowerful = isPowerfulSeedKeyword(currentData.seedApiRow);
+
+    if (seedIsPowerful && currentData.categoryName === '직장·채용') {
+      currentData.categoryName = '방송·콘텐츠';
+      currentData.intent = '콘텐츠정보형';
+    }
+
+    const cleanedRows = scoredRows
+      .filter(row => {
+        if (isApiKeywordMismatch(row)) return false;
+        if (shouldDropCareerExpansion(row, currentData)) return false;
+        if (isTooWeakComparedToSeed(row, currentData)) return false;
+        return true;
+      })
+      .map(row => {
+        const isSeedRow = normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData.seedKeyword);
+
+        if (seedIsPowerful && isSeedRow) {
+          const totalContent = Number(row.totalContent || 0);
+          const monthly = Number(row.monthly || 0);
+          let opportunityType = row.opportunityType;
+          let score = Math.max(Number(row.score || 0), 88);
+
+          if (isStrictGoldenCandidate(row, currentData)) {
+            opportunityType = '황금키워드';
+            score = Math.max(score, 92);
+          } else if (monthly >= 100000 && totalContent <= 10000) {
+            opportunityType = '준황금키워드';
+            score = Math.max(score, 88);
+          } else if (totalContent <= 20000) {
+            opportunityType = '도전키워드';
+            score = Math.max(score, 82);
+          }
+
+          return {
+            ...row,
+            contextLabel: currentData.intent === '콘텐츠정보형' ? '방송·드라마' : (row.contextLabel || '원 키워드'),
+            opportunityType,
+            score,
+            aiAnswerFit: row.aiAnswerFit === '낮음' ? '중간' : row.aiAnswerFit,
+            whyRecommended: '원 키워드 검색량이 높고 발행량이 낮아 단독 후보로 다시 검증한 키워드입니다.'
+          };
+        }
+
+        if (seedIsPowerful && currentData.intent === '콘텐츠정보형') {
+          return {
+            ...row,
+            contextLabel: row.contextLabel || '방송·드라마'
+          };
+        }
+
+        return row;
+      });
+
     const typeRank = {
       '황금키워드': 8,
       '준황금키워드': 7,
@@ -3177,7 +3361,7 @@ async function fetchKeywordDataCached(keyword) {
       return aiFitRank + relevance + sourcePriority;
     };
 
-    const sortedRows = [...scoredRows].sort((a, b) => {
+    const sortedRows = [...cleanedRows].sort((a, b) => {
       const aStrictGolden = isStrictGoldenCandidate(a, currentData);
       const bStrictGolden = isStrictGoldenCandidate(b, currentData);
       if (aStrictGolden && !bStrictGolden) return -1;
@@ -3222,7 +3406,7 @@ async function fetchKeywordDataCached(keyword) {
       return Number(b.score || 0) - Number(a.score || 0);
     });
 
-    currentData.allRows = scoredRows;
+    currentData.allRows = cleanedRows;
     currentData.detailRows = sortedRows.slice(0, 30);
     currentData.recommendedRows = sortedRows.filter(isRecommendable).slice(0, 6);
     currentData.rows = currentData.recommendedRows;
@@ -3242,7 +3426,7 @@ async function fetchKeywordDataCached(keyword) {
     renderDetailTable();
     renderSelected();
     analyzeBtn.disabled = false;
-    analyzeBtn.textContent = '분석';
+    analyzeBtn.textContent = '키워드 분석하기';
     return;
   }
 
@@ -3273,7 +3457,7 @@ async function fetchKeywordDataCached(keyword) {
   setTimeout(() => {
     renderSelected();
     analyzeBtn.disabled = false;
-    analyzeBtn.textContent = '분석';
+    analyzeBtn.textContent = '키워드 분석하기';
   }, 0);
 }
     function copyText(text, button, label) {

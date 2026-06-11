@@ -85,19 +85,51 @@ export default async function handler(req, res) {
   // source=google | naver | both (기본 both)
   const source = String(req.query.source || 'both').toLowerCase();
 
+  // 자동완성용 키워드 변형 생성:
+  // 자동완성은 "2026장마기간"처럼 다 붙은 복합어를 인식 못 한다.
+  // 사람이 실제로 치는 형태(공백 분리, 연도 분리, 핵심어)로 여러 변형을 만들어 시도한다.
+  function buildVariants(kw){
+    const variants = new Set();
+    const base = kw.trim();
+    variants.add(base);
+    // 1) 연도(20xx, xx년) 분리: "2026장마기간" -> "2026 장마기간", "장마기간 2026", "장마기간"
+    const yearMatch = base.match(/(20\d{2}|\d{2}년)/);
+    if(yearMatch){
+      const year = yearMatch[0];
+      const rest = base.replace(year, '').trim();
+      if(rest){
+        variants.add(`${year} ${rest}`);
+        variants.add(`${rest} ${year}`);
+        variants.add(rest);
+      }
+    }
+    // 2) 공백 없는 긴 복합어는 공백 버전도 시도 (자동완성이 띄어쓰기에 더 잘 반응)
+    const noYear = base.replace(/(20\d{2}|\d{2}년)/g, '').trim();
+    if(noYear && noYear !== base) variants.add(noYear);
+    // 최대 4개 변형으로 제한 (호출 폭증 방지)
+    return [...variants].filter(v => v && v.length >= 2).slice(0, 4);
+  }
+
   try {
+    const variants = buildVariants(keyword);
     let google = [];
     let naver = [];
 
-    if (source === 'google' || source === 'both') {
-      google = await fetchGoogleSuggest(keyword);
-    }
-    // 두 소스를 연속으로 때리지 않도록 짧은 지터를 둔다 (사람처럼 보이게)
-    if (source === 'both') {
-      await sleep(jitter(120, 280));
-    }
-    if (source === 'naver' || source === 'both') {
-      naver = await fetchNaverSuggest(keyword);
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      if (source === 'google' || source === 'both') {
+        const g = await fetchGoogleSuggest(v);
+        google = google.concat(g);
+      }
+      if (source === 'both') {
+        await sleep(jitter(100, 220));
+      }
+      if (source === 'naver' || source === 'both') {
+        const n = await fetchNaverSuggest(v);
+        naver = naver.concat(n);
+      }
+      // 변형 간에도 짧은 간격
+      if (i < variants.length - 1) await sleep(jitter(120, 260));
     }
 
     // 합치고 중복 제거 (정규화: 공백 제거 + 대문자)
@@ -121,6 +153,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       keyword,
+      variants,
       count: merged.length,
       googleCount: google.length,
       naverCount: naver.length,

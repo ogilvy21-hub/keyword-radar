@@ -96,7 +96,7 @@
         <div class="search-zone">
           <h2>키워드 검색 → API 묶음 수집 → 점수순 추천</h2>
           <div class="search-row">
-            <input id="keywordInput" value="" placeholder="예: 참교육, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
+            <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
             <button id="analyzeBtn">분석하기</button>
           </div>
           <div class="steps">
@@ -126,10 +126,10 @@
           </div>
 
           <div class="section-title">
-            <h3>추천 글감 TOP 6</h3>
+            <h3>검색의도 기반 글감 TOP 6</h3>
             <span class="micro-hint">좋은 후보가 없으면 차순위 후보까지 표시</span>
           </div>
-          <p class="table-caption">원키워드와 API 연관키워드를 모두 같은 기준으로 점수화합니다. 카테고리 필터로 후보를 삭제하지 않습니다.</p>
+          <p class="table-caption">키워드는 검색 수요의 입구로 쓰고, 의도근거가 선명한 후보를 우선 추천합니다.</p>
           <div class="table-wrap recommend-table">
             <table>
               <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>발행량</th><th>경쟁비율</th><th>의도근거</th><th>점수</th></tr></thead>
@@ -139,7 +139,7 @@
 
           <div class="section-title">
             <h3>상세 후보 검증표</h3>
-            <span class="micro-hint">API 원자료 가공 결과</span>
+            <span class="micro-hint">API 원자료 + 의도근거 가공 결과</span>
           </div>
           <p class="table-caption">검색광고 API의 keywordList를 표준 row로 바꾸고, 각 키워드별 블로그·카페 total을 붙인 표입니다.</p>
           <div class="table-wrap detail-table">
@@ -278,48 +278,63 @@ async function mapLimit(items, limit, mapper){
 }
 
 function scoreMonthly(monthly){
-  if(monthly>=100000) return 35; if(monthly>=30000) return 32; if(monthly>=10000) return 29; if(monthly>=3000) return 25; if(monthly>=1000) return 20; if(monthly>=300) return 14; if(monthly>=100) return 9; if(monthly>0) return 4; return 0;
+  if(monthly>=100000) return 25;
+  if(monthly>=30000) return 23;
+  if(monthly>=10000) return 21;
+  if(monthly>=3000) return 18;
+  if(monthly>=1000) return 15;
+  if(monthly>=300) return 10;
+  if(monthly>=100) return 6;
+  if(monthly>0) return 3;
+  return 0;
 }
 function scoreContent(total){
-  if(total<=0) return 5; if(total<=1000) return 28; if(total<=3000) return 25; if(total<=5000) return 22; if(total<=10000) return 17; if(total<=20000) return 12; if(total<=50000) return 6; return 0;
+  if(total<=0) return 4;
+  if(total<=1000) return 20;
+  if(total<=3000) return 18;
+  if(total<=5000) return 16;
+  if(total<=10000) return 13;
+  if(total<=20000) return 10;
+  if(total<=50000) return 5;
+  return 0;
 }
 function scoreRatio(row){
-  const r=ratioValue(row); if(r<3) return 25; if(r<5) return 22; if(r<10) return 18; if(r<20) return 13; if(r<50) return 7; if(r<100) return 3; return 0;
+  const r=ratioValue(row);
+  if(r<3) return 20;
+  if(r<5) return 18;
+  if(r<10) return 15;
+  if(r<20) return 11;
+  if(r<50) return 6;
+  if(r<100) return 3;
+  return 0;
 }
-function sourceBonus(row){ if(row.sourceType==='원 키워드') return 6; if(row.sourceType==='API 연관키워드') return 4; if(row.sourceType==='연관검색어 묶음') return 2; return 0; }
+function relevanceScore(row, seed){
+  const kw=normalizeKey(row?.kw||''), seedKey=normalizeKey(seed||state.seed||'');
+  if(!kw || !seedKey) return 0;
+  if(kw===seedKey) return 10;
+  if(kw.includes(seedKey) || seedKey.includes(kw)) return 8;
+  const parts=normalizeSpace(seed||state.seed||'').split(/\s+/).map(normalizeKey).filter(x=>x.length>=2);
+  if(!parts.length) return 4;
+  const matched=parts.filter(part=>kw.includes(part)).length;
+  return Math.min(7, Math.round((matched/parts.length)*7));
+}
 function classify(row){
-  const m=Number(row.monthly||0), c=Number(row.totalContent||0), r=ratioValue(row);
-  if(m>=3000 && c>0 && c<=3000 && r<5) return '황금키워드';
-  if(m>=1000 && c>0 && c<=5000 && r<10) return '준황금키워드';
-  if(m>=100 && (c<=20000 || r<50)) return '차순위 글감';
-  if(m>0) return '참고 후보';
+  const m=Number(row.monthly||0), c=Number(row.totalContent||0), r=ratioValue(row), clarity=Number(row.intentClarityScore||0);
+  if(m>=3000 && c>0 && c<=3000 && r<5 && clarity>=10) return '즉시 글감';
+  if(m>=1000 && c>0 && c<=10000 && r<10) return '우선 후보';
+  if(m>=100 && (c<=30000 || r<50)) return '차순위 글감';
+  if(m>0) return '관찰키워드';
   return 'API 수치 부족';
 }
-function enrichScore(row, bundleRows){
-  const intent = inferIntentFromEvidence(row.kw, bundleRows);
-  const score = Math.max(1, Math.min(95, Math.round(scoreMonthly(row.monthly)+scoreContent(row.totalContent)+scoreRatio(row)+sourceBonus(row)+Math.min(6, intent.score*2))));
-  return { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, score, grade:classify(row), reason:makeReason(row, score, intent) };
-}
-function sortCandidates(rows){
-  const gradeRank = { '황금키워드':5, '준황금키워드':4, '차순위 글감':3, '참고 후보':2, 'API 수치 부족':1 };
-  const sourceRank = { '원 키워드':3, 'API 연관키워드':2, '연관검색어 묶음':1, '원키워드 fallback':0 };
-  return [...rows].sort((a,b)=>{
-    if((gradeRank[b.grade]||0)!==(gradeRank[a.grade]||0)) return (gradeRank[b.grade]||0)-(gradeRank[a.grade]||0);
-    if(Number(b.score||0)!==Number(a.score||0)) return Number(b.score||0)-Number(a.score||0);
-    if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
-    if(Number(a.totalContent||0)!==Number(b.totalContent||0)) return Number(a.totalContent||0)-Number(b.totalContent||0);
-    if(Number(a.ratio||999999)!==Number(b.ratio||999999)) return Number(a.ratio||999999)-Number(b.ratio||999999);
-    return (sourceRank[b.sourceType]||0)-(sourceRank[a.sourceType]||0);
-  });
-}
 function makeReason(row, score, intent){
-  if(row.monthly>0) return `${row.sourceType}에서 확인된 후보입니다. 월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)} 기준으로 ${row.grade || '후보'}에 배치했습니다.`;
+  const evidence = intent?.terms?.length ? ` 의도근거는 ${intent.terms.join(', ')}입니다.` : ' 의도근거가 약해 원키워드 설계로만 참고합니다.';
+  if(row.monthly>0) return `${row.sourceType}에서 확인된 후보입니다. 월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)} 기준으로 ${row.grade || '후보'}에 배치했습니다.${evidence}`;
   return `${row.sourceType}에는 포함됐지만 검색량 수치가 부족합니다. 추천 후보가 부족할 때 연관검색어 묶음으로 참고합니다.`;
 }
 
 const INTENTS = [
-  { key:'content', label:'방송·콘텐츠', terms:['드라마','영화','예능','넷플릭스','티빙','웨이브','OTT','ott','출연진','등장인물','몇부작','재방송','다시보기','원작','웹툰','줄거리','결말','시청률','회차','인물관계도','공개일','방영일'] },
-  { key:'policy', label:'정책·지원금', terms:['지원금','보조금','환급','환급금','신청','대상','지급일','사용처','바우처','장려금','수당','조건','서류'] },
+  { key:'policy', label:'정책·지원금', terms:['환급','환급금','환급일','신청','대상','조건','지급일','사용처','기준','서류','조회','지원금','보조금','장려금','수당','바우처','받는 방법','신청방법'] },
+  { key:'content', label:'방송·콘텐츠', terms:['드라마','영화','예능','넷플릭스','티빙','웨이브','디즈니','쿠팡플레이','OTT','ott','출연진','등장인물','몇부작','재방송','다시보기','원작','웹툰','줄거리','결말','시청률','회차','인물관계도','공개일','방영일'] },
   { key:'finance', label:'금융·대출', terms:['대출','전세대출','버팀목','금리','한도','상환','부결','은행','청약','예금','적금','보험','카드','서류'] },
   { key:'place', label:'장소·방문', terms:['맛집','카페','주차','예약','영업시간','위치','주소','메뉴','가격','후기','근처','가볼만한곳','축제','전시','여행','숙소'] },
   { key:'recipe', label:'레시피·요리', terms:['레시피','만드는법','끓이는법','재료','양념장','요리','국','찌개','조림','볶음','무침','보관법','효능','칼로리'] },
@@ -331,50 +346,89 @@ const INTENTS = [
 const DEFAULT_INTENT = { key:'general', label:'일반정보', score:0, terms:[] };
 
 function includesTerm(text, term){
-  const t = normalizeKey(text), k = normalizeKey(term);
-  if(!k) return false;
-  return t.includes(k);
+  const raw = normalizeSpace(text);
+  const compact = normalizeKey(raw);
+  const termCompact = normalizeKey(term);
+  if(!termCompact) return false;
+  if(raw.includes(term)) return true;
+  return compact.includes(termCompact);
 }
 function inferIntentFromEvidence(selectedKeyword, bundleRows){
-  const evidenceText = [selectedKeyword, ...(bundleRows||[]).map(r=>r.kw)].join(' ');
+  const selected = normalizeSpace(selectedKeyword || '');
+  const bundleText = (bundleRows||[]).map(r=>r.kw).join(' ');
   const scored = INTENTS.map(intent=>{
-    const matched = intent.terms.filter(term => includesTerm(evidenceText, term));
-    return { ...intent, score:matched.length, matched };
+    const selectedMatched = intent.terms.filter(term => includesTerm(selected, term));
+    const bundleMatched = intent.terms.filter(term => includesTerm(bundleText, term));
+    const matched = [...new Set([...selectedMatched, ...bundleMatched])];
+    const score = selectedMatched.length * 3 + bundleMatched.length;
+    return { ...intent, score, terms:matched };
   }).sort((a,b)=>b.score-a.score);
   const best = scored[0];
-  if(best && best.score >= 1) return { key:best.key, label:best.label, score:best.score, terms:best.matched };
+  if(best && best.score >= 1) return { key:best.key, label:best.label, score:best.score, terms:best.terms };
   return DEFAULT_INTENT;
+}
+function clarityScore(intent){
+  const count = Number(intent?.terms?.length || 0);
+  if(count>=4) return 25;
+  if(count===3) return 21;
+  if(count===2) return 16;
+  if(count===1) return 10;
+  return 0;
+}
+function enrichScore(row, bundleRows){
+  const intent = inferIntentFromEvidence(row.kw, bundleRows);
+  const intentScore = clarityScore(intent);
+  const score = Math.max(1, Math.min(95, Math.round(
+    scoreMonthly(row.monthly) + scoreContent(row.totalContent) + scoreRatio(row) + intentScore + relevanceScore(row, state.seed)
+  )));
+  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, score };
+  enriched.grade = classify(enriched);
+  enriched.reason = makeReason(enriched, score, intent);
+  return enriched;
+}
+function sortCandidates(rows){
+  const gradeRank = { '즉시 글감':5, '우선 후보':4, '차순위 글감':3, '관찰키워드':2, 'API 수치 부족':1 };
+  const sourceRank = { '원 키워드':3, 'API 연관키워드':2, '연관검색어 묶음':1, '원키워드 fallback':0 };
+  return [...rows].sort((a,b)=>{
+    if((gradeRank[b.grade]||0)!==(gradeRank[a.grade]||0)) return (gradeRank[b.grade]||0)-(gradeRank[a.grade]||0);
+    if(Number(b.score||0)!==Number(a.score||0)) return Number(b.score||0)-Number(a.score||0);
+    if(Number(b.intentClarityScore||0)!==Number(a.intentClarityScore||0)) return Number(b.intentClarityScore||0)-Number(a.intentClarityScore||0);
+    if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
+    if(Number(a.totalContent||0)!==Number(b.totalContent||0)) return Number(a.totalContent||0)-Number(b.totalContent||0);
+    if(Number(a.ratio||999999)!==Number(b.ratio||999999)) return Number(a.ratio||999999)-Number(b.ratio||999999);
+    return (sourceRank[b.sourceType]||0)-(sourceRank[a.sourceType]||0);
+  });
 }
 function getIntentForSelected(row){ return inferIntentFromEvidence(row?.kw || state.seed, state.rows); }
 
 function needsForIntent(intent){
   const map = {
     content:['어디서 볼 수 있는지 알고 싶다','몇부작·공개 일정·회차 정보를 확인하고 싶다','출연진과 등장인물 관계를 정리하고 싶다','원작·웹툰·줄거리 차이를 알고 싶다'],
-    policy:['내가 대상자인지 확인하고 싶다','신청 방법과 필요 서류를 알고 싶다','지급일과 사용처를 확인하고 싶다','제외 조건과 주의사항을 알고 싶다'],
-    finance:['신청 조건과 한도를 알고 싶다','금리와 상환 방식을 비교하고 싶다','필요 서류와 신청 절차를 확인하고 싶다','부결 사유와 주의사항을 알고 싶다'],
+    policy:['내가 대상자인지 확인하고 싶다','신청 방법과 필요한 서류를 알고 싶다','언제 지급되거나 환급되는지 알고 싶다','사용처·제외 조건·주의사항을 보고 싶다'],
+    finance:['신청 조건과 한도를 알고 싶다','금리와 상환 방식을 비교하고 싶다','필요 서류와 부결 사유를 확인하고 싶다','신청 전 주의할 점을 알고 싶다'],
     place:['위치와 영업시간을 알고 싶다','주차와 예약 가능 여부를 확인하고 싶다','메뉴·가격·후기를 보고 싶다','방문 전 주의할 점을 알고 싶다'],
-    recipe:['재료와 비율을 정확히 알고 싶다','조리 순서를 쉽게 따라 하고 싶다','맛을 살리는 핵심 포인트를 알고 싶다','보관법과 응용법을 알고 싶다'],
-    career:['무엇을 준비해야 하는지 알고 싶다','면접·자소서·채용 조건을 확인하고 싶다','첫 출근 전 실수할 부분을 알고 싶다','실제 후기와 체크리스트를 보고 싶다'],
-    shopping:['가격과 브랜드 차이를 비교하고 싶다','실제 후기를 확인하고 싶다','나에게 맞는 선택 기준을 알고 싶다','구매 전 주의사항을 확인하고 싶다'],
-    issue:['무슨 일이 있었는지 빠르게 알고 싶다','원인과 쟁점을 정리하고 싶다','타임라인과 반응을 확인하고 싶다','앞으로 확인할 내용을 알고 싶다'],
-    howto:['어떻게 해야 하는지 순서대로 알고 싶다','먼저 확인할 설정을 알고 싶다','오류 원인과 해결 방법을 찾고 싶다','안 될 때 대안을 알고 싶다'],
-    general:['핵심 의미를 빠르게 알고 싶다','관련 정보를 한 번에 정리하고 싶다','비슷한 개념과 차이를 확인하고 싶다','주의할 점을 미리 알고 싶다']
+    recipe:['재료와 비율을 알고 싶다','조리 순서를 쉽게 따라 하고 싶다','맛을 살리는 포인트를 알고 싶다','보관법과 응용법을 보고 싶다'],
+    career:['준비해야 할 것과 체크리스트를 알고 싶다','면접·자소서·입사 절차를 확인하고 싶다','후기와 실수하기 쉬운 부분을 보고 싶다','연봉·교육·회사생활 정보를 알고 싶다'],
+    shopping:['가격과 브랜드 차이를 비교하고 싶다','후기와 추천 대상을 알고 싶다','구매 전 주의할 점을 확인하고 싶다','비슷한 선택지를 비교하고 싶다'],
+    issue:['무슨 일이 있었는지 빠르게 알고 싶다','원인과 쟁점을 정리해서 보고 싶다','타임라인과 반응을 확인하고 싶다','앞으로 확인할 부분을 알고 싶다'],
+    howto:['어떻게 하는지 순서대로 알고 싶다','오류나 문제의 원인을 찾고 싶다','먼저 확인할 설정을 알고 싶다','안 될 때 대안을 확인하고 싶다'],
+    general:['핵심 의미와 기본정보를 알고 싶다','관련 정보를 한 번에 정리하고 싶다','비교할 기준을 확인하고 싶다','주의할 점을 미리 보고 싶다']
   };
   return map[intent.key] || map.general;
 }
 function titlesFor(keyword, intent){
   const kw=normalizeSpace(keyword);
   const map = {
-    content:[`${kw}, 어디서 볼 수 있고 몇부작인지 정리`,`${kw} 보기 전 알아둘 인물과 줄거리`,`${kw} 원작·OTT·공개 정보 한 번에 정리`],
-    policy:[`${kw} 대상 조건과 신청 방법 정리`,`${kw} 내가 받을 수 있는지 확인할 기준`,`${kw} 지급일·사용처·제외 조건 체크`],
-    finance:[`${kw} 조건 한도 금리 한 번에 정리`,`${kw} 신청 전 확인할 서류와 부결 기준`,`${kw} 받을 수 있는지 먼저 볼 기준`],
-    place:[`${kw} 방문 전 주차·예약·영업시간 정리`,`${kw} 메뉴와 위치, 가기 전 확인할 내용`,`${kw} 처음 간다면 이 기준부터 보세요`],
-    recipe:[`${kw} 재료 비율과 순서 정리`,`${kw} 실패 줄이는 핵심 포인트`,`${kw} 처음 만들어도 따라 하기 쉬운 방법`],
-    career:[`${kw} 준비 전 꼭 볼 체크리스트`,`${kw} 처음 겪는 사람을 위한 현실 안내`,`${kw} 준비물과 주의사항 정리`],
-    shopping:[`${kw} 가격 후기 선택 기준 정리`,`${kw} 실패 줄이는 구매 포인트`,`${kw} 추천 대상과 비교 기준`],
-    issue:[`${kw} 사건 개요와 쟁점 정리`,`${kw} 타임라인과 반응 한 번에 보기`,`${kw} 앞으로 확인할 부분`],
-    howto:[`${kw} 원인과 해결 순서 정리`,`${kw} 안 될 때 먼저 확인할 것`,`${kw} 쉽게 따라 하는 방법`],
-    general:[`${kw}, 핵심만 쉽게 정리`,`${kw} 처음 보는 사람을 위한 안내`,`${kw} 관련 정보와 주의할 점`]
+    content:[`${kw}, 어디서 볼 수 있고 몇부작인지 정리`,`${kw} 출연진과 줄거리 보기 전 확인할 내용`,`${kw} 원작·OTT·재방송 정보 한 번에 정리`],
+    policy:[`${kw}, 대상과 신청 기준 정리`,`${kw} 언제 받고 어떻게 신청하는지 정리`,`${kw} 사용처와 주의사항까지 확인하세요`],
+    finance:[`${kw}, 한도·금리·서류 기준 정리`,`${kw} 신청 전 부결 사유부터 확인하세요`,`${kw} 조건 비교와 주의사항 정리`],
+    place:[`${kw} 주차·예약·영업시간 정리`,`${kw} 방문 전 확인할 메뉴와 후기`,`${kw} 위치와 가격대 한 번에 정리`],
+    recipe:[`${kw} 재료 비율과 순서 정리`,`${kw} 실패 줄이는 조리 포인트`,`${kw} 맛을 살리는 핵심만 정리`],
+    career:[`${kw} 준비 전 꼭 볼 체크리스트`,`${kw} 입사·면접 전 확인할 내용`,`${kw} 처음 겪는 사람을 위한 정리`],
+    shopping:[`${kw} 가격·후기·선택 기준 정리`,`${kw} 구매 전 비교할 포인트`,`${kw} 추천 대상과 주의사항`],
+    issue:[`${kw} 사건 개요와 쟁점 정리`,`${kw} 타임라인과 반응 확인`,`${kw} 앞으로 봐야 할 부분`],
+    howto:[`${kw} 원인과 해결 순서`,`${kw} 먼저 확인할 설정`,`${kw} 안 될 때 대안 정리`],
+    general:[`${kw}, 핵심만 쉽게 정리`,`${kw} 기준과 주의할 점`,`${kw} 처음 보는 사람을 위한 정리`]
   };
   return map[intent.key] || map.general;
 }
@@ -382,20 +436,20 @@ function outlinesFor(keyword, intent){
   const kw=normalizeSpace(keyword);
   const map = {
     content:[`${kw} 기본정보`,'공개 일정과 회차 구성','출연진과 주요 인물','줄거리와 관전 포인트','OTT·재방송·다시보기','자주 묻는 질문'],
-    policy:[`${kw} 대상자 확인`,'신청 조건과 제외 대상','지원 금액과 지급 일정','신청 방법과 필요 서류','사용처와 주의사항','자주 묻는 질문'],
-    finance:[`${kw} 조건 정리`,'한도와 금리 비교','신청 대상과 필요 서류','승인 기간과 부결 사유','상환 방식과 주의사항','자주 묻는 질문'],
+    policy:[`${kw} 대상자 확인`,'신청 조건과 제외 대상','지급·환급 금액과 일정','신청 방법과 필요 서류','사용처와 주의사항','자주 묻는 질문'],
+    finance:[`${kw} 기본 조건`,'한도와 금리 비교','신청 대상과 필요 서류','승인 기간과 부결 사유','상환 방식과 주의사항','자주 묻는 질문'],
     place:[`${kw} 기본정보`,'위치와 영업시간','주차와 예약 방법','메뉴와 가격대','방문 전 체크할 점','자주 묻는 질문'],
     recipe:[`${kw} 재료 준비`,'양념과 비율','만드는 순서','맛을 살리는 포인트','보관법과 응용법','자주 묻는 질문'],
-    career:[`${kw} 기본정보`,'필요한 준비물','실제 절차와 체크리스트','실수하기 쉬운 부분','후기와 참고할 점','자주 묻는 질문'],
+    career:[`${kw} 기본정보`,'대상과 상황','준비해야 할 것','실제 절차','주의사항','자주 묻는 질문'],
     shopping:[`${kw} 선택 기준`,'가격과 브랜드 비교','사이즈와 사용 후기','추천 대상과 피해야 할 경우','구매 전 체크리스트','자주 묻는 질문'],
-    issue:[`${kw} 개요`,'타임라인 정리','핵심 쟁점','관련 반응','앞으로 확인할 부분','자주 묻는 질문'],
+    issue:[`${kw} 사건 개요`,'타임라인 정리','핵심 쟁점','관련 반응','앞으로 확인할 부분','자주 묻는 질문'],
     howto:[`${kw} 원인 확인`,'먼저 확인할 설정','해결 순서','안 될 때 대안','추가 조치와 주의사항','자주 묻는 질문'],
     general:[`${kw} 기본정보`,'가장 많이 묻는 내용','관련 정보 정리','비교할 기준','주의할 점','자주 묻는 질문']
   };
   return map[intent.key] || map.general;
 }
 
-function pillClass(value){ if(['황금키워드','준황금키워드'].includes(value)) return 'pill green'; if(['차순위 글감','참고 후보'].includes(value)) return 'pill yellow'; if(['API 수치 부족'].includes(value)) return 'pill red'; return 'pill gray'; }
+function pillClass(value){ if(['즉시 글감','우선 후보'].includes(value)) return 'pill green'; if(['차순위 글감','관찰키워드'].includes(value)) return 'pill yellow'; if(['API 수치 부족'].includes(value)) return 'pill red'; return 'pill gray'; }
 function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'score low'; }
 function renderIdle(){
   state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -440,6 +494,7 @@ async function analyze(){
   const seed=normalizeSpace(els.keywordInput.value);
   if(!seed){ renderIdle(); return; }
   els.analyzeBtn.disabled=true; els.analyzeBtn.textContent='분석 중...';
+  state.seed = seed;
   try{
     const adPayload = await fetchSearchAd(seed);
     console.log('[글감레이더 searchPayload]', adPayload);

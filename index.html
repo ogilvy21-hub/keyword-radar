@@ -626,8 +626,8 @@
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>API MVP v9</strong>
-        <p>네이버 검색 API로 블로그·카페 발행수를 가져오고, 카테고리별 검색의도 템플릿을 적용합니다.</p>
+        <strong>API MVP v12</strong>
+        <p>원키워드 exact와 검색광고 API related 묶음을 우선 검증하고, 부족할 때만 조합 검증을 실행합니다.</p>
       </div>
     </header>
 
@@ -1052,14 +1052,24 @@ function getItemKeyword(item) {
   );
 }
 
+function coerceAdCompetition(value) {
+  const text = String(value || '').trim();
+  if (!text) return '낮음';
+  if (/^high$/i.test(text)) return '높음';
+  if (/^mid|medium$/i.test(text)) return '중간';
+  if (/^low$/i.test(text)) return '낮음';
+  return text;
+}
+
 function rowFromApiItem(item, sourceType = 'API 연관키워드') {
-  const kw = getItemKeyword(item);
-  const pc = pickFirstNumber(item, ['monthlyPc','monthlyPcQcCnt','pc','pcCount','pcSearch','pcSearchCount']);
-  const mo = pickFirstNumber(item, ['monthlyMobile','monthlyMobileQcCnt','mo','mobile','mobileCount','mobileSearch','mobileSearchCount']);
-  const monthly = pickFirstNumber(item, ['monthlyTotal','monthlySearch','totalSearch','searchVolume','searchCount','total','cnt']) || pc + mo;
-  const blog = pickFirstNumber(item, ['blog','blogTotal','blogCount','blogIssueCnt','blogDocumentCount']);
-  const cafe = pickFirstNumber(item, ['cafe','cafeTotal','cafeCount','cafeIssueCnt','cafeDocumentCount']);
-  const ad = item.compIdx || item.competition || item.ad || item.adCompetition || '낮음';
+  const safeItem = item || {};
+  const kw = getItemKeyword(safeItem);
+  const pc = pickFirstNumber(safeItem, ['monthlyPc','monthlyPcQcCnt','pc','pcCount','pcSearch','pcSearchCount']);
+  const mo = pickFirstNumber(safeItem, ['monthlyMobile','monthlyMobileQcCnt','mo','mobile','mobileCount','mobileSearch','mobileSearchCount']);
+  const monthly = pickFirstNumber(safeItem, ['monthlyTotal','monthlySearch','totalSearch','searchVolume','searchCount','total','cnt']) || pc + mo;
+  const blog = pickFirstNumber(safeItem, ['blog','blogTotal','blogCount','blogIssueCnt','blogDocumentCount']);
+  const cafe = pickFirstNumber(safeItem, ['cafe','cafeTotal','cafeCount','cafeIssueCnt','cafeDocumentCount']);
+  const ad = coerceAdCompetition(safeItem.compIdx || safeItem.competition || safeItem.ad || safeItem.adCompetition || safeItem.competitionLevel || '낮음');
 
   return {
     kw,
@@ -1078,31 +1088,40 @@ function rowFromApiItem(item, sourceType = 'API 연관키워드') {
   };
 }
 
-function extractRelatedItems(payload, seedKeyword) {
-  const seedKey = normalizeKeywordKey(seedKeyword);
-  const candidates = [];
+function collectSearchAdItems(payload) {
+  const items = [];
   const visited = new Set();
-  const preferredArrayKeys = ['related','relatedKeywords','relKeywords','keywordList','keywords','items','list','data','result'];
+  const preferredArrayKeys = [
+    'keywordList',
+    'relatedKeywords',
+    'related',
+    'relKeywords',
+    'keywords',
+    'items',
+    'list',
+    'rows',
+    'data',
+    'result',
+    'results'
+  ];
 
   function pushItem(item) {
+    if (!item || typeof item !== 'object') return;
     const kw = getItemKeyword(item);
     if (!kw) return;
-    const key = normalizeKeywordKey(kw);
-    if (!key || key === seedKey) return;
-    if (key.length < 2) return;
-    candidates.push(rowFromApiItem(item, 'API 연관키워드'));
+    if (!Object.keys(item).some(key => /Keyword|keyword|kw|QcCnt|monthly|search|compIdx|competition|blog|cafe/i.test(key))) return;
+    items.push(item);
   }
 
   function walk(value, depth = 0) {
-    if (!value || depth > 5) return;
-    if (typeof value !== 'object') return;
+    if (!value || depth > 6 || typeof value !== 'object') return;
     if (visited.has(value)) return;
     visited.add(value);
 
     if (Array.isArray(value)) {
       value.forEach(item => {
         if (item && typeof item === 'object') {
-          if (getItemKeyword(item)) pushItem(item);
+          pushItem(item);
           walk(item, depth + 1);
         }
       });
@@ -1114,13 +1133,55 @@ function extractRelatedItems(payload, seedKeyword) {
     });
 
     Object.keys(value).forEach(key => {
-      if (!preferredArrayKeys.includes(key) && typeof value[key] === 'object') {
-        walk(value[key], depth + 1);
+      const child = value[key];
+      if (child && typeof child === 'object' && !preferredArrayKeys.includes(key)) {
+        walk(child, depth + 1);
       }
     });
   }
 
   walk(payload);
+  return items;
+}
+
+function findExactKeywordRow(payload, keyword) {
+  const seedKey = normalizeKeywordKey(keyword);
+  const items = collectSearchAdItems(payload);
+
+  const exact = items.find(item => normalizeKeywordKey(getItemKeyword(item)) === seedKey);
+  if (exact) return exact;
+
+  const topLevelKeyword = getItemKeyword(payload);
+  const topLevelHasMetric = payload && typeof payload === 'object' && (
+    payload.monthlyPc !== undefined ||
+    payload.monthlyPcQcCnt !== undefined ||
+    payload.monthlyMobile !== undefined ||
+    payload.monthlyMobileQcCnt !== undefined ||
+    payload.monthlyTotal !== undefined ||
+    payload.searchVolume !== undefined
+  );
+
+  if (topLevelHasMetric) {
+    const topLevelKey = normalizeKeywordKey(topLevelKeyword || keyword);
+    if (!topLevelKeyword || topLevelKey === seedKey) {
+      return { ...payload, keyword };
+    }
+  }
+
+  return null;
+}
+
+function extractRelatedItems(payload, seedKeyword) {
+  const seedKey = normalizeKeywordKey(seedKeyword);
+  const candidates = collectSearchAdItems(payload)
+    .map(item => rowFromApiItem(item, 'API 연관키워드'))
+    .filter(row => {
+      const key = normalizeKeywordKey(row.kw);
+      if (!key || key === seedKey) return false;
+      if (key.length < 2) return false;
+      return Number(row.monthly || 0) > 0 || row.kw.length >= 2;
+    });
+
   return uniqueRowsByKeyword(candidates)
     .filter(row => row.kw && normalizeKeywordKey(row.kw) !== seedKey)
     .slice(0, 80);
@@ -1338,6 +1399,36 @@ function sortRowsByOpportunity(rows, currentData) {
   });
 }
 
+function getIntentClarityScore(row, currentData) {
+  const template = currentData?.template || getDefaultTemplate(row?.kw || '');
+  const count = getRowIntentTermCount(row, template);
+  if (count >= 2) return 3;
+  if (count === 1) return 2;
+  return 1;
+}
+
+function sortRowsByDataPriority(rows, currentData) {
+  const sourceRank = { '원 키워드': 4, 'API 연관키워드': 3, '연관어 조합 검증': 2, '원키워드 글감': 1 };
+  return [...(rows || [])].sort((a, b) => {
+    if (Number(b.monthly || 0) !== Number(a.monthly || 0)) return Number(b.monthly || 0) - Number(a.monthly || 0);
+    if (Number(a.totalContent || 0) !== Number(b.totalContent || 0)) return Number(a.totalContent || 0) - Number(b.totalContent || 0);
+
+    const aRatio = Number(a.competitionRatio || getCompetitionRatioValue(a));
+    const bRatio = Number(b.competitionRatio || getCompetitionRatioValue(b));
+    if (aRatio !== bRatio) return aRatio - bRatio;
+
+    const aRel = Number(a.baseRelevance || getBaseRelevance(a, currentData?.seedKeyword));
+    const bRel = Number(b.baseRelevance || getBaseRelevance(b, currentData?.seedKeyword));
+    if (bRel !== aRel) return bRel - aRel;
+
+    const aIntent = getIntentClarityScore(a, currentData);
+    const bIntent = getIntentClarityScore(b, currentData);
+    if (bIntent !== aIntent) return bIntent - aIntent;
+
+    return (sourceRank[b.sourceType] || 0) - (sourceRank[a.sourceType] || 0);
+  });
+}
+
 function makeRowFromKeyword(kw, extra = {}) {
   return {
     kw: normalizeSpace(kw),
@@ -1405,10 +1496,11 @@ async function fetchKeywordDataCached(keyword) {
     totalContent: 0,
     ad: '낮음',
     relKeyword: cacheKey,
-    apiKeywordMatchScore: 100,
+    apiKeywordMatchScore: 0,
     searchPayload: null,
     searchOk: false,
-    contentOk: false
+    contentOk: false,
+    exactAdRowFound: false
   };
 
   try {
@@ -1424,14 +1516,26 @@ async function fetchKeywordDataCached(keyword) {
   try {
     const adData = await fetchSearchAdData(cacheKey);
     result.searchPayload = adData;
-    const direct = rowFromApiItem({ ...adData, keyword: cacheKey }, '원 키워드');
-    result.pc = Number(adData.monthlyPc || adData.monthlyPcQcCnt || direct.pc || 0);
-    result.mo = Number(adData.monthlyMobile || adData.monthlyMobileQcCnt || direct.mo || 0);
-    result.monthly = Number(adData.monthlyTotal || direct.monthly || result.pc + result.mo || 0);
-    result.ad = adData.competition || adData.compIdx || result.ad;
-    result.relKeyword = adData.relKeyword || adData.keyword || cacheKey;
-    result.apiKeywordMatchScore = getApiKeywordMatchScore(cacheKey, result.relKeyword);
-    result.searchOk = true;
+
+    const exactAdRow = findExactKeywordRow(adData, cacheKey);
+    const direct = exactAdRow ? rowFromApiItem(exactAdRow, '원 키워드') : null;
+
+    if (direct && normalizeKeywordKey(direct.kw) === normalizeKeywordKey(cacheKey)) {
+      result.pc = Number(direct.pc || 0);
+      result.mo = Number(direct.mo || 0);
+      result.monthly = Number(direct.monthly || result.pc + result.mo || 0);
+      result.ad = direct.ad || result.ad;
+      result.relKeyword = direct.kw || cacheKey;
+      result.apiKeywordMatchScore = 100;
+      result.searchOk = true;
+      result.exactAdRowFound = true;
+    } else {
+      result.relKeyword = exactAdRow ? getItemKeyword(exactAdRow) : '';
+      result.apiKeywordMatchScore = getApiKeywordMatchScore(cacheKey, result.relKeyword);
+      result.searchOk = false;
+      result.exactAdRowFound = false;
+      console.warn(`[searchad exact 없음] "${cacheKey}"와 정확히 일치하는 keywordList 행을 찾지 못했습니다. related 묶음만 사용합니다.`, adData);
+    }
   } catch (error) {
     console.warn(`${cacheKey} 검색광고 API 실패`, error);
   }
@@ -1889,6 +1993,13 @@ async function renderAll(resetSelection = true) {
     };
 
     const rawRelatedRows = extractRelatedItems(seedApi.searchPayload, keyword);
+    console.log('[글감레이더 searchPayload]', seedApi.searchPayload);
+    console.log('[글감레이더 API related rows]', rawRelatedRows);
+
+    if (!rawRelatedRows.length) {
+      console.warn('API related 묶음이 비어 있습니다. /api/searchad 응답에 keywordList 또는 relatedKeywords 배열이 포함되어 있는지 확인하세요.');
+    }
+
     const hydratedRelatedRows = await hydrateRelatedRows(rawRelatedRows, 40);
     const inference = inferTemplateFromBundle(keyword, hydratedRelatedRows);
 
@@ -1930,7 +2041,7 @@ async function renderAll(resetSelection = true) {
       detailRows = detailRows.length ? detailRows : [fallback];
     }
 
-    currentData.detailRows = sortRowsByOpportunity(detailRows, currentData).slice(0, 40);
+    currentData.detailRows = sortRowsByDataPriority(detailRows, currentData).slice(0, 40);
     currentData.rows = recommendedRows.slice(0, 6);
     currentData.totalCandidateCount = currentData.detailRows.length;
     currentData.related = currentData.detailRows.map(row => row.kw).slice(0, 24);

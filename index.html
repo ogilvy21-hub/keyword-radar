@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v13 | API 데이터 기반 글감 추천</title>
-  <meta name="description" content="네이버 API 데이터만 받아 검색량, 발행량, 경쟁비율 기준으로 글감 후보를 추천하고 제목·목차·원고 프롬프트를 생성합니다." />
+  <title>글감레이더 v15 | 검색의도·구글 유입 중심 글감 추천</title>
+  <meta name="description" content="네이버 API 데이터로 검색량 대비 발행량이 적은 블루오션 키워드를 찾고, 검색의도 명확도와 구글 유입 적합도를 함께 평가해 제목·목차·원고 프롬프트를 생성합니다." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -50,6 +51,7 @@
     .pick-btn { border:0; border-radius:999px; padding:8px 10px; background:#2563eb; color:#fff; font-size:12px; font-weight:900; cursor:pointer; }
     .pill { display:inline-flex; align-items:center; justify-content:center; padding:6px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:900; white-space:nowrap; }
     .pill.green { background:#dcfce7; color:#047857; } .pill.yellow { background:#fef3c7; color:#a16207; } .pill.red { background:#fee2e2; color:#b91c1c; } .pill.gray { background:#f1f5f9; color:#475569; }
+    .pill.cpc { background:#fde68a; color:#92400e; }
     .score { display:inline-flex; min-width:42px; height:28px; align-items:center; justify-content:center; border-radius:999px; background:#dcfce7; color:#047857; font-weight:900; } .score.mid { background:#fef3c7; color:#a16207; } .score.low { background:#fee2e2; color:#b91c1c; }
     .reason-cell { max-width:360px; white-space:normal; line-height:1.5; color:#475569; font-weight:700; } .detail-table table { min-width:1320px; }
     .builder-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .card { padding:13px 15px; border-radius:16px; background:#fff; border:1px solid #e5e7eb; } .card h4 { margin:0 0 10px; font-size:15px; }
@@ -74,14 +76,14 @@
   <div class="app">
     <header class="hero">
       <div>
-        <p class="eyebrow">PURE API KEYWORD ENGINE</p>
-        <h1>글감레이더 v13<br>API 데이터만 보고 추천</h1>
-        <p class="desc">키워드를 입력하면 네이버 검색광고 API의 원키워드·연관키워드 묶음과 네이버 검색 API의 블로그·카페 발행량을 합쳐 글감 후보를 순서대로 추천합니다. 원키워드 문자열로 카테고리를 먼저 찍지 않습니다.</p>
+        <p class="eyebrow">INTENT × GOOGLE-FIT ENGINE</p>
+        <h1>글감레이더 v15<br>검색의도·구글 유입 중심</h1>
+        <p class="desc">키워드를 입력하면 검색 수요 대비 발행량이 적은 블루오션 후보를 찾고, 검색의도가 명확한지와 구글에서 유입이 터질 정보성 키워드인지를 함께 평가해 위로 올립니다. 네이버가 구글식 '검색의도 충족'으로 옮겨가는 흐름에 맞춘 버전입니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>v13 Pure API</strong>
-        <p>특정 키워드 예외 처리, seed 문자열 자동 카테고리 감지, 테스트용 강제 필터를 제거한 구조입니다.</p>
+        <strong>v15 Intent × Google</strong>
+        <p>경쟁비율 + 검색의도 명확도 비중을 동급으로 맞추고, 정보성(구글 유입형) 의도와 고단가 틈새에 보너스를 줍니다.</p>
       </div>
     </header>
 
@@ -94,7 +96,7 @@
         </div>
 
         <div class="search-zone">
-          <h2>키워드 검색 → API 묶음 수집 → 점수순 추천</h2>
+          <h2>키워드 검색 → API 묶음 수집 → 블루오션 정렬</h2>
           <div class="search-row">
             <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
             <button id="analyzeBtn">분석하기</button>
@@ -103,7 +105,7 @@
             <div class="step active">STEP 1<br>원키워드 API</div>
             <div class="step active">STEP 2<br>related 묶음</div>
             <div class="step active">STEP 3<br>발행량 결합</div>
-            <div class="step active">STEP 4<br>점수 정렬</div>
+            <div class="step active">STEP 4<br>블루오션 정렬</div>
             <div class="step active">STEP 5<br>제목·목차</div>
           </div>
         </div>
@@ -120,19 +122,19 @@
             <div>
               <p class="decision-label">GEULGAM RADAR DECISION</p>
               <h3 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h3>
-              <p id="judgementReason">API가 준 키워드 묶음을 점수화해 가장 좋은 후보부터 보여줍니다.</p>
+              <p id="judgementReason">검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.</p>
             </div>
             <div class="strategy-list" id="strategyList"></div>
           </div>
 
           <div class="section-title">
-            <h3>검색의도 기반 글감 TOP 6</h3>
-            <span class="micro-hint">좋은 후보가 없으면 차순위 후보까지 표시</span>
+            <h3>블루오션 글감 TOP 6</h3>
+            <span class="micro-hint">의도 명확 + 경쟁 적음 + 구글 유입형 우선</span>
           </div>
-          <p class="table-caption">키워드는 검색 수요의 입구로 쓰고, 의도근거가 선명한 후보를 우선 추천합니다.</p>
+          <p class="table-caption">검색 수요는 받쳐주면서 발행량이 적고, 검색의도가 뚜렷하며 구글에서 유입이 잘 터지는 후보를 우선 추천합니다.</p>
           <div class="table-wrap recommend-table">
             <table>
-              <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>발행량</th><th>경쟁비율</th><th>의도근거</th><th>점수</th></tr></thead>
+              <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>발행량</th><th>경쟁비율</th><th>의도근거</th><th>구글적합</th><th>점수</th></tr></thead>
               <tbody id="keywordTable"></tbody>
             </table>
           </div>
@@ -277,8 +279,10 @@ async function mapLimit(items, limit, mapper){
   return results;
 }
 
+/* ===== 점수 로직 v14: 검색량↑ 발행량↓ + 고단가 틈새 ===== */
+
+// 검색량은 "최소 수요 확인" 용도. 점수 폭을 줄여서 검색량 깡패 방지.
 function scoreMonthly(monthly){
-  // 검색량은 "최소 수요 확인" 용도로만. 점수 폭을 줄여서 깡패 방지
   if(monthly>=10000) return 15;
   if(monthly>=3000) return 14;
   if(monthly>=1000) return 12;
@@ -288,8 +292,8 @@ function scoreMonthly(monthly){
   if(monthly>0) return 2;
   return 0;
 }
+// 발행량 절대량 평가 (적을수록 가점)
 function scoreContent(total){
-  // 발행량 자체도 적을수록 가점 (경쟁비율과 별개로 절대량도 평가)
   if(total<=0) return 6;
   if(total<=1000) return 20;
   if(total<=5000) return 16;
@@ -298,23 +302,22 @@ function scoreContent(total){
   if(total<=100000) return 4;
   return 1;
 }
+// 경쟁비율(발행량÷검색량)이 주력 정렬 기준. 최대 40점으로 강화.
 function scoreRatio(row){
   const monthly = Number(row.monthly||0);
   const content = Number(row.totalContent||0);
   if(monthly<=0) return 0;
-  const r = ratioValue(row); // 발행량 ÷ 검색량 (낮을수록 블루오션)
-
+  const r = ratioValue(row);
   // 발행량이 비현실적으로 0에 가까우면 '수요 없는 허수'일 수 있어 살짝 보정
   if(content < 50) return 28;
-
-  if(r<1) return 40;    // 검색량보다 글이 적음 = 최고의 블루오션
+  if(r<1) return 40;
   if(r<3) return 36;
   if(r<5) return 30;
   if(r<10) return 24;
   if(r<20) return 17;
   if(r<50) return 10;
   if(r<100) return 5;
-  return 0;             // 비율 100배 이상 = 레드오션, 글감 부적합
+  return 0;
 }
 function relevanceScore(row, seed){
   const kw=normalizeKey(row?.kw||''), seedKey=normalizeKey(seed||state.seed||'');
@@ -326,24 +329,62 @@ function relevanceScore(row, seed){
   const matched=parts.filter(part=>kw.includes(part)).length;
   return Math.min(7, Math.round((matched/parts.length)*7));
 }
+
+// 애드센스 고단가 의도/단어에 보너스
+const HIGH_CPC_KEYS = ['finance','policy'];
+const CPC_WORDS = ['대출','보험','금리','한도','상속','세금','연금','환급','지원금','변호사','수당','적금','청약','펀드','투자','카드','보상','진단'];
+function highCpcBonus(intentKey, kw){
+  let bonus = 0;
+  if(HIGH_CPC_KEYS.includes(intentKey)) bonus += 8;
+  const compact = normalizeKey(kw);
+  if(CPC_WORDS.some(w => compact.includes(normalizeKey(w)))) bonus += 5;
+  return bonus;
+}
+function isHighCpc(intentKey, kw){
+  if(HIGH_CPC_KEYS.includes(intentKey)) return true;
+  const compact = normalizeKey(kw);
+  return CPC_WORDS.some(w => compact.includes(normalizeKey(w)));
+}
+
+// 구글 유입 적합도: 정보성(방법·정책·금융·이슈·해결) 의도일수록 구글에서 트래픽이 잘 터짐
+const GOOGLE_FRIENDLY_KEYS = ['howto','policy','finance','issue','recipe','career'];
+const GOOGLE_WORDS = ['방법','하는법','신청','조건','차이','비교','원인','해결','후기','효능','뜻','종류','순서','정리','준비물','기준'];
+function googleBonus(intentKey, kw){
+  let bonus = 0;
+  if(GOOGLE_FRIENDLY_KEYS.includes(intentKey)) bonus += 7;
+  const compact = normalizeKey(kw);
+  if(GOOGLE_WORDS.some(w => compact.includes(normalizeKey(w)))) bonus += 5;
+  return bonus;
+}
+function googleFitLabel(intentKey, kw){
+  const b = googleBonus(intentKey, kw);
+  if(b >= 10) return { label:'구글 강세', cls:'green' };
+  if(b >= 5) return { label:'구글 양호', cls:'yellow' };
+  return { label:'네이버형', cls:'gray' };
+}
+
 function classify(row){
   const m=Number(row.monthly||0), c=Number(row.totalContent||0), r=ratioValue(row), clarity=Number(row.intentClarityScore||0);
-  if(m>=3000 && c>0 && c<=3000 && r<5 && clarity>=10) return '즉시 글감';
-  if(m>=1000 && c>0 && c<=10000 && r<10) return '우선 후보';
-  if(m>=100 && (c<=30000 || r<50)) return '차순위 글감';
+  // 블루오션 기준: 검색 수요 있으면서 경쟁비율 낮은 것을 상위로
+  if(m>=500 && r<3 && clarity>=10) return '즉시 글감';
+  if(m>=300 && r<5) return '우선 후보';
+  if(m>=300 && r<20) return '차순위 글감';
   if(m>0) return '관찰키워드';
   return 'API 수치 부족';
 }
 function makeReason(row, score, intent){
+  const cpc = isHighCpc(intent?.key, row.kw) ? ' 고단가 틈새 키워드라 수익 가치가 높습니다.' : '';
+  const gFit = googleFitLabel(intent?.key, row.kw);
+  const gtext = gFit.cls==='green' ? ' 정보성 의도가 뚜렷해 구글 유입이 잘 터지는 유형입니다.' : (gFit.cls==='yellow' ? ' 구글 유입 가능성이 있는 정보성 키워드입니다.' : '');
   const evidence = intent?.terms?.length ? ` 의도근거는 ${intent.terms.join(', ')}입니다.` : ' 의도근거가 약해 원키워드 설계로만 참고합니다.';
-  if(row.monthly>0) return `${row.sourceType}에서 확인된 후보입니다. 월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)} 기준으로 ${row.grade || '후보'}에 배치했습니다.${evidence}`;
+  if(row.monthly>0) return `월간 검색수 ${format(row.monthly)}회 대비 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 글이 ${ratioValue(row)<5?'적은 편이라 블루오션':'다소 많은 편'}으로 보고 ${row.grade || '후보'}에 배치했습니다.${cpc}${gtext}${evidence}`;
   return `${row.sourceType}에는 포함됐지만 검색량 수치가 부족합니다. 추천 후보가 부족할 때 연관검색어 묶음으로 참고합니다.`;
 }
 
 const INTENTS = [
   { key:'policy', label:'정책·지원금', terms:['환급','환급금','환급일','신청','대상','조건','지급일','사용처','기준','서류','조회','지원금','보조금','장려금','수당','바우처','받는 방법','신청방법'] },
   { key:'content', label:'방송·콘텐츠', terms:['드라마','영화','예능','넷플릭스','티빙','웨이브','디즈니','쿠팡플레이','OTT','ott','출연진','등장인물','몇부작','재방송','다시보기','원작','웹툰','줄거리','결말','시청률','회차','인물관계도','공개일','방영일'] },
-  { key:'finance', label:'금융·대출', terms:['대출','전세대출','버팀목','금리','한도','상환','부결','은행','청약','예금','적금','보험','카드','서류'] },
+  { key:'finance', label:'금융·대출', terms:['대출','전세대출','버팀목','금리','한도','상환','부결','은행','청약','예금','적금','보험','카드','서류','연금','펀드','투자','상속','세금'] },
   { key:'place', label:'장소·방문', terms:['맛집','카페','주차','예약','영업시간','위치','주소','메뉴','가격','후기','근처','가볼만한곳','축제','전시','여행','숙소'] },
   { key:'recipe', label:'레시피·요리', terms:['레시피','만드는법','끓이는법','재료','양념장','요리','국','찌개','조림','볶음','무침','보관법','효능','칼로리'] },
   { key:'career', label:'직장·채용', terms:['준비물','첫출근','면접','자소서','이력서','채용','연봉','인턴','공채','수습','직무','퇴사'] },
@@ -376,48 +417,39 @@ function inferIntentFromEvidence(selectedKeyword, bundleRows){
   return DEFAULT_INTENT;
 }
 function clarityScore(intent){
+  // v15: 검색의도 명확도를 경쟁비율과 거의 동급(최대 35)으로 강화
   const count = Number(intent?.terms?.length || 0);
-  if(count>=4) return 25;
-  if(count===3) return 21;
-  if(count===2) return 16;
-  if(count===1) return 10;
+  if(count>=4) return 35;
+  if(count===3) return 29;
+  if(count===2) return 22;
+  if(count===1) return 13;
   return 0;
-}
-  // 애드센스 고단가 의도에 보너스
-const HIGH_CPC_KEYS = ['finance','policy']; // 금융·대출, 정책·지원금
-function highCpcBonus(intentKey, kw){
-  let bonus = 0;
-  if(HIGH_CPC_KEYS.includes(intentKey)) bonus += 8;
-  // 단가 높은 단어가 키워드에 직접 들어가면 추가 가점
-  const cpcWords = ['대출','보험','금리','한도','상속','세금','연금','환급','지원금','변호사','수당','적금','청약'];
-  const compact = normalizeKey(kw);
-  if(cpcWords.some(w => compact.includes(normalizeKey(w)))) bonus += 5;
-  return bonus;
 }
 function enrichScore(row, bundleRows){
   const intent = inferIntentFromEvidence(row.kw, bundleRows);
   const intentScore = clarityScore(intent);
   const cpcBonus = highCpcBonus(intent.key, row.kw);
+  const gBonus = googleBonus(intent.key, row.kw);
   const score = Math.max(1, Math.min(100, Math.round(
-    scoreMonthly(row.monthly) + scoreContent(row.totalContent) + scoreRatio(row)
-    + intentScore + relevanceScore(row, state.seed) + cpcBonus
+    scoreMonthly(row.monthly) + scoreContent(row.totalContent) + scoreRatio(row) + intentScore + relevanceScore(row, state.seed) + cpcBonus + gBonus
   )));
-  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, score };
+  const gFit = googleFitLabel(intent.key, row.kw);
+  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, score };
   enriched.grade = classify(enriched);
   enriched.reason = makeReason(enriched, score, intent);
   return enriched;
 }
 function sortCandidates(rows){
   const gradeRank = { '즉시 글감':5, '우선 후보':4, '차순위 글감':3, '관찰키워드':2, 'API 수치 부족':1 };
-  const sourceRank = { '원 키워드':3, 'API 연관키워드':2, '연관검색어 묶음':1, '원키워드 fallback':0 };
   return [...rows].sort((a,b)=>{
     if((gradeRank[b.grade]||0)!==(gradeRank[a.grade]||0)) return (gradeRank[b.grade]||0)-(gradeRank[a.grade]||0);
     if(Number(b.score||0)!==Number(a.score||0)) return Number(b.score||0)-Number(a.score||0);
+    // v15: 점수 동률이면 의도 명확한 순(구글 친화)
     if(Number(b.intentClarityScore||0)!==Number(a.intentClarityScore||0)) return Number(b.intentClarityScore||0)-Number(a.intentClarityScore||0);
-    if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
-    if(Number(a.totalContent||0)!==Number(b.totalContent||0)) return Number(a.totalContent||0)-Number(b.totalContent||0);
+    // 그다음 경쟁비율 낮은(블루오션) 순
     if(Number(a.ratio||999999)!==Number(b.ratio||999999)) return Number(a.ratio||999999)-Number(b.ratio||999999);
-    return (sourceRank[b.sourceType]||0)-(sourceRank[a.sourceType]||0);
+    if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
+    return 0;
   });
 }
 function getIntentForSelected(row){ return inferIntentFromEvidence(row?.kw || state.seed, state.rows); }
@@ -475,16 +507,16 @@ function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'scor
 function renderIdle(){
   state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
   els.totalKeywords.textContent='0개'; els.bestKeywordText.textContent='-'; els.bestScoreText.textContent='0'; els.intentShortText.textContent='대기';
-  els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='API가 준 키워드 묶음을 점수화해 가장 좋은 후보부터 보여줍니다.'; els.strategyList.innerHTML='';
-  els.keywordTable.innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
+  els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
+  els.keywordTable.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   els.selectedHint.textContent='키워드를 선택하세요'; els.relatedChips.innerHTML=''; els.readerNeeds.innerHTML=''; els.titleList.innerHTML=''; els.outlineList.innerHTML='';
   els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value='';
 }
 function renderRecommendTable(){
   const rows=state.recommended;
-  if(!rows.length){ els.keywordTable.innerHTML='<tr><td colspan="9"><div class="empty"><strong>추천 가능한 키워드가 부족합니다.</strong>원키워드와 API 연관검색어 묶음 기준으로 글감 설계를 만듭니다.</div></td></tr>'; return; }
-  els.keywordTable.innerHTML = rows.map((row,i)=>`<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.totalContent)}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`).join('');
+  if(!rows.length){ els.keywordTable.innerHTML='<tr><td colspan="10"><div class="empty"><strong>추천 가능한 키워드가 부족합니다.</strong>원키워드와 API 연관검색어 묶음 기준으로 글감 설계를 만듭니다.</div></td></tr>'; return; }
+  els.keywordTable.innerHTML = rows.map((row,i)=>`<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.totalContent)}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`).join('');
   els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); renderRecommendTable(); renderSelected(); }));
 }
 function renderDetailTable(){
@@ -500,15 +532,15 @@ function renderSelected(){
   const needs = needsForIntent(intent), titles=titlesFor(row.kw,intent), outlines=outlinesFor(row.kw,intent);
   els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=row.score; els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
   els.judgementTitle.textContent = `${row.kw}, ${row.grade}로 추천합니다`;
-  els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. API 데이터 기준으로 점수순 배치했습니다.`;
-  els.strategyList.innerHTML = ['API related 묶음에서 확인된 키워드를 우선 활용하세요.','제목은 선택 키워드와 검색자가 판단할 포인트를 함께 넣으세요.','목차는 선택 키워드의 의도근거와 같은 방향으로만 구성하세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
+  els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 발행량이 적은 순으로 정렬했습니다.`;
+  els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','제목은 선택 키워드와 검색자가 판단할 포인트를 함께 넣으세요.','목차는 선택 키워드의 의도근거와 같은 방향으로만 구성하세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
   els.relatedChips.innerHTML = state.relatedKeywords.slice(0,30).map((kw,i)=>`<span class="chip ${i<6?'hot':''}">${escapeHTML(kw)}</span>`).join('');
   els.readerNeeds.innerHTML = needs.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
   els.titleList.innerHTML = titles.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
   els.outlineList.innerHTML = outlines.map((x,i)=>`<div class="outline-item"><span>${i+1}</span><div>${escapeHTML(x)}</div></div>`).join('');
-  els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
+  els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');
-  els.draftPrompt.value = `키워드: ${row.kw}\n\n의도근거: ${intent.label}\n플랫폼: ${els.platformSelect.value}\n문체: ${els.toneSelect.value}\n분량: ${els.lengthSelect.value}\n출력 형식: ${els.outputSelect.value}\n추가 조건: ${els.tableCheck.checked?'표 포함':'표 제외'}, ${els.faqCheck.checked?'FAQ 포함':'FAQ 제외'}\n\n경쟁 데이터:\n- 월간 검색수: ${format(row.monthly)}\n- PC 검색수: ${format(row.pc)}\n- 모바일 검색수: ${format(row.mo)}\n- 블로그 발행수: ${format(row.blog)}\n- 카페 발행수: ${format(row.cafe)}\n- 경쟁비율: ${ratioText(row)}\n- 글감점수: ${row.score}\n\nAPI 연관키워드 묶음:\n${promptRelated}\n\n검색자가 원하는 답:\n${needs.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n제목 후보:\n${titles.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n목차:\n${outlines.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n위 설계를 바탕으로 원고를 작성해줘. 키워드만 나열하지 말고, 검색자가 궁금해하는 판단 포인트를 제목과 소제목에 자연스럽게 넣어줘. 본문은 주체와 대상을 분명히 쓰고, 기계적인 표현을 피해서 자연어로 작성해줘. 마지막에는 자료출처와 태그 10개를 붙여줘.`;
+  els.draftPrompt.value = `키워드: ${row.kw}\n\n의도근거: ${intent.label}\n구글 유입 적합도: ${row.googleFit||'네이버형'}\n플랫폼: ${els.platformSelect.value}\n문체: ${els.toneSelect.value}\n분량: ${els.lengthSelect.value}\n출력 형식: ${els.outputSelect.value}\n추가 조건: ${els.tableCheck.checked?'표 포함':'표 제외'}, ${els.faqCheck.checked?'FAQ 포함':'FAQ 제외'}\n\n경쟁 데이터:\n- 월간 검색수: ${format(row.monthly)}\n- PC 검색수: ${format(row.pc)}\n- 모바일 검색수: ${format(row.mo)}\n- 블로그 발행수: ${format(row.blog)}\n- 카페 발행수: ${format(row.cafe)}\n- 경쟁비율: ${ratioText(row)}\n- 글감점수: ${row.score}\n\nAPI 연관키워드 묶음:\n${promptRelated}\n\n검색자가 원하는 답:\n${needs.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n제목 후보:\n${titles.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n목차:\n${outlines.map((x,i)=>`${i+1}. ${x}`).join('\n')}\n\n위 설계를 바탕으로 원고를 작성해줘. 핵심 원칙은 '검색한 사람의 질문에 정확히 답하는 글'이야(네이버·구글 공통 평가 방향). 키워드만 나열하지 말고, 검색자가 궁금해하는 판단 포인트를 제목과 소제목에 자연스럽게 넣어줘. 도입부 3줄 안에 검색 의도에 대한 직접적인 답을 먼저 제시하고(구글 스니펫 대응), 본문은 주체와 대상을 분명히 쓰고 기계적인 표현을 피해서 자연어로 작성해줘. 소제목은 사람들이 실제로 검색하는 질문형으로 구성하고, 가능하면 비교·기준·주의사항을 표로 정리해줘. 마지막에는 자료출처와 태그 10개를 붙여줘.`;
 }
 
 async function analyze(){
@@ -536,10 +568,9 @@ async function analyze(){
     });
     const enrichedRaw = uniqueByKeyword(hydrated).map(row=>enrichScore(row, hydrated));
     const sorted = sortCandidates(enrichedRaw);
-   // 월 300회 이상만 추천 (고단가 틈새 포함). 후보가 부족하면 기준 완화
-let recommended = sorted.filter(row=>Number(row.monthly||0)>=300).slice(0,6);
-if(recommended.length < 3) recommended = sorted.filter(row=>Number(row.monthly||0)>0).slice(0,6);
-    if(!recommended.length) recommended = sorted.slice(0,6);
+    // 월 300회 이상만 추천 (고단가 틈새 포함). 후보 부족하면 기준 완화
+    let recommended = sorted.filter(row=>Number(row.monthly||0)>=300).slice(0,6);
+    if(recommended.length < 3) recommended = sorted.filter(row=>Number(row.monthly||0)>0).slice(0,6);
     if(!recommended.length) recommended = [{ ...exactRow, sourceType:'원키워드 fallback', grade:'API 수치 부족', score:20, reason:'API 후보가 부족해 원키워드 기준으로 글감 설계를 만듭니다.', intentEvidence:'일반정보' }];
 
     state = { seed, rows:sorted, recommended, relatedKeywords:relatedRows.map(r=>r.kw), selectedIndex:0 };

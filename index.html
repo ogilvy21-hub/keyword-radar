@@ -626,7 +626,7 @@
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>API MVP v2</strong>
+        <strong>API MVP v9</strong>
         <p>네이버 검색 API로 블로그·카페 발행수를 가져오고, 카테고리별 검색의도 템플릿을 적용합니다.</p>
       </div>
     </header>
@@ -1249,7 +1249,12 @@ function convertRelatedToRows(relatedList) {
         totalContent: 0,
         ad: source.competition || source.ad || source.compIdx || '낮음',
         score: 0,
-        fromRelated: true
+        fromRelated: true,
+        sourceType: '검색광고 연관어',
+        apiRelKeyword: kw,
+        relKeyword: kw,
+        apiKeywordMatchScore: 100,
+        searchOk: parseMetricValue(source.monthlyTotal || source.monthly || source.monthlyCnt) > 0
       };
     })
     .filter(row => row.kw);
@@ -1603,10 +1608,37 @@ function getEffectiveCategoryName(row, currentData) {
 }
 
 function getEffectiveNeeds(row, currentData) {
+  const categoryName = currentData?.categoryName || '';
+  const contextLabel = getContextLabel(row, currentData) || '';
+  const templateKey = currentData?.template?.key || '';
+
+  const entertainmentNeeds = [
+    '작품이나 프로그램의 기본정보를 빠르게 알고 싶다',
+    '출연진·등장인물·줄거리·관계도를 함께 확인하고 싶다',
+    '방송 시간, 회차 구성, 재방송·OTT 정보를 알고 싶다',
+    '처음 보는 사람도 헷갈리지 않게 핵심만 정리해서 보고 싶다'
+  ];
+
+  const careerNeeds = [
+    '지원이나 입사 전에 무엇을 준비해야 하는지 알고 싶다',
+    '회사 생활이나 교육 과정의 실제 정보를 확인하고 싶다',
+    '면접·자소서·후기처럼 바로 필요한 답을 찾고 싶다',
+    '실수하기 쉬운 부분과 체크리스트를 보고 싶다'
+  ];
+
+  // 최종 확정 맥락이 방송이면 row가 원키워드여도 방송 의도로 고정한다.
+  if (templateKey === 'entertainment' || categoryName === '방송·콘텐츠' || contextLabel === '방송·드라마') {
+    return entertainmentNeeds;
+  }
+
+  if (templateKey === 'career' || categoryName === '직장·채용') {
+    return careerNeeds;
+  }
+
   if (!row?.fromDisambiguation) return Array.isArray(currentData?.needs) ? currentData.needs : [];
 
   const needsByContext = {
-    broadcast: ['이 키워드가 어떤 작품인지 빠르게 알고 싶다', '출연진·등장인물·줄거리를 함께 확인하고 싶다', '방송 채널과 OTT, 재방송 정보를 알고 싶다', '동명이의어와 섞이지 않는 정확한 맥락을 확인하고 싶다'],
+    broadcast: entertainmentNeeds,
     webtoon: ['원작 웹툰 여부를 확인하고 싶다', '작가·회차·결말 정보를 알고 싶다', '드라마나 다른 콘텐츠와의 차이를 구분하고 싶다', '처음 보는 사람이 이해할 수 있는 기본정보를 원한다'],
     meaning: ['단어의 뜻과 실제 쓰임을 알고 싶다', '비슷한 표현과 차이를 구분하고 싶다', '사례와 주의할 맥락을 함께 보고 싶다', '과거 이슈나 콘텐츠명과 헷갈리지 않게 정리하고 싶다'],
     event: ['언제 열린 이벤트인지 알고 싶다', '현재 검색되는 이슈와 과거 행사 맥락을 구분하고 싶다', '참여 방법이나 결과를 확인하고 싶다', '연도별 차이를 정리해서 보고 싶다'],
@@ -1890,9 +1922,10 @@ function shouldForceEntertainmentBySeed(seedKeyword, bundleContext) {
   const entertainmentScore = bundleContext?.scores?.find(item => item.key === 'entertainment')?.score || 0;
   const careerScore = bundleContext?.scores?.find(item => item.key === 'career')?.score || 0;
 
-  // 신입사원강회장처럼 직장 단어 뒤에 고유명사형 제목이 붙는 경우.
-  if (looksLikeCareerWordPlusTitle(seedKeyword)) return careerScore <= entertainmentScore + 3;
-  if (looksLikeCareerTitleWithCareerTail(seedKeyword)) return careerScore <= entertainmentScore + 3;
+  // 신입사원강회장처럼 직장 단어 뒤에 고유명사형 제목이 붙는 경우는
+  // related에 직장 단어가 섞여도 콘텐츠명 가능성을 우선한다.
+  if (looksLikeCareerWordPlusTitle(seedKeyword)) return true;
+  if (looksLikeCareerTitleWithCareerTail(seedKeyword)) return true;
 
   return false;
 }
@@ -2109,11 +2142,89 @@ function sortDetailRowsByGoldenLike(rows, currentData) {
   });
 }
 
+function forceTemplateByKey(currentData, key, seedKeyword, reason) {
+  const template = getTemplateByKey(key);
+  if (!template || !currentData) return;
+  currentData.template = template;
+  currentData.categoryName = template.name;
+  currentData.intent = template.intent;
+  currentData.needs = template.needs;
+  currentData.outlines = template.outlines.map(item => `${seedKeyword} ${item}`.trim());
+  currentData.needsDisambiguation = needsDisambiguation(seedKeyword, template);
+  currentData.reason = reason || template.reason;
+}
+
+function isSeedRow(row, currentData) {
+  return normalizeKeywordKey(row?.kw || '') === normalizeKeywordKey(currentData?.seedKeyword || '');
+}
+
+function isVerifiedApiKeyword(row) {
+  return Boolean(row?.searchOk) && Number(row?.apiKeywordMatchScore || 0) >= 80 && Number(row?.monthly || 0) > 0;
+}
+
+function shouldKeepRowForResolvedDetail(row, currentData) {
+  const categoryName = currentData?.categoryName || '';
+  const kw = row?.kw || '';
+  const seedKey = normalizeKeywordKey(currentData?.seedKeyword || '');
+  const rowKey = normalizeKeywordKey(kw);
+
+  if (!kw) return false;
+  if (isSeedRow(row, currentData)) return true;
+  if (isContextContradictKeyword(row, currentData)) return false;
+
+  if (categoryName === '방송·콘텐츠' || categoryName === '방송·드라마') {
+    if (hasCareerOnlyWord(kw)) return false;
+
+    // 검색광고 related 묶음은 블랙키위 연관 키워드 탭과 같은 1차 판단 재료다.
+    // 나무위키/리뷰/내용처럼 방송 의도어가 약해도 실제 연관어면 검증표에 남긴다.
+    if (row.fromRelated) {
+      return !seedKey || rowKey.includes(seedKey) || hasEntertainmentOnlyWord(kw);
+    }
+
+    // 자체 후보는 방송 안전 의도어가 있는 것만 남긴다.
+    return hasEntertainmentOnlyWord(kw);
+  }
+
+  if (categoryName === '직장·채용') {
+    if (hasEntertainmentOnlyWord(kw)) return false;
+    if (row.fromRelated) return !seedKey || rowKey.includes(seedKey) || hasCareerOnlyWord(kw);
+    return hasCareerOnlyWord(kw);
+  }
+
+  if (row.fromExpansion && !isVerifiedApiKeyword(row)) return false;
+
+  return true;
+}
+
+function promoteSeedIfStrong(row, currentData) {
+  if (!isSeedRow(row, currentData)) return row;
+
+  const monthly = Number(row.monthly || 0);
+  const totalContent = Number(row.totalContent || 0);
+  const ratio = Number(row.competitionRatio || getCompetitionRatioValue(row));
+  const ad = row.ad || '낮음';
+
+  if (monthly >= 3000 && totalContent > 0 && totalContent <= 20000 && ratio < 5 && ad !== '높음') {
+    const strictGolden = isStrictGoldenCandidate(row, currentData) || (monthly >= 3000 && totalContent <= 3000 && ratio < 5);
+    return {
+      ...row,
+      contextLabel: currentData?.template?.key === 'entertainment' ? '방송·드라마' : (row.contextLabel || '원 키워드'),
+      opportunityType: strictGolden ? '황금키워드' : '준황금키워드',
+      score: Math.max(Number(row.score || 0), strictGolden ? 92 : 90),
+      aiAnswerFit: row.aiAnswerFit === '낮음' ? '중간' : row.aiAnswerFit,
+      whyRecommended: '원 키워드 자체의 검색량이 높고 발행량이 낮아 조합어보다 원 키워드 우선 글감으로 판단했습니다.'
+    };
+  }
+
+  return row;
+}
+
+
 function makeCategoryBoostRows(keyword, currentData) {
   const categoryName = currentData?.categoryName || '';
 
   // 방송·콘텐츠로 확정된 키워드는 직장식 확장을 만들지 않는다.
-  if (categoryName === '방송·콘텐츠') return makeContentSafeExpansionRows(keyword);
+  if (categoryName === '방송·콘텐츠' || categoryName === '방송·드라마') return makeContentSafeExpansionRows(keyword);
 
   const disambiguationRows = makeDisambiguationRows(keyword, currentData?.template);
   if (disambiguationRows.length) return disambiguationRows;
@@ -2127,9 +2238,21 @@ function makeCategoryBoostRows(keyword, currentData) {
 
 function buildRowsAfterContextResolved(keyword, currentData, relatedRows) {
   const seedRow = makeRowFromKeyword(keyword, { contextLabel: '원 키워드' });
+  const filteredRelatedRows = filterRelatedRows(relatedRows, keyword, currentData);
+  const safeRelatedRows = filteredRelatedRows.filter(row => isKeywordAllowedByResolvedContext(row, currentData));
+
+  // 1순위는 원키워드 + 검색광고 API related 묶음이다.
+  // 자체 조합은 이 묶음에서 글감 후보가 없을 때만 써야 한다.
+  if (safeRelatedRows.length) {
+    return uniqueRowsByCompact([
+      seedRow,
+      ...safeRelatedRows
+    ]);
+  }
+
+  // related 묶음이 없을 때만 카테고리별 안전 확장을 보조로 만든다.
   const categoryBoostRows = makeCategoryBoostRows(keyword, currentData);
   const generatedRows = generateKeywordCandidates(keyword, currentData.template).map(kw => makeRowFromKeyword(kw, { fromExpansion: true }));
-  const filteredRelatedRows = filterRelatedRows(relatedRows, keyword, currentData);
 
   const expansionRows = uniqueRowsByCompact([
     seedRow,
@@ -2137,9 +2260,7 @@ function buildRowsAfterContextResolved(keyword, currentData, relatedRows) {
     ...generatedRows
   ]).filter(row => isKeywordAllowedByResolvedContext(row, currentData));
 
-  const safeRelatedRows = filteredRelatedRows.filter(row => isKeywordAllowedByResolvedContext(row, currentData));
-
-  return mergeRowsByCategoryPriority(expansionRows, safeRelatedRows, currentData);
+  return expansionRows;
 }
 
 function getSeedTokens(seedKeyword) {
@@ -2766,10 +2887,11 @@ function makeOutlines(keyword, intent, categoryName) {
     function getAiAnswerFitLabel(row, currentData) {
       const key = normalizeKeywordKey(row.kw);
       const intent = currentData?.intent || '';
-      const highWords = ['기준', '방법', '해결', '비교', '조건', '대상', '서류', '지급일', '사용처', '후기', '주의사항', '체형커버', '코디', '브랜드', '주차', '영업시간', '예약', '끓이는법', '만드는법', '재료', '효능'];
-      const midWords = ['추천', '가격', '사이즈', '원인', '정리', '전망', '맛집', '카페', '레시피'];
+      const highWords = ['기준', '방법', '해결', '비교', '조건', '대상', '서류', '지급일', '사용처', '후기', '주의사항', '체형커버', '코디', '브랜드', '주차', '영업시간', '예약', '끓이는법', '만드는법', '재료', '효능', '출연진', '등장인물', '줄거리', '몇부작', '재방송', '다시보기', 'OTT', '원작', '웹툰', '시청률', '나무위키', '결말', '내용', '리뷰'];
+      const midWords = ['추천', '가격', '사이즈', '원인', '정리', '전망', '맛집', '카페', '레시피', '드라마'];
 
       if (looksLikeProperContentKeyword(row, currentData)) return currentData?.categoryName === '방송·콘텐츠' ? '높음' : '중간';
+      if (currentData?.intent === '콘텐츠정보형' && isSeedRow(row, currentData) && isSeedPrimaryRecommendable(row)) return '높음';
       if (highWords.some(word => key.includes(normalizeKeywordKey(word)))) return '높음';
       if (intent && ['조건확인형', '문제해결형', '실행방법형', '방문탐색형', '위험확인형'].includes(intent)) return '높음';
       if (midWords.some(word => key.includes(normalizeKeywordKey(word)))) return '중간';
@@ -2953,10 +3075,11 @@ function makeOutlines(keyword, intent, categoryName) {
       const score = Number(row.score || 0);
       const closeness = Number(row.baseCloseness || getBaseKeywordCloseness(row, currentData?.seedKeyword));
 
-      if (score < 40) return false;
+      const isContentBundleRow = Boolean(currentData?.intent === '콘텐츠정보형' && (row.fromRelated || hasEntertainmentOnlyWord(row.kw || '') || isSeedRow(row, currentData)));
+      if (score < 40 && !isContentBundleRow) return false;
       if (monthly < 100) return false;
       if (ratio > 100) return false;
-      if (closeness < 55) return false;
+      if (closeness < 55 && !isContentBundleRow) return false;
       if (isApiKeywordMismatch(row)) return false;
       if (shouldDropCareerExpansion(row, currentData)) return false;
       if (isTooWeakComparedToSeed(row, currentData)) return false;
@@ -3465,25 +3588,32 @@ async function fetchKeywordDataCached(keyword) {
 
     for (const row of targetRows) {
       const apiData = await fetchKeywordDataCached(row.kw);
-      const apiMatchScore = Number(apiData.apiKeywordMatchScore || 0);
-      const apiMatched = apiMatchScore >= 80;
+      const apiMatchScore = Number(apiData.apiKeywordMatchScore || row.apiKeywordMatchScore || 0);
+      const rowMonthly = parseMetricValue(row.monthly || 0);
+      const rowHasRelatedSearchMetric = Boolean(row.fromRelated && rowMonthly > 0);
+      const apiMatched = apiMatchScore >= 80 || rowHasRelatedSearchMetric;
+
+      // related 묶음에서 이미 받은 월검색량은 다시 exact 조회로 덮어쓰지 않는다.
+      // 여기서 덮어쓰면 블랙키위에 보이는 황금 후보들이 검증표에서 사라진다.
+      const monthlyValue = rowHasRelatedSearchMetric ? rowMonthly : (apiMatched ? parseMetricValue(apiData.monthly || 0) : 0);
+      const pcValue = rowHasRelatedSearchMetric ? parseMetricValue(row.pc || 0) : (apiMatched ? parseMetricValue(apiData.pc || 0) : 0);
+      const moValue = rowHasRelatedSearchMetric ? parseMetricValue(row.mo || 0) : (apiMatched ? parseMetricValue(apiData.mo || 0) : 0);
+      const adValue = rowHasRelatedSearchMetric ? (row.ad || '낮음') : (apiMatched ? (apiData.ad || row.ad || '낮음') : '불일치');
 
       apiRows.push({
         ...row,
-        // 검색광고 API가 요청 키워드와 다른 relKeyword를 반환하면
-        // 그 검색량은 다른 키워드의 수치이므로 절대 쓰지 않는다.
-        monthly: apiMatched ? parseMetricValue(apiData.monthly || 0) : 0,
-        pc: apiMatched ? parseMetricValue(apiData.pc || 0) : 0,
-        mo: apiMatched ? parseMetricValue(apiData.mo || 0) : 0,
+        monthly: monthlyValue,
+        pc: pcValue,
+        mo: moValue,
         blog: parseMetricValue(apiData.blog || row.blog || 0),
         cafe: parseMetricValue(apiData.cafe || row.cafe || 0),
         totalContent: parseMetricValue(apiData.totalContent || ((apiData.blog || 0) + (apiData.cafe || 0)) || row.totalContent || 0),
-        ad: apiMatched ? (apiData.ad || row.ad || '낮음') : '불일치',
-        relKeyword: apiData.relKeyword || row.relKeyword || row.kw,
-        apiRelKeyword: apiData.apiRelKeyword || apiData.relKeyword || row.relKeyword || row.kw,
-        apiKeywordMatchScore: apiMatchScore,
+        ad: adValue,
+        relKeyword: rowHasRelatedSearchMetric ? (row.relKeyword || row.kw) : (apiData.relKeyword || row.relKeyword || row.kw),
+        apiRelKeyword: rowHasRelatedSearchMetric ? (row.apiRelKeyword || row.relKeyword || row.kw) : (apiData.apiRelKeyword || apiData.relKeyword || row.relKeyword || row.kw),
+        apiKeywordMatchScore: rowHasRelatedSearchMetric ? 100 : apiMatchScore,
         contentOk: Boolean(apiData.contentOk),
-        searchOk: Boolean(apiData.searchOk && apiMatched),
+        searchOk: Boolean(rowHasRelatedSearchMetric || (apiData.searchOk && apiMatched)),
         fromRelated: Boolean(row.fromRelated),
         fromExpansion: Boolean(row.fromExpansion),
         fromCommerceLongtail: Boolean(row.fromCommerceLongtail),
@@ -3544,7 +3674,7 @@ async function fetchKeywordDataCached(keyword) {
         else score += 0;
 
         const intentProbeRow = { ...row, competitionRatio };
-        const clearIntent = hasClearSearchIntent(intentProbeRow, currentData);
+        const clearIntent = hasClearSearchIntent(intentProbeRow, currentData) || Boolean(currentData?.intent === '콘텐츠정보형' && (row.fromRelated || hasEntertainmentOnlyWord(row.kw) || isSeedRow(row, currentData)));
 
         if (isStrictGoldenCandidate(intentProbeRow, currentData)) opportunityType = '황금키워드';
         else if (monthlyTotal >= 1000 && totalContent > 0 && totalContent <= 5000 && competitionRatio < 10 && row.ad !== '높음' && clearIntent) opportunityType = '준황금키워드';
@@ -3671,66 +3801,26 @@ async function fetchKeywordDataCached(keyword) {
 
     const seedIsPowerful = isPowerfulSeedKeyword(currentData.seedApiRow);
 
-    if (seedIsPowerful && currentData.categoryName === '직장·채용') {
-      currentData.categoryName = '방송·콘텐츠';
-      currentData.intent = '콘텐츠정보형';
+    if (seedIsPowerful && currentData.categoryName === '직장·채용' && looksLikeCareerWordPlusTitle(currentData.seedKeyword)) {
+      forceTemplateByKey(
+        currentData,
+        'entertainment',
+        currentData.seedKeyword,
+        '원 키워드의 검색량이 높고 발행량이 낮으며 콘텐츠명 형태로 보여 방송·콘텐츠 맥락으로 재판단했습니다.'
+      );
     }
 
     const adjustedRows = scoredRows.map(row => {
-      const isSeedRow = normalizeKeywordKey(row.kw) === normalizeKeywordKey(currentData.seedKeyword);
-
-      if (seedIsPowerful && isSeedRow) {
-        const totalContent = Number(row.totalContent || 0);
-        const monthly = Number(row.monthly || 0);
-        let opportunityType = row.opportunityType;
-        let score = Math.max(Number(row.score || 0), 88);
-
-        if (isStrictGoldenCandidate(row, currentData)) {
-          opportunityType = '황금키워드';
-          score = Math.max(score, 92);
-        } else if (isSeedPrimaryRecommendable(row) || (monthly >= 100000 && totalContent <= 10000)) {
-          opportunityType = '준황금키워드';
-          score = Math.max(score, 90);
-        } else if (totalContent <= 20000) {
-          opportunityType = '도전키워드';
-          score = Math.max(score, 82);
-        }
-
-        return {
-          ...row,
-          contextLabel: currentData.intent === '콘텐츠정보형' ? '방송·드라마' : (row.contextLabel || '원 키워드'),
-          opportunityType,
-          score,
-          aiAnswerFit: row.aiAnswerFit === '낮음' ? '중간' : row.aiAnswerFit,
-          whyRecommended: '원 키워드 자체의 검색량이 높고 발행량이 낮아 조합어보다 원 키워드 우선 글감으로 판단했습니다.'
-        };
+      const promoted = promoteSeedIfStrong(row, currentData);
+      if ((currentData.categoryName === '방송·콘텐츠' || currentData.intent === '콘텐츠정보형') && !isContextContradictKeyword(promoted, currentData)) {
+        return { ...promoted, contextLabel: promoted.contextLabel || '방송·드라마' };
       }
-
-      if (isSeedPrimaryRecommendable(row) && isSeedRow) {
-        return {
-          ...row,
-          contextLabel: currentData.intent === '콘텐츠정보형' ? '방송·드라마' : (row.contextLabel || '원 키워드'),
-          opportunityType: isStrictGoldenCandidate(row, currentData) ? '황금키워드' : '준황금키워드',
-          score: Math.max(Number(row.score || 0), 90),
-          aiAnswerFit: row.aiAnswerFit === '낮음' ? '중간' : row.aiAnswerFit,
-          whyRecommended: '원 키워드 자체의 검색량이 높고 발행량이 낮아 조합어보다 원 키워드 우선 글감으로 판단했습니다.'
-        };
-      }
-
-      if (seedIsPowerful && currentData.intent === '콘텐츠정보형') {
-        return { ...row, contextLabel: row.contextLabel || '방송·드라마' };
-      }
-
-      return row;
+      return promoted;
     });
 
     // 상세검증표도 확정된 맥락 안에서만 보여준다.
     // 방송 맥락이면 방송 키워드만, 직장 맥락이면 직장 키워드만 남긴다.
-    const contextMatchedRows = adjustedRows.filter(row => {
-      if (isContextContradictKeyword(row, currentData)) return false;
-      if (isArtificialWeakCombination(row, currentData)) return false;
-      return true;
-    });
+    const contextMatchedRows = adjustedRows.filter(row => shouldKeepRowForResolvedDetail(row, currentData));
 
     const auditRows = contextMatchedRows.map(row => {
       if (isApiKeywordMismatch(row)) {
@@ -3880,11 +3970,22 @@ async function fetchKeywordDataCached(keyword) {
     });
 
     const sortedDetailRows = sortDetailRowsByGoldenLike(auditRows, currentData);
+    const sortedRecommendRowsFromDetail = sortDetailRowsByGoldenLike(recommendBaseRows, currentData);
 
     currentData.allRows = auditRows;
     currentData.detailRows = sortedDetailRows.slice(0, 30);
-    currentData.recommendedRows = sortedRecommendRows.filter(isRecommendable).slice(0, 6);
-    currentData.rows = currentData.recommendedRows;
+    currentData.recommendedRows = sortedRecommendRowsFromDetail.filter(isRecommendable).slice(0, 6);
+
+    // 추천 TOP이 비면 원키워드라도 글감으로 살린다.
+    if (!currentData.recommendedRows.length) {
+      const fallbackRow = currentData.detailRows.find(row => isSeedRow(row, currentData)) || currentData.detailRows[0] || null;
+      currentData.rows = fallbackRow ? [fallbackRow] : [];
+    } else {
+      currentData.rows = currentData.recommendedRows;
+    }
+
+    // 관련 키워드 칩은 최종 상세검증표 기준으로 다시 만든다. 이전 직장/드라마 혼합 후보를 섞지 않는다.
+    currentData.related = uniqueByCompact((currentData.detailRows || []).map(row => row.kw)).slice(0, 16);
 
   } catch (error) {
     console.error(error);

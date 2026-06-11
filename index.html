@@ -277,7 +277,7 @@ async function mapLimit(items, limit, mapper){
   return results;
 }
 
-ffunction scoreMonthly(monthly){
+function scoreMonthly(monthly){
   // 검색량은 "최소 수요 확인" 용도로만. 점수 폭을 줄여서 깡패 방지
   if(monthly>=10000) return 15;
   if(monthly>=3000) return 14;

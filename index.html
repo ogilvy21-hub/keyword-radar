@@ -277,36 +277,44 @@ async function mapLimit(items, limit, mapper){
   return results;
 }
 
-function scoreMonthly(monthly){
-  if(monthly>=100000) return 25;
-  if(monthly>=30000) return 23;
-  if(monthly>=10000) return 21;
-  if(monthly>=3000) return 18;
-  if(monthly>=1000) return 15;
-  if(monthly>=300) return 10;
-  if(monthly>=100) return 6;
-  if(monthly>0) return 3;
+ffunction scoreMonthly(monthly){
+  // 검색량은 "최소 수요 확인" 용도로만. 점수 폭을 줄여서 깡패 방지
+  if(monthly>=10000) return 15;
+  if(monthly>=3000) return 14;
+  if(monthly>=1000) return 12;
+  if(monthly>=500) return 10;
+  if(monthly>=300) return 8;
+  if(monthly>=100) return 4;
+  if(monthly>0) return 2;
   return 0;
 }
 function scoreContent(total){
-  if(total<=0) return 4;
+  // 발행량 자체도 적을수록 가점 (경쟁비율과 별개로 절대량도 평가)
+  if(total<=0) return 6;
   if(total<=1000) return 20;
-  if(total<=3000) return 18;
   if(total<=5000) return 16;
-  if(total<=10000) return 13;
-  if(total<=20000) return 10;
-  if(total<=50000) return 5;
-  return 0;
+  if(total<=10000) return 12;
+  if(total<=30000) return 8;
+  if(total<=100000) return 4;
+  return 1;
 }
 function scoreRatio(row){
-  const r=ratioValue(row);
-  if(r<3) return 20;
-  if(r<5) return 18;
-  if(r<10) return 15;
-  if(r<20) return 11;
-  if(r<50) return 6;
-  if(r<100) return 3;
-  return 0;
+  const monthly = Number(row.monthly||0);
+  const content = Number(row.totalContent||0);
+  if(monthly<=0) return 0;
+  const r = ratioValue(row); // 발행량 ÷ 검색량 (낮을수록 블루오션)
+
+  // 발행량이 비현실적으로 0에 가까우면 '수요 없는 허수'일 수 있어 살짝 보정
+  if(content < 50) return 28;
+
+  if(r<1) return 40;    // 검색량보다 글이 적음 = 최고의 블루오션
+  if(r<3) return 36;
+  if(r<5) return 30;
+  if(r<10) return 24;
+  if(r<20) return 17;
+  if(r<50) return 10;
+  if(r<100) return 5;
+  return 0;             // 비율 100배 이상 = 레드오션, 글감 부적합
 }
 function relevanceScore(row, seed){
   const kw=normalizeKey(row?.kw||''), seedKey=normalizeKey(seed||state.seed||'');
@@ -375,11 +383,24 @@ function clarityScore(intent){
   if(count===1) return 10;
   return 0;
 }
+  // 애드센스 고단가 의도에 보너스
+const HIGH_CPC_KEYS = ['finance','policy']; // 금융·대출, 정책·지원금
+function highCpcBonus(intentKey, kw){
+  let bonus = 0;
+  if(HIGH_CPC_KEYS.includes(intentKey)) bonus += 8;
+  // 단가 높은 단어가 키워드에 직접 들어가면 추가 가점
+  const cpcWords = ['대출','보험','금리','한도','상속','세금','연금','환급','지원금','변호사','수당','적금','청약'];
+  const compact = normalizeKey(kw);
+  if(cpcWords.some(w => compact.includes(normalizeKey(w)))) bonus += 5;
+  return bonus;
+}
 function enrichScore(row, bundleRows){
   const intent = inferIntentFromEvidence(row.kw, bundleRows);
   const intentScore = clarityScore(intent);
-  const score = Math.max(1, Math.min(95, Math.round(
-    scoreMonthly(row.monthly) + scoreContent(row.totalContent) + scoreRatio(row) + intentScore + relevanceScore(row, state.seed)
+  const cpcBonus = highCpcBonus(intent.key, row.kw);
+  const score = Math.max(1, Math.min(100, Math.round(
+    scoreMonthly(row.monthly) + scoreContent(row.totalContent) + scoreRatio(row)
+    + intentScore + relevanceScore(row, state.seed) + cpcBonus
   )));
   const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, score };
   enriched.grade = classify(enriched);
@@ -515,7 +536,9 @@ async function analyze(){
     });
     const enrichedRaw = uniqueByKeyword(hydrated).map(row=>enrichScore(row, hydrated));
     const sorted = sortCandidates(enrichedRaw);
-    let recommended = sorted.filter(row=>Number(row.monthly||0)>0).slice(0,6);
+   // 월 300회 이상만 추천 (고단가 틈새 포함). 후보가 부족하면 기준 완화
+let recommended = sorted.filter(row=>Number(row.monthly||0)>=300).slice(0,6);
+if(recommended.length < 3) recommended = sorted.filter(row=>Number(row.monthly||0)>0).slice(0,6);
     if(!recommended.length) recommended = sorted.slice(0,6);
     if(!recommended.length) recommended = [{ ...exactRow, sourceType:'원키워드 fallback', grade:'API 수치 부족', score:20, reason:'API 후보가 부족해 원키워드 기준으로 글감 설계를 만듭니다.', intentEvidence:'일반정보' }];
 

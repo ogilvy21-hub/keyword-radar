@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v15 | 검색의도·구글 유입 중심 글감 추천</title>
-  <meta name="description" content="네이버 API 데이터로 검색량 대비 발행량이 적은 블루오션 키워드를 찾고, 검색의도 명확도와 구글 유입 적합도를 함께 평가해 제목·목차·원고 프롬프트를 생성합니다." />
+  <title>글감레이더 v16 | 자동완성 결합 키워드 발굴</title>
+  <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
     * { box-sizing: border-box; }
@@ -76,14 +76,14 @@
   <div class="app">
     <header class="hero">
       <div>
-        <p class="eyebrow">INTENT × GOOGLE-FIT ENGINE</p>
-        <h1>글감레이더 v15<br>검색의도·구글 유입 중심</h1>
-        <p class="desc">키워드를 입력하면 검색 수요 대비 발행량이 적은 블루오션 후보를 찾고, 검색의도가 명확한지와 구글에서 유입이 터질 정보성 키워드인지를 함께 평가해 위로 올립니다. 네이버가 구글식 '검색의도 충족'으로 옮겨가는 흐름에 맞춘 버전입니다.</p>
+        <p class="eyebrow">SEARCHAD × SUGGEST ENGINE</p>
+        <h1>글감레이더 v16<br>자동완성 결합 발굴</h1>
+        <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>v15 Intent × Google</strong>
-        <p>경쟁비율 + 검색의도 명확도 비중을 동급으로 맞추고, 정보성(구글 유입형) 의도와 고단가 틈새에 보너스를 줍니다.</p>
+        <strong>v16 Suggest Merge</strong>
+        <p>검색광고 연관키워드 + 네이버/구글 자동완성을 합쳐 후보를 넓히고, 자동완성 키워드는 검색량을 재조회해 점수화합니다.</p>
       </div>
     </header>
 
@@ -102,9 +102,9 @@
             <button id="analyzeBtn">분석하기</button>
           </div>
           <div class="steps">
-            <div class="step active">STEP 1<br>원키워드 API</div>
-            <div class="step active">STEP 2<br>related 묶음</div>
-            <div class="step active">STEP 3<br>발행량 결합</div>
+            <div class="step active">STEP 1<br>검색광고 API</div>
+            <div class="step active">STEP 2<br>자동완성 결합</div>
+            <div class="step active">STEP 3<br>검색량·발행량</div>
             <div class="step active">STEP 4<br>블루오션 정렬</div>
             <div class="step active">STEP 5<br>제목·목차</div>
           </div>
@@ -262,6 +262,28 @@ async function fetchJSON(url){
 }
 async function fetchSearchAd(keyword){ return fetchJSON(`/api/searchad?keyword=${encodeURIComponent(keyword)}`); }
 async function fetchContent(keyword){ return fetchJSON(`/api/keyword?keyword=${encodeURIComponent(keyword)}`); }
+// 네이버+구글 자동완성. 실패해도 빈 결과 반환(본체 보호).
+async function fetchSuggest(keyword){
+  try { return await fetchJSON(`/api/suggest?keyword=${encodeURIComponent(keyword)}&source=both`); }
+  catch(err){ console.error('suggest fetch error:', err.message); return { suggestions:[], detailed:[] }; }
+}
+const suggestCache = new Map();
+async function fetchSuggestCached(keyword){
+  const key = `suggest:${normalizeSpace(keyword)}`;
+  if(suggestCache.has(key)) return suggestCache.get(key);
+  const promise = fetchSuggest(keyword);
+  suggestCache.set(key, promise);
+  return promise;
+}
+// 자동완성 키워드의 검색량을 검색광고 API로 재조회 (없으면 0). 캐시 사용.
+const searchAdCache = new Map();
+async function fetchSearchAdCached(keyword){
+  const key = `searchad:${normalizeSpace(keyword)}`;
+  if(searchAdCache.has(key)) return searchAdCache.get(key);
+  const promise = fetchSearchAd(keyword).catch(err => ({ _error:err.message }));
+  searchAdCache.set(key, promise);
+  return promise;
+}
 async function fetchContentCached(keyword){
   const key = `content:${normalizeSpace(keyword)}`;
   if (apiCache.has(key)) return apiCache.get(key);
@@ -549,6 +571,7 @@ async function analyze(){
   els.analyzeBtn.disabled=true; els.analyzeBtn.textContent='분석 중...';
   state.seed = seed;
   try{
+    // STEP 1: 검색광고 API 연관키워드
     const adPayload = await fetchSearchAd(seed);
     console.log('[글감레이더 searchPayload]', adPayload);
     const list = extractKeywordList(adPayload);
@@ -556,10 +579,38 @@ async function analyze(){
     const exact = findExactItem(list, seed);
     const exactRow = exact ? rowFromSearchAdItem(exact, '원 키워드') : { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback', raw:null };
     const relatedRows = uniqueByKeyword(list.map(item=>rowFromSearchAdItem(item, 'API 연관키워드')).filter(row=>normalizeKey(row.kw)!==normalizeKey(seed)));
-    let baseRows = uniqueByKeyword([exactRow, ...relatedRows]).slice(0, 60);
+
+    // STEP 2: 네이버+구글 자동완성 결합 (검색광고 API가 못 주는 트렌드/신조어 보강)
+    const suggestData = await fetchSuggestCached(seed);
+    console.log('[글감레이더 suggest]', suggestData);
+    const adKeys = new Set([exactRow, ...relatedRows].map(r=>normalizeKey(r.kw)));
+    // 자동완성 키워드 중 검색광고에 이미 있는 건 제외, 신규만 추림 (상위 15개로 호출 제한)
+    const newSuggestKws = (suggestData.detailed || (suggestData.suggestions||[]).map(s=>({keyword:s,source:'suggest'})))
+      .map(d => ({ kw:normalizeSpace(d.keyword), src:d.source }))
+      .filter(d => d.kw && !adKeys.has(normalizeKey(d.kw)))
+      .slice(0, 15);
+
+    // 자동완성 신규 키워드는 검색량을 검색광고 API로 재조회해 row로 만든다
+    const suggestRows = await mapLimit(newSuggestKws, 3, async d => {
+      const sourceLabel = d.src === 'google' ? '구글 자동완성' : (d.src === 'naver' ? '네이버 자동완성' : '자동완성');
+      try {
+        const p = await fetchSearchAdCached(d.kw);
+        const sList = extractKeywordList(p);
+        const hit = findExactItem(sList, d.kw) || sList[0] || null;
+        if(hit){
+          const r = rowFromSearchAdItem(hit, sourceLabel);
+          r.kw = d.kw; // 표시는 자동완성 원문 유지
+          return r;
+        }
+      } catch(e){ /* 검색량 못 받아도 키워드는 살림 */ }
+      return { kw:d.kw, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:sourceLabel, raw:null };
+    });
+
+    let baseRows = uniqueByKeyword([exactRow, ...relatedRows, ...suggestRows]).slice(0, 70);
     if(!baseRows.length) baseRows = [{ kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback' }];
     console.log('[글감레이더 baseRows before content]', baseRows);
 
+    // STEP 3: 발행량 결합
     const hydrated = await mapLimit(baseRows, 3, async row => {
       const content = await fetchContentCached(row.kw);
       const blog = parseNumber(content.blogTotal ?? content.blog ?? 0);
@@ -573,7 +624,9 @@ async function analyze(){
     if(recommended.length < 3) recommended = sorted.filter(row=>Number(row.monthly||0)>0).slice(0,6);
     if(!recommended.length) recommended = [{ ...exactRow, sourceType:'원키워드 fallback', grade:'API 수치 부족', score:20, reason:'API 후보가 부족해 원키워드 기준으로 글감 설계를 만듭니다.', intentEvidence:'일반정보' }];
 
-    state = { seed, rows:sorted, recommended, relatedKeywords:relatedRows.map(r=>r.kw), selectedIndex:0 };
+    // 연관키워드 묶음: 검색광고 + 자동완성 신규 합쳐 표시
+    const relatedKeywords = uniqueByKeyword([...relatedRows, ...suggestRows]).map(r=>r.kw);
+    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0 };
     els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
   } catch(err){

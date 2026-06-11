@@ -1781,61 +1781,161 @@ function makeRecipeLongtailRows(keyword) {
 }
 
 
-function inferContextFromKeywordBundle(seedKeyword, relatedRows = []) {
-  const seed = String(seedKeyword || '').trim();
-  const bundleText = [
-    seed,
-    ...(relatedRows || []).map(row => row.kw || row.relKeyword || row.keyword || '')
-  ].join(' ');
-  const normalizedText = normalizeKeywordKey(bundleText);
-
-  const contextRules = {
-    entertainment: ['드라마', '영화', '예능', '방송', '출연진', '등장인물', '줄거리', '몇부작', '재방송', '다시보기', '결말', '인물관계도', '시청률', '회차', '예고', '원작', '웹툰', 'OTT', '티빙', '넷플릭스', '웨이브', '디즈니', '쿠팡플레이', 'JTBC', 'ENA', 'TVN', 'KBS', 'MBC', 'SBS'],
-    career: ['준비물', '첫출근', '면접', '자소서', '이력서', '채용', '공채', '취업', '인턴', '온보딩', '교육', '회사생활', '연봉', '직무', '퇴사', '입사', '체크리스트'],
-    place: ['맛집', '카페', '여행', '숙소', '호텔', '펜션', '리조트', '캠핑', '축제', '전시', '팝업', '가볼만한곳', '주차', '예약', '영업시간', '위치', '주소', '후기'],
-    recipe: ['레시피', '만드는법', '끓이는법', '요리', '재료', '양념', '양념장', '보관법', '효능', '칼로리'],
-    policy: ['지원금', '보조금', '환급금', '장려금', '수당', '바우처', '신청', '대상', '조건', '지급일', '사용처', '서류', '조회'],
-    finance: ['대출', '전세대출', '금리', '한도', '서류', '상환', '부결', '신청방법', '전세', '청약', '예금', '적금'],
-    stock: ['주가', '공모주', '관련주', '상장', '상장일', '수요예측', '공모가', '실적', '전망', 'ETF', '반도체', '방산', '로봇', '비트코인'],
-    tech: ['앱', '어플', '사이트', '웹앱', 'AI', 'API', '챗GPT', '구글', '네이버', '크롬', '오류', '해결', '로그인', '비밀번호', '아이폰', '갤럭시'],
-    health: ['효능', '부작용', '영양소', '건강', '다이어트', '혈당', '혈압', '피부', '탈모', '운동', '증상', '원인', '치료'],
-    legal: ['법', '법률', '소송', '고소', '신고', '계약', '위약금', '환불', '약관', '판례', '처벌', '벌금', '저작권', '개인정보'],
-    news: ['논란', '사건', '사고', '이슈', '속보', '발표', '폭발', '화재', '사망', '구속', '수사', '재판', '선거', '투표']
+function getContextRuleMap() {
+  return {
+    entertainment: {
+      words: ['드라마', '영화', '예능', '방송', '출연진', '등장인물', '줄거리', '몇부작', '재방송', '다시보기', '결말', '인물관계도', '시청률', '회차', '예고', '원작', '웹툰', 'OTT', '티빙', '넷플릭스', '웨이브', '디즈니', '쿠팡플레이', 'JTBC', 'ENA', 'TVN', 'KBS', 'MBC', 'SBS'],
+      strongWords: ['출연진', '등장인물', '줄거리', '몇부작', '재방송', '다시보기', '결말', '인물관계도', 'OTT', '티빙', '넷플릭스']
+    },
+    career: {
+      words: ['준비물', '첫출근', '면접', '자소서', '이력서', '채용', '공채', '취업', '인턴', '온보딩', '교육', '회사생활', '연봉', '직무', '퇴사', '입사', '체크리스트'],
+      strongWords: ['면접', '자소서', '이력서', '채용', '공채', '취업', '첫출근', '연봉', '직무', '온보딩', '체크리스트']
+    },
+    place: {
+      words: ['맛집', '카페', '여행', '숙소', '호텔', '펜션', '리조트', '캠핑', '축제', '전시', '팝업', '가볼만한곳', '주차', '예약', '영업시간', '위치', '주소', '후기'],
+      strongWords: ['맛집', '카페', '숙소', '호텔', '주차', '예약', '영업시간', '위치']
+    },
+    recipe: {
+      words: ['레시피', '만드는법', '끓이는법', '요리', '재료', '양념', '양념장', '보관법', '효능', '칼로리'],
+      strongWords: ['레시피', '만드는법', '끓이는법', '재료', '양념장']
+    },
+    policy: {
+      words: ['지원금', '보조금', '환급금', '장려금', '수당', '바우처', '신청', '대상', '조건', '지급일', '사용처', '서류', '조회'],
+      strongWords: ['지원금', '신청', '대상', '지급일', '사용처']
+    },
+    finance: {
+      words: ['대출', '전세대출', '금리', '한도', '서류', '상환', '부결', '신청방법', '전세', '청약', '예금', '적금'],
+      strongWords: ['대출', '금리', '한도', '상환', '부결', '전세대출']
+    },
+    commerce: {
+      words: ['원피스', '가방', '운동화', '스니커즈', '자켓', '재킷', '셔츠', '니트', '청바지', '바지', '향수', '쿠션', '립스틱', '선크림', '코디', '브랜드', '사이즈', '가격'],
+      strongWords: ['코디', '브랜드', '사이즈', '가격', '후기']
+    },
+    stock: {
+      words: ['주가', '공모주', '관련주', '상장', '상장일', '수요예측', '공모가', '실적', '전망', 'ETF', '반도체', '방산', '로봇', '비트코인'],
+      strongWords: ['주가', '공모주', '관련주', '상장', '상장일']
+    },
+    tech: {
+      words: ['앱', '어플', '사이트', '웹앱', 'AI', 'API', '챗GPT', '구글', '네이버', '크롬', '오류', '해결', '로그인', '비밀번호', '아이폰', '갤럭시'],
+      strongWords: ['오류', '해결', '로그인', '비밀번호', '설치', '사용법']
+    },
+    health: {
+      words: ['효능', '부작용', '영양소', '건강', '다이어트', '혈당', '혈압', '피부', '탈모', '운동', '증상', '원인', '치료'],
+      strongWords: ['효능', '부작용', '증상', '원인', '치료']
+    },
+    legal: {
+      words: ['법', '법률', '소송', '고소', '신고', '계약', '위약금', '환불', '약관', '판례', '처벌', '벌금', '저작권', '개인정보'],
+      strongWords: ['법률', '소송', '고소', '신고', '판례', '처벌']
+    },
+    news: {
+      words: ['논란', '사건', '사고', '이슈', '속보', '발표', '폭발', '화재', '사망', '구속', '수사', '재판', '선거', '투표'],
+      strongWords: ['논란', '사건', '사고', '이슈', '속보', '발표']
+    }
   };
-
-  const scores = Object.entries(contextRules).map(([key, words]) => {
-    let score = 0;
-    const matchedWords = [];
-    words.forEach(word => {
-      const wordKey = normalizeKeywordKey(word);
-      if (normalizedText.includes(wordKey)) {
-        score += 1;
-        matchedWords.push(word);
-      }
-    });
-    return { key, score, matchedWords };
-  }).sort((a, b) => b.score - a.score);
-
-  return { best: scores[0], scores };
 }
 
-function applyBundleContextToCurrentData(seedKeyword, relatedRows, currentData) {
-  const bundleContext = inferContextFromKeywordBundle(seedKeyword, relatedRows);
-  const best = bundleContext?.best;
-  if (!best || best.score < 2) return bundleContext;
+function getBundleKeywordTexts(seedKeyword, relatedRows = []) {
+  return [
+    String(seedKeyword || '').trim(),
+    ...(relatedRows || []).map(row => row.kw || row.relKeyword || row.keyword || '').filter(Boolean)
+  ].filter(Boolean);
+}
 
-  const matchedTemplate = categoryTemplates.find(item => item.key === best.key);
-  if (!matchedTemplate) return bundleContext;
+function scoreContextInTexts(texts, key, rule) {
+  let score = 0;
+  const matchedWords = [];
+  const matchedRows = [];
+
+  (texts || []).forEach(text => {
+    const textKey = normalizeKeywordKey(text);
+    let rowMatched = false;
+
+    (rule.words || []).forEach(word => {
+      const wordKey = normalizeKeywordKey(word);
+      if (!wordKey || !textKey.includes(wordKey)) return;
+
+      const isStrong = (rule.strongWords || []).some(strong => normalizeKeywordKey(strong) === wordKey);
+      const point = isStrong ? 3 : 1;
+      score += point;
+      rowMatched = true;
+
+      if (!matchedWords.includes(word)) matchedWords.push(word);
+    });
+
+    if (rowMatched) matchedRows.push(text);
+  });
+
+  return { key, score, matchedWords, matchedRows };
+}
+
+function inferContextFromKeywordBundle(seedKeyword, relatedRows = []) {
+  const texts = getBundleKeywordTexts(seedKeyword, relatedRows);
+  const rules = getContextRuleMap();
+
+  const scores = Object.entries(rules).map(([key, rule]) =>
+    scoreContextInTexts(texts, key, rule)
+  ).sort((a, b) => b.score - a.score);
+
+  const best = scores[0] || { key: 'default', score: 0, matchedWords: [], matchedRows: [] };
+  const second = scores[1] || { key: 'default', score: 0, matchedWords: [], matchedRows: [] };
+
+  return { best, second, scores, texts };
+}
+
+function getTemplateByKey(key) {
+  return categoryTemplates.find(item => item.key === key) || null;
+}
+
+function shouldForceEntertainmentBySeed(seedKeyword, bundleContext) {
+  const entertainmentScore = bundleContext?.scores?.find(item => item.key === 'entertainment')?.score || 0;
+  const careerScore = bundleContext?.scores?.find(item => item.key === 'career')?.score || 0;
+
+  // 신입사원강회장처럼 직장 단어 뒤에 고유명사형 제목이 붙는 경우.
+  if (looksLikeCareerWordPlusTitle(seedKeyword)) return careerScore <= entertainmentScore + 3;
+  if (looksLikeCareerTitleWithCareerTail(seedKeyword)) return careerScore <= entertainmentScore + 3;
+
+  return false;
+}
+
+function resolveTemplateFromBundle(seedKeyword, relatedRows, fallbackTemplate) {
+  const bundleContext = inferContextFromKeywordBundle(seedKeyword, relatedRows);
+  const best = bundleContext.best;
+  const second = bundleContext.second;
+
+  if (shouldForceEntertainmentBySeed(seedKeyword, bundleContext)) {
+    const entertainment = getTemplateByKey('entertainment');
+    if (entertainment) return { template: entertainment, bundleContext, reasonType: 'seedTitlePattern' };
+  }
+
+  // related 묶음에 강한 맥락이 있으면 입력어 조각보다 related 묶음을 우선한다.
+  if (best && best.score >= 3 && best.score >= (second.score || 0) + 2) {
+    const matchedTemplate = getTemplateByKey(best.key);
+    if (matchedTemplate) return { template: matchedTemplate, bundleContext, reasonType: 'bundle' };
+  }
+
+  return { template: fallbackTemplate, bundleContext, reasonType: 'fallback' };
+}
+
+function applyResolvedTemplateToCurrentData(seedKeyword, resolved, currentData) {
+  const matchedTemplate = resolved?.template || currentData?.template;
+  if (!matchedTemplate) return;
 
   currentData.template = matchedTemplate;
   currentData.categoryName = matchedTemplate.name;
   currentData.intent = matchedTemplate.intent;
   currentData.needs = matchedTemplate.needs;
   currentData.outlines = matchedTemplate.outlines.map(item => `${seedKeyword} ${item}`.trim());
-  currentData.reason = `${best.matchedWords.slice(0, 5).join(', ')} 관련 연관 키워드가 함께 잡혀 ${matchedTemplate.name} 맥락으로 판단했습니다.`;
   currentData.needsDisambiguation = needsDisambiguation(seedKeyword, matchedTemplate);
-  currentData.rows = generateKeywordCandidates(seedKeyword, matchedTemplate).map(kw => makeRowFromKeyword(kw, { fromExpansion: true }));
-  return bundleContext;
+  currentData.bundleContext = resolved?.bundleContext || null;
+
+  if (resolved?.reasonType === 'bundle') {
+    const words = resolved.bundleContext.best.matchedWords.slice(0, 5).join(', ');
+    currentData.reason = `${words} 관련 연관 키워드가 함께 잡혀 ${matchedTemplate.name} 맥락으로 판단했습니다.`;
+  } else if (resolved?.reasonType === 'seedTitlePattern') {
+    currentData.reason = '입력어가 콘텐츠명 형태로 보여 방송·콘텐츠 맥락으로 판단했습니다.';
+  } else {
+    currentData.reason = matchedTemplate.reason;
+  }
 }
 
 function isSeedPrimaryRecommendable(seedRow) {
@@ -1857,17 +1957,65 @@ function makeContentSafeExpansionRows(keyword) {
   }));
 }
 
+function isCareerOnlyExpansionKeyword(keyword) {
+  const key = normalizeKeywordKey(keyword);
+  const careerWords = ['준비물', '첫출근', '면접', '자소서', '이력서', '채용', '공채', '취업', '온보딩', '교육', '회사생활', '연봉', '직무', '퇴사', '입사', '체크리스트'];
+  return careerWords.some(word => key.includes(normalizeKeywordKey(word))) && !hasContentIntentWord(keyword);
+}
+
+function isContentOnlyExpansionKeyword(keyword) {
+  return hasContentIntentWord(keyword) && !hasCareerIntentWord(keyword);
+}
+
+function isKeywordAllowedByResolvedContext(row, currentData) {
+  const kw = row?.kw || '';
+  const categoryName = currentData?.categoryName || '';
+  const isSeed = normalizeKeywordKey(kw) === normalizeKeywordKey(currentData?.seedKeyword || '');
+
+  if (isSeed) return true;
+
+  if (categoryName === '방송·콘텐츠' || categoryName === '방송·드라마') {
+    return !isCareerOnlyExpansionKeyword(kw);
+  }
+
+  if (categoryName === '직장·채용') {
+    return !isContentOnlyExpansionKeyword(kw);
+  }
+
+  return true;
+}
+
 function makeCategoryBoostRows(keyword, currentData) {
   const categoryName = currentData?.categoryName || '';
+
+  // 방송·콘텐츠로 확정된 키워드는 직장식 확장을 만들지 않는다.
+  if (categoryName === '방송·콘텐츠') return makeContentSafeExpansionRows(keyword);
+
   const disambiguationRows = makeDisambiguationRows(keyword, currentData?.template);
   if (disambiguationRows.length) return disambiguationRows;
 
-  if (categoryName === '방송·콘텐츠') return makeContentSafeExpansionRows(keyword);
   if (categoryName === '쇼핑·패션·뷰티') return makeCommerceLongtailRows(keyword);
   if (categoryName === '장소·여행·맛집') return makePlaceLongtailRows(keyword);
   if (categoryName === '레시피·식품') return makeRecipeLongtailRows(keyword);
 
   return [];
+}
+
+function buildRowsAfterContextResolved(keyword, currentData, relatedRows) {
+  const seedRow = makeRowFromKeyword(keyword, { contextLabel: '원 키워드' });
+  const categoryBoostRows = makeCategoryBoostRows(keyword, currentData);
+  const generatedRows = generateKeywordCandidates(keyword, currentData.template).map(kw => makeRowFromKeyword(kw, { fromExpansion: true }));
+  const filteredRelatedRows = filterRelatedRows(relatedRows, keyword, currentData);
+
+  const expansionRows = uniqueRowsByCompact([
+    seedRow,
+    ...categoryBoostRows,
+    ...generatedRows
+  ]).filter(row => isKeywordAllowedByResolvedContext(row, currentData));
+
+  const safeRelatedRows = filteredRelatedRows.filter(row => isKeywordAllowedByResolvedContext(row, currentData));
+
+  return mergeRowsByCategoryPriority(expansionRows, safeRelatedRows, currentData);
 }
 
 function getSeedTokens(seedKeyword) {
@@ -3157,26 +3305,14 @@ async function fetchKeywordDataCached(keyword) {
 
     // 2. 검색광고 related 묶음으로 맥락을 다시 판단한다.
     const relatedRows = convertRelatedToRows(seedAdData?.related || []);
-    currentData.bundleContext = applyBundleContextToCurrentData(keyword, relatedRows, currentData);
+    const resolved = resolveTemplateFromBundle(keyword, relatedRows, currentData.template);
+    applyResolvedTemplateToCurrentData(keyword, resolved, currentData);
 
-    // 3. 확정된 맥락 기준으로만 보강 후보를 만든다.
-    const filteredRelatedRows = filterRelatedRows(relatedRows, keyword, currentData);
-    const categoryBoostRows = makeCategoryBoostRows(keyword, currentData);
-    const seedRow = makeRowFromKeyword(keyword, { contextLabel: '원 키워드' });
+    // 3. 확정된 맥락 기준으로만 후보를 만든다. 이전 분류에서 만든 rows는 버린다.
+    const mergedRows = buildRowsAfterContextResolved(keyword, currentData, relatedRows);
 
-    const expansionRows = uniqueRowsByCompact([
-      seedRow,
-      ...categoryBoostRows,
-      ...(currentData.rows || [])
-    ]);
-
-    const mergedRows = mergeRowsByCategoryPriority(
-      expansionRows,
-      filteredRelatedRows,
-      currentData
-    );
-
-    let contextSafeRows = filterContextSafeRows(mergedRows, keyword, currentData);
+    let contextSafeRows = filterContextSafeRows(mergedRows, keyword, currentData)
+      .filter(row => isKeywordAllowedByResolvedContext(row, currentData));
 
     if (!contextSafeRows.length) {
       contextSafeRows = [makeRowFromKeyword(keyword, { fromExpansion: false })];

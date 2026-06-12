@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v17 | 사실검증 강화</title>
+  <title>글감레이더 v17.1 | 사실검증·호출최적화</title>
   <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
@@ -77,12 +77,12 @@
     <header class="hero">
       <div>
         <p class="eyebrow">SEARCHAD × SUGGEST ENGINE</p>
-        <h1>글감레이더 v17<br>사실검증 강화</h1>
+        <h1>글감레이더 v17.1<br>호출 최적화</h1>
         <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>v17 Fact-Check</strong>
+        <strong>v17.1 Fact-Check+</strong>
         <p>검색광고 연관키워드 + 네이버/구글 자동완성을 합쳐 후보를 넓히고, 자동완성 키워드는 검색량을 재조회해 점수화합니다.</p>
       </div>
     </header>
@@ -252,8 +252,14 @@ function findExactItem(list, keyword){
   return list.find(item => normalizeKey(getKeywordFromApiItem(item)) === seedKey) || null;
 }
 
-async function fetchJSON(url){
+async function fetchJSON(url, _retried){
   const res = await fetch(url);
+  // [v17.1] 429(Too Many Requests)면 잠깐 쉬었다 1회만 재시도. 그 외 상태는 기존대로 처리.
+  if(res.status === 429 && !_retried){
+    const wait = 600 + Math.floor(Math.random()*500); // 0.6~1.1초 지터
+    await new Promise(r=>setTimeout(r, wait));
+    return fetchJSON(url, true);
+  }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : {}; } catch { data = { message:text }; }
@@ -723,7 +729,8 @@ async function analyze(){
       .slice(0, 15);
 
     // 자동완성 신규 키워드는 검색량을 검색광고 API로 재조회해 row로 만든다
-    const suggestRows = await mapLimit(newSuggestKws, 3, async d => {
+    // [v17.1] 동시성 3→2: STEP 3 발행량 조회와 같은 백엔드 API를 쓰므로 동시 압력을 낮춰 429를 줄인다.
+    const suggestRows = await mapLimit(newSuggestKws, 2, async d => {
       const sourceLabel = d.src === 'google' ? '구글 자동완성' : (d.src === 'naver' ? '네이버 자동완성' : '자동완성');
       try {
         const p = await fetchSearchAdCached(d.kw);
@@ -743,7 +750,17 @@ async function analyze(){
     console.log('[글감레이더 baseRows before content]', baseRows);
 
     // STEP 3: 발행량 결합
-    const hydrated = await mapLimit(baseRows, 3, async row => {
+    // [v17.1] 발행량 조회 호출량 절감: baseRows 전체(최대 70)에 다 조회하면 검색광고/콘텐츠 API에 429가 난다.
+    // 추천 후보 선별 기준은 '월간 검색수(monthly)'인데 이 값은 발행량 조회 전에 이미 알고 있으므로,
+    // monthly가 큰 상위 키워드에만 발행량을 조회한다. 나머지는 발행량 0으로 둔다(어차피 추천 후보로 안 올라옴).
+    const CONTENT_LOOKUP_LIMIT = 24; // 추천은 상위 6개만 쓰므로 여유롭게 24개까지만 조회
+    const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
+    const lookupSet = new Set(byDemand.slice(0, CONTENT_LOOKUP_LIMIT).map(r=>normalizeKey(r.kw)));
+    const hydrated = await mapLimit(baseRows, 2, async row => {
+      // 조회 대상이 아니면 API 호출 없이 발행량 0으로 통과
+      if(!lookupSet.has(normalizeKey(row.kw))){
+        return { ...row, blog:0, cafe:0, totalContent:0, contentSkipped:true };
+      }
       const content = await fetchContentCached(row.kw);
       const blog = parseNumber(content.blogTotal ?? content.blog ?? 0);
       const cafe = parseNumber(content.cafeTotal ?? content.cafe ?? 0);

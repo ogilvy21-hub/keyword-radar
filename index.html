@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v17.1 | 사실검증·호출최적화</title>
+  <title>글감레이더 v18 | 후킹 제목 발굴</title>
   <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
@@ -77,12 +77,12 @@
     <header class="hero">
       <div>
         <p class="eyebrow">SEARCHAD × SUGGEST ENGINE</p>
-        <h1>글감레이더 v17.1<br>호출 최적화</h1>
+        <h1>글감레이더 v18<br>후킹 제목</h1>
         <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>v17.1 Fact-Check+</strong>
+        <strong>v18 Hook-Title</strong>
         <p>검색광고 연관키워드 + 네이버/구글 자동완성을 합쳐 후보를 넓히고, 자동완성 키워드는 검색량을 재조회해 점수화합니다.</p>
       </div>
     </header>
@@ -268,6 +268,19 @@ async function fetchJSON(url, _retried){
 }
 async function fetchSearchAd(keyword){ return fetchJSON(`/api/searchad?keyword=${encodeURIComponent(keyword)}`); }
 async function fetchContent(keyword){ return fetchJSON(`/api/keyword?keyword=${encodeURIComponent(keyword)}`); }
+// [v18] 네이버 검색 API로 발행 제목 모아 후킹 키워드 추출. 실패해도 빈 결과(본체 보호).
+async function fetchTitleHunt(keyword){
+  try { return await fetchJSON(`/api/titlehunt?keyword=${encodeURIComponent(keyword)}`); }
+  catch(err){ console.error('titlehunt fetch error:', err.message); return { hooks:[], sampleTitles:[] }; }
+}
+const titleHuntCache = new Map();
+async function fetchTitleHuntCached(keyword){
+  const key = `titlehunt:${normalizeSpace(keyword)}`;
+  if(titleHuntCache.has(key)) return titleHuntCache.get(key);
+  const promise = fetchTitleHunt(keyword);
+  titleHuntCache.set(key, promise);
+  return promise;
+}
 // 네이버+구글 자동완성. 실패해도 빈 결과 반환(본체 보호).
 async function fetchSuggest(keyword){
   try { return await fetchJSON(`/api/suggest?keyword=${encodeURIComponent(keyword)}&source=both`); }
@@ -555,6 +568,22 @@ function needsForIntent(intent){
   };
   return map[intent.key] || map.general;
 }
+// [v18] 후킹 기반 제목 생성: 메인키워드 + 검색에서 검증된 후킹 키워드, 명사형 마감(서술 꼬리 없음).
+// hooks: [{word,count}] (titlehunt API 결과). 없으면 빈 배열 반환 -> 호출부에서 템플릿으로 폴백.
+function titlesFromHooks(keyword, hooks){
+  const kw = normalizeSpace(keyword);
+  if(!Array.isArray(hooks) || hooks.length===0) return [];
+  const words = hooks.map(h=>h.word).filter(w => w && !kw.includes(w));
+  if(words.length===0) return [];
+  const out = [];
+  // 1) 메인키워드 + 후킹 1~2개 (가장 빈도 높은 것)
+  if(words[0]) out.push(`${kw} ${words[0]}`);
+  if(words[1]) out.push(`${kw} ${words[0]} ${words[1]}`);
+  // 2) 후킹 2개를 자연스럽게 (상위 후킹이 곧 다른 검색어인 경우)
+  if(words[1] && words[2]) out.push(`${kw} ${words[1]} ${words[2]}`);
+  // 중복 제거 + 너무 긴 것 컷(네이버 제목 가독: 대략 35자 내)
+  return [...new Set(out)].map(t=>t.trim()).filter(t=>t.length<=40).slice(0,3);
+}
 function titlesFor(keyword, intent){
   const kw=normalizeSpace(keyword);
   const map = {
@@ -638,7 +667,14 @@ function renderSelected(){
   els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','제목은 선택 키워드와 검색자가 판단할 포인트를 함께 넣으세요.','목차는 선택 키워드의 의도근거와 같은 방향으로만 구성하세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
   els.relatedChips.innerHTML = state.relatedKeywords.slice(0,30).map((kw,i)=>`<span class="chip ${i<6?'hot':''}">${escapeHTML(kw)}</span>`).join('');
   els.readerNeeds.innerHTML = needs.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
-  els.titleList.innerHTML = titles.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
+  // [v18] 제목: 후킹(검증된 제목 키워드)이 있으면 그걸로, 없으면 분야 템플릿으로 폴백
+  const hookTitles = titlesFromHooks(row.kw, state.hooks);
+  const finalTitles = hookTitles.length ? hookTitles : titles;
+  const hookChips = (state.hooks||[]).slice(0,8)
+    .map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.6">${h.count}</b></span>`).join('');
+  els.titleList.innerHTML =
+    (hookChips ? `<div style="margin-bottom:8px;font-size:12px;opacity:.7">발행 제목에서 뽑은 후킹 키워드</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${hookChips}</div>` : '')
+    + finalTitles.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
   els.outlineList.innerHTML = outlines.map((x,i)=>`<div class="outline-item"><span>${i+1}</span><div>${escapeHTML(x)}</div></div>`).join('');
   els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');
@@ -686,7 +722,7 @@ ${promptRelated || '(연관키워드 없음 — 메인 키워드 의도로만 �
 ### 1단계 — 설계 (본문 쓰기 전에 먼저 하고, 결과를 보여줘라)
 아래 항목을 너가 직접 새로 만들어라. 프로그램이 준 자동 분류는 참고만 하고 정답으로 여기지 마라.
 1) **검색 의도 재정의**: 메인 키워드 "${row.kw}"를 검색하는 사람이 진짜 알고 싶은 게 무엇인지 한 문장으로 규정해라. 위 연관키워드가 가장 좋은 근거다. (자동 분류 의도 "${intent.label}"가 안 맞으면 무시하고 너의 판단을 따르라.)
-2) **제목 3개**: 클릭하고 싶게, 메인 키워드를 포함하되 검색 의도와 연관키워드를 반영해 새로 뽑아라.
+2) **제목 3개 (공식: 메인키워드 + 검증된 후킹 - 서술형 꼬리)**: ${(state.hooks&&state.hooks.length)?`아래 '발행 제목 후킹 키워드'는 실제 발행된 글 제목에서 자주 등장한, 검색에서 검증된 후킹어다. 메인 키워드에 이 후킹어를 결합해 제목을 만들어라.`:`네이버에서 이 키워드로 검색해 상위 뉴스·블로그 제목에 반복되는 후킹 키워드를 찾아 활용해라.`} 규칙: (a) 메인 키워드를 그대로 포함한다. (b) 후킹은 '그 자체로 검색되는 명사'여야 한다(단순 수식어 금지). (c) 제목은 **명사로 끝맺어라** — "~하세요/~합니다/~정리했습니다/~알아볼게요" 같은 서술형 꼬리와 "총정리·꼭·한번에·완벽" 같은 빈 수식어(TMI)는 빼라. 예: "...대응하세요"→"...대응방법".${(state.hooks&&state.hooks.length)?`\n\n**발행 제목 후킹 키워드(빈도순): ${state.hooks.slice(0,8).map(h=>h.word).join(', ')}**`:''}
 3) **검색자의 핵심 질문 5개**: 연관키워드에서 검색자가 실제로 가질 법한 질문을 추출해라.
 4) **최종 목차**: 위 질문에 답하는 순서로, 가장 궁금해할 내용을 위에 배치해 짜라. 소제목은 검색 질문형으로.
 
@@ -775,9 +811,20 @@ async function analyze(){
 
     // 연관키워드 묶음: 검색광고 + 자동완성 신규 합쳐 표시
     const relatedKeywords = uniqueByKeyword([...relatedRows, ...suggestRows]).map(r=>r.kw);
-    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0 };
+    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooks:[], hookSamples:[] };
     els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
+
+    // [v18] 추천 1위(허브) 키워드로 발행 제목을 조사해 후킹 키워드 추출 -> 제목 영역 갱신
+    const hubKw = recommended[0]?.kw;
+    if(hubKw){
+      fetchTitleHuntCached(hubKw).then(th => {
+        if(state.seed !== seed) return; // 그새 다른 분석 시작됐으면 무시
+        state.hooks = Array.isArray(th.hooks) ? th.hooks : [];
+        state.hookSamples = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
+        renderSelected(); // 후킹 반영해 제목 다시 그림
+      });
+    }
   } catch(err){
     console.error(err);
     els.judgementTitle.textContent='분석 중 오류가 발생했습니다.';

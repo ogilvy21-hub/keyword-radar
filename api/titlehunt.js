@@ -157,22 +157,25 @@ export default async function handler(req, res) {
       fetchNaverSearch('blog', keyword, clientId, clientSecret),
       fetchNaverSearch('news', keyword, clientId, clientSecret),
     ]);
-    const titles = [...blogTitles, ...newsTitles];
-    const hooks = extractHooks(titles, keyword);
+    // [v19] 후킹은 '블로그 제목'만으로 추출한다.
+    // 블로그는 도메인 권위가 약해 상위 노출을 위해 제목에 검색의도(키워드)를 의도적으로 박는다 = 검증된 후킹.
+    // 뉴스는 매체 신뢰도로 노출되어 기사체 문장이 많아 후킹 노이즈가 크다 → 후킹엔 쓰지 않고 '맥락 파악용'으로만 분리.
+    const hooks = extractHooks(blogTitles, keyword);
 
     res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600'); // 6h 캐시
     return res.status(200).json({
       keyword,
-      count: titles.length,
+      count: blogTitles.length + newsTitles.length,
       blogCount: blogTitles.length,
       newsCount: newsTitles.length,
-      hooks,                                   // [{word, count}] 빈도순 후킹 후보
-      sampleTitles: titles.slice(0, 12),       // 화면에서 근거로 보여줄 실제 제목들
+      hooks,                                   // [{word, count}] 블로그 제목 기반 후킹(검증된 키워드)
+      sampleTitles: blogTitles.slice(0, 8),    // 후킹 근거로 보여줄 블로그 제목
+      newsTitles: newsTitles.slice(0, 6),      // 맥락·최신성 파악용 뉴스 제목 (후킹엔 미사용)
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);
     return res.status(200).json({
-      keyword, hooks: [], titles: [], count: 0, _error: error.message,
+      keyword, hooks: [], sampleTitles: [], newsTitles: [], count: 0, _error: error.message,
     });
   }
 }

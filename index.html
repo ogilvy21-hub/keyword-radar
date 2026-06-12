@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v18 | 후킹 제목 발굴</title>
+  <title>글감레이더 v19 | 허브-스포크 클러스터</title>
   <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
@@ -49,6 +49,12 @@
     .recommend-table th:first-child,.detail-table th:first-child { z-index:4; background:#f1f5f9; } .recommend-table td:first-child,.detail-table td:first-child { min-width:190px; max-width:270px; white-space:normal; line-height:1.45; font-weight:900; color:#111827; }
     tr.selected td { background:#eff6ff; }
     .pick-btn { border:0; border-radius:999px; padding:8px 10px; background:#2563eb; color:#fff; font-size:12px; font-weight:900; cursor:pointer; }
+    .cluster-node { border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+    .cluster-node.hub { background:#eff6ff; border-color:#bfdbfe; }
+    .cluster-node.spoke { background:#fafafa; }
+    .cluster-node.single { background:#fff7ed; border-color:#fed7aa; }
+    .cl-line { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px; margin-bottom:6px; }
+    .cl-btn { padding:6px 10px; font-size:11px; }
     .pill { display:inline-flex; align-items:center; justify-content:center; padding:6px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:900; white-space:nowrap; }
     .pill.green { background:#dcfce7; color:#047857; } .pill.yellow { background:#fef3c7; color:#a16207; } .pill.red { background:#fee2e2; color:#b91c1c; } .pill.gray { background:#f1f5f9; color:#475569; }
     .pill.cpc { background:#fde68a; color:#92400e; }
@@ -77,12 +83,12 @@
     <header class="hero">
       <div>
         <p class="eyebrow">SEARCHAD × SUGGEST ENGINE</p>
-        <h1>글감레이더 v18<br>후킹 제목</h1>
+        <h1>글감레이더 v19<br>허브-스포크</h1>
         <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>v18 Hook-Title</strong>
+        <strong>v19 Cluster</strong>
         <p>검색광고 연관키워드 + 네이버/구글 자동완성을 합쳐 후보를 넓히고, 자동완성 키워드는 검색량을 재조회해 점수화합니다.</p>
       </div>
     </header>
@@ -156,10 +162,9 @@
             <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
           </div>
           <div class="builder-grid">
-            <div class="card"><h4>API 연관키워드 묶음</h4><div class="chip-wrap" id="relatedChips"></div></div>
+            <div class="card"><h4>콘텐츠 클러스터 <span class="micro-hint">허브 1 + 스포크 5, 각 원고 프롬프트</span></h4><div id="clusterBox"></div></div>
             <div class="card"><h4>검색자가 원하는 답</h4><div class="title-list" id="readerNeeds"></div></div>
-            <div class="card"><h4>제목 후보</h4><div class="title-list" id="titleList"></div></div>
-            <div class="card"><h4>목차 초안</h4><div class="outline-list" id="outlineList"></div></div>
+            <div class="card"><h4>제목 후보 <span class="micro-hint">발행 블로그 제목에서 뽑은 후킹</span></h4><div class="title-list" id="titleList"></div></div>
           </div>
         </div>
       </section>
@@ -205,7 +210,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const els = {
-  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), relatedChips:$('relatedChips'), readerNeeds:$('readerNeeds'), titleList:$('titleList'), outlineList:$('outlineList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck')
+  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), readerNeeds:$('readerNeeds'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -252,13 +257,14 @@ function findExactItem(list, keyword){
   return list.find(item => normalizeKey(getKeywordFromApiItem(item)) === seedKey) || null;
 }
 
-async function fetchJSON(url, _retried){
+async function fetchJSON(url, _retry){
+  const attempt = _retry || 0;
   const res = await fetch(url);
-  // [v17.1] 429(Too Many Requests)면 잠깐 쉬었다 1회만 재시도. 그 외 상태는 기존대로 처리.
-  if(res.status === 429 && !_retried){
-    const wait = 600 + Math.floor(Math.random()*500); // 0.6~1.1초 지터
+  // [v18.1] 429면 점증 대기 후 최대 2회 재시도(0.7s→1.4s). 그 외 상태는 기존대로.
+  if(res.status === 429 && attempt < 2){
+    const wait = 700 * (attempt + 1) + Math.floor(Math.random()*400);
     await new Promise(r=>setTimeout(r, wait));
-    return fetchJSON(url, true);
+    return fetchJSON(url, attempt + 1);
   }
   const text = await res.text();
   let data = null;
@@ -570,6 +576,49 @@ function needsForIntent(intent){
 }
 // [v18] 후킹 기반 제목 생성: 메인키워드 + 검색에서 검증된 후킹 키워드, 명사형 마감(서술 꼬리 없음).
 // hooks: [{word,count}] (titlehunt API 결과). 없으면 빈 배열 반환 -> 호출부에서 템플릿으로 폴백.
+// [v19] 허브-스포크 클러스터: 연관키워드를 의도축으로 가르고, 검색량으로 키워드형(독립스포크)/의도형(흡수) 구분.
+// 의도축 = 후킹이 '의도'로 쓰일 때 붙는 라벨. 실제 사용 데이터(드라마·금융·시험·복지·의료)에서 추출.
+const INTENT_AXES = [
+  {key:'인물', label:'출연진·등장인물', terms:['출연진','등장인물','인물관계도','참가자','심사위원','제작진','라인업','명단']},
+  {key:'편성', label:'편성·재방송', terms:['OTT','재방송','시청률','몇부작','편성표','공개일','방영일','방송시간','회차','다시보기','보러가기']},
+  {key:'원작', label:'원작·결말', terms:['원작','웹툰','결말','작가','OST','줄거리','뜻']},
+  {key:'장소', label:'촬영지·장소', terms:['촬영지','촬영장소','배경','위치']},
+  {key:'결제행동', label:'결제·거래', terms:['결제','결제내역','결제취소','자동이체','거래내역','명세','이체']},
+  {key:'시세정보', label:'주가·시세', terms:['주가','시세','배당','전망','관련주','주식회사','공모주','상장']},
+  {key:'금액', label:'금액·요금', terms:['요금','9900','29000','299000']},
+  {key:'문의', label:'고객센터·문의', terms:['고객센터','홈페이지','채용','문의','번호']},
+  {key:'일정', label:'일정·기간', terms:['시험일정','일정','기간','날짜','접수','신청기간','마감','예매','예약']},
+  {key:'자격', label:'자격·난이도', terms:['응시자격','자격','조건','난이도','합격률','대상','요건','시험과목','준비물']},
+  {key:'방법', label:'방법·신청', terms:['신청방법','방법','신청','조회','등록','발급','해지','환불','취소','취득','다운로드','만드는법','되는법']},
+  {key:'증상', label:'증상·치료', terms:['초기증상','전조증상','증상','원인','검사','치료','생존율','좋은음식','부작용']},
+  {key:'정보', label:'기본정보', terms:['기본정보','정보','정의','종류','순위','비용','가격','후기','평점','관람평']},
+];
+function intentAxisOf(kw){
+  for(const a of INTENT_AXES){ if(a.terms.some(t=>includesTerm(kw,t))) return a; }
+  return {key:'기타', label:'기타', terms:[]};
+}
+const SPOKE_MIN_MONTHLY = 400; // 이 이상 검색량이면 독립 스포크(별도 글), 미만은 허브로 흡수
+function buildCluster(hubKw, rows){
+  const hubKey = normalizeKey(hubKw);
+  const hubAxis = intentAxisOf(hubKw).key;
+  const byAxis = {};
+  for(const r of (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey)){
+    const ax = intentAxisOf(r.kw);
+    (byAxis[ax.key] = byAxis[ax.key] || {label:ax.label, rows:[]}).rows.push(r);
+  }
+  const spokes=[], absorbed=[];
+  for(const [key,grp] of Object.entries(byAxis)){
+    grp.rows.sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
+    const rep=grp.rows[0], repM=Number(rep.monthly||0);
+    // 허브와 같은 의도거나 '기타'면 흡수(자기잠식 방지). 검색량 약해도 흡수.
+    if(key===hubAxis || key==='기타' || repM<SPOKE_MIN_MONTHLY){
+      absorbed.push(...grp.rows.map(x=>x.kw)); continue;
+    }
+    spokes.push({ axisKey:key, axisLabel:grp.label, kw:rep.kw, monthly:repM, also:grp.rows.slice(1).map(x=>x.kw) });
+  }
+  spokes.sort((a,b)=>b.monthly-a.monthly);
+  return { hub:hubKw, spokes:spokes.slice(0,5), absorbed };
+}
 function titlesFromHooks(keyword, hooks){
   const kw = normalizeSpace(keyword);
   if(!Array.isArray(hooks) || hooks.length===0) return [];
@@ -641,7 +690,7 @@ function renderIdle(){
   els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
-  els.selectedHint.textContent='키워드를 선택하세요'; els.relatedChips.innerHTML=''; els.readerNeeds.innerHTML=''; els.titleList.innerHTML=''; els.outlineList.innerHTML='';
+  els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; els.readerNeeds.innerHTML=''; els.titleList.innerHTML='';
   els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value='';
 }
 function renderRecommendTable(){
@@ -655,27 +704,133 @@ function renderDetailTable(){
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
   els.detailKeywordTable.innerHTML = rows.map(row=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${format(row.totalContent)}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell">${escapeHTML(row.reason)}</td></tr>`).join('');
 }
+// [v18.1] 선택된 키워드의 후킹을 키워드별 캐시로 관리. 없으면 비동기로 가져와 채우고 다시 렌더.
+function ensureHooksFor(keyword){
+  const key = normalizeSpace(keyword);
+  if(!state.hooksByKw) state.hooksByKw = {};
+  if(!state.hookPending) state.hookPending = {};
+  if(state.hooksByKw[key] !== undefined) return;      // 이미 있음
+  if(state.hookPending[key]) return;                   // 이미 요청 중
+  state.hookPending[key] = true;
+  const seedAtRequest = state.seed;
+  fetchTitleHuntCached(keyword).then(th => {
+    if(state.seed !== seedAtRequest) return;           // 그새 다른 분석 시작 → 버림
+    state.hooksByKw[key] = Array.isArray(th.hooks) ? th.hooks : [];
+    if(!state.hookSamplesByKw) state.hookSamplesByKw = {};
+    state.hookSamplesByKw[key] = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
+    state.hookPending[key] = false;
+    // 지금 화면에 떠 있는 키워드와 같으면 다시 그림
+    const rows = state.recommended.length ? state.recommended : state.rows;
+    const cur = rows[state.selectedIndex] || rows[0];
+    if(cur && normalizeSpace(cur.kw) === key) renderSelected();
+  }).catch(()=>{ state.hookPending[key] = false; });
+}
+// [v19] 콘텐츠 클러스터 렌더: 허브1 + 스포크5. 각 스포크에 '원고 프롬프트' 버튼.
+function renderCluster(hubRow){
+  if(!els.clusterBox) return;
+  const cluster = buildCluster(hubRow.kw, state.rows);
+  state.currentCluster = cluster;
+  const hubHtml = `<div class="cluster-node hub"><div class="cl-line"><b>허브</b> <span>${escapeHTML(cluster.hub)}</span></div>
+    <button class="pick-btn cl-btn" data-cluster="hub">이 허브 원고 프롬프트</button></div>`;
+  let spokeHtml = '';
+  if(cluster.spokes.length){
+    spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
+      <div class="cl-line"><b>스포크 ${i+1}</b> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
+      ${s.also.length?`<div style="font-size:11px;opacity:.5;margin:2px 0 4px">+ ${s.also.map(escapeHTML).join(', ')}</div>`:''}
+      <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
+    </div>`).join('');
+  } else {
+    spokeHtml = `<div class="cluster-node single"><div class="cl-line" style="opacity:.7">독립 글감이 충분치 않습니다. 이 키워드는 <b>단독 원고</b>로 작성하세요. (최신 이슈성 키워드일 수 있음)</div></div>`;
+  }
+  els.clusterBox.innerHTML = hubHtml + spokeHtml;
+  els.clusterBox.querySelectorAll('.cl-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    generateClusterPrompt(btn.dataset.cluster, Number(btn.dataset.idx||0));
+  }));
+}
+
+// 스포크/허브 버튼 클릭 → 그 키워드로 자동완성 재조회 → 풍부하면 클러스터형, 빈약하면 단독형 프롬프트
+async function generateClusterPrompt(kind, idx){
+  const cluster = state.currentCluster;
+  if(!cluster) return;
+  const targetKw = kind==='hub' ? cluster.hub : (cluster.spokes[idx]?.kw);
+  if(!targetKw) return;
+  els.draftPrompt.value = `"${targetKw}" 관련 검색어를 조사해 원고 프롬프트를 만드는 중...`;
+  // 스포크 키워드로 자동완성 재조회 (가벼운 suggest만 사용 → 429 방지)
+  let subKeywords = [];
+  try {
+    const sug = await fetchSuggestCached(targetKw);
+    subKeywords = (sug.suggestions || []).filter(k => normalizeKey(k)!==normalizeKey(targetKw)).slice(0, 12);
+  } catch(e){ subKeywords = []; }
+  // 같은 클러스터의 흡수 키워드도 섹션 재료로 포함
+  if(kind==='spoke'){ subKeywords = [...new Set([...(cluster.spokes[idx].also||[]), ...subKeywords])]; }
+  const isSingle = subKeywords.length < 3; // 연관어 빈약 → 단독 원고 모드
+  // 다른 스포크들 = 내부링크 후보
+  const siblings = cluster.spokes.filter((_,i)=> kind==='hub' || i!==idx).map(s=>s.kw);
+  const linkTargets = [kind==='spoke' ? cluster.hub : null, ...siblings].filter(Boolean);
+  els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, isSingle, linkTargets, hub:cluster.hub, kind });
+  els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function buildSpokePrompt({ targetKw, subKeywords, isSingle, linkTargets, hub, kind }){
+  const role = kind==='hub' ? '허브(대표) 원고' : '스포크(세부) 원고';
+  const sectionSrc = subKeywords.length ? subKeywords.join(', ') : '(연관 검색어가 적어 핵심 정보 위주로 구성)';
+  const linkBlock = linkTargets.length
+    ? `\n## 내부링크 (원고 하단 또는 본문 자연스러운 위치)\n아래 키워드를 다루는 다른 글로 내부링크를 걸어라(앵커텍스트=키워드). 이들은 같은 주제 묶음의 형제 글이다:\n${linkTargets.map(k=>`- ${k}`).join('\n')}\n`
+    : '';
+  const modeNote = isSingle
+    ? `이 키워드는 연관 검색어가 적다(최신 이슈성일 가능성). 무리하게 섹션을 늘리지 말고, 검색자가 진짜 궁금한 핵심만 깊게 다뤄라.`
+    : `아래 '섹션 재료'는 이 키워드의 실제 연관 검색어다. 이를 검색자의 질문으로 바꿔 목차(섹션)를 구성하라.`;
+  return `# 블로그 원고 작성 의뢰 (${role})
+
+## 메인 키워드
+${targetKw}
+
+## 섹션 재료 (이 키워드의 연관 검색어)
+${sectionSrc}
+
+## 설계 지침
+${modeNote}
+- 먼저 검색 의도를 한 문장으로 규정하라.
+- 제목: 메인 키워드 + 검증된 후킹(그 자체로 검색되는 명사). "~하세요/~합니다" 서술형 꼬리와 "총정리·꼭·완벽" 같은 빈 수식어(TMI)는 빼고 명사로 끝맺어라.
+- 목차: 위 섹션 재료를 검색 질문형 소제목으로 바꿔 짜라. 도입부 다음에 '## 목차'로 본문에 직접 넣어라.
+${linkBlock}
+## 사실 검증 (필수)
+- 금액·기간·신청법 등 바뀌는 정보는 지어내지 말고, 불확실하면 "공식 페이지 확인 필요"로 처리하라.
+- 출처는 실제 근거만 \`매체명 — 제목 (날짜)\` 형식으로. 주제와 무관한 출처 금지.
+
+## 작성 조건
+- 플랫폼: ${els.platformSelect.value} / 문체: ${els.toneSelect.value} / 출력: ${els.outputSelect.value}
+- 분량: ${lengthSpec(els.lengthSelect.value)}
+- ${els.tableCheck.checked?'표 포함':''}${els.tableCheck.checked&&els.faqCheck.checked?', ':''}${els.faqCheck.checked?'FAQ 포함':''} / 글 끝에 출처·태그
+
+먼저 [1단계] 설계(의도·제목·목차)를 보여준 뒤, [2단계] 본문을 작성해줘.`;
+}
 function renderSelected(){
   const rows = state.recommended.length ? state.recommended : state.rows;
   const row = rows[state.selectedIndex] || rows[0];
   if(!row){ renderIdle(); return; }
+  // [v18.1] 선택된 키워드 기준으로 후킹을 가져온다(추천1위 고정 → 선택 연동).
+  ensureHooksFor(row.kw);
+  const curHooks = (state.hooksByKw && state.hooksByKw[normalizeSpace(row.kw)]) || [];
   const intent = getIntentForSelected(row);
-  const needs = needsForIntent(intent), titles=titlesFor(row.kw,intent), outlines=outlinesFor(row.kw,intent);
+  const needs = needsForIntent(intent), titles=titlesFor(row.kw,intent);
   els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=row.score; els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
   els.judgementTitle.textContent = `${row.kw}, ${row.grade}로 추천합니다`;
   els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 발행량이 적은 순으로 정렬했습니다.`;
-  els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','제목은 선택 키워드와 검색자가 판단할 포인트를 함께 넣으세요.','목차는 선택 키워드의 의도근거와 같은 방향으로만 구성하세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
-  els.relatedChips.innerHTML = state.relatedKeywords.slice(0,30).map((kw,i)=>`<span class="chip ${i<6?'hot':''}">${escapeHTML(kw)}</span>`).join('');
+  els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','제목은 선택 키워드와 검색자가 판단할 포인트를 함께 넣으세요.','각 스포크는 독립된 원고이며, 허브와 내부링크로 연결하세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
   els.readerNeeds.innerHTML = needs.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
-  // [v18] 제목: 후킹(검증된 제목 키워드)이 있으면 그걸로, 없으면 분야 템플릿으로 폴백
-  const hookTitles = titlesFromHooks(row.kw, state.hooks);
+  // [v19] 콘텐츠 클러스터 렌더 (허브1 + 스포크5)
+  renderCluster(row);
+  // [v19] 제목: 후킹(블로그 제목 기반)이 있으면 그걸로, 없으면 분야 템플릿. 후킹은 상위 3개만 + 근거 블로그 제목.
+  const hookTitles = titlesFromHooks(row.kw, curHooks);
   const finalTitles = hookTitles.length ? hookTitles : titles;
-  const hookChips = (state.hooks||[]).slice(0,8)
-    .map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.6">${h.count}</b></span>`).join('');
+  const top3 = curHooks.slice(0,3);
+  const hookChips = top3.map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.55">${h.count}</b></span>`).join('');
+  const samples = (state.hookSamplesByKw && state.hookSamplesByKw[normalizeSpace(row.kw)]) || [];
+  const sampleHtml = samples.slice(0,3).map(t=>`<div style="font-size:11px;opacity:.55;margin-top:2px">· ${escapeHTML(t)}</div>`).join('');
   els.titleList.innerHTML =
-    (hookChips ? `<div style="margin-bottom:8px;font-size:12px;opacity:.7">발행 제목에서 뽑은 후킹 키워드</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${hookChips}</div>` : '')
+    (hookChips ? `<div style="margin-bottom:6px;font-size:12px;opacity:.7">발행 블로그 제목 후킹 TOP3</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${hookChips}</div>${sampleHtml?`<div style="margin:6px 0 10px">${sampleHtml}</div>`:''}` : '')
     + finalTitles.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
-  els.outlineList.innerHTML = outlines.map((x,i)=>`<div class="outline-item"><span>${i+1}</span><div>${escapeHTML(x)}</div></div>`).join('');
   els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');
   els.draftPrompt.value = `# 블로그 원고 작성 의뢰
@@ -722,7 +877,7 @@ ${promptRelated || '(연관키워드 없음 — 메인 키워드 의도로만 �
 ### 1단계 — 설계 (본문 쓰기 전에 먼저 하고, 결과를 보여줘라)
 아래 항목을 너가 직접 새로 만들어라. 프로그램이 준 자동 분류는 참고만 하고 정답으로 여기지 마라.
 1) **검색 의도 재정의**: 메인 키워드 "${row.kw}"를 검색하는 사람이 진짜 알고 싶은 게 무엇인지 한 문장으로 규정해라. 위 연관키워드가 가장 좋은 근거다. (자동 분류 의도 "${intent.label}"가 안 맞으면 무시하고 너의 판단을 따르라.)
-2) **제목 3개 (공식: 메인키워드 + 검증된 후킹 - 서술형 꼬리)**: ${(state.hooks&&state.hooks.length)?`아래 '발행 제목 후킹 키워드'는 실제 발행된 글 제목에서 자주 등장한, 검색에서 검증된 후킹어다. 메인 키워드에 이 후킹어를 결합해 제목을 만들어라.`:`네이버에서 이 키워드로 검색해 상위 뉴스·블로그 제목에 반복되는 후킹 키워드를 찾아 활용해라.`} 규칙: (a) 메인 키워드를 그대로 포함한다. (b) 후킹은 '그 자체로 검색되는 명사'여야 한다(단순 수식어 금지). (c) 제목은 **명사로 끝맺어라** — "~하세요/~합니다/~정리했습니다/~알아볼게요" 같은 서술형 꼬리와 "총정리·꼭·한번에·완벽" 같은 빈 수식어(TMI)는 빼라. 예: "...대응하세요"→"...대응방법".${(state.hooks&&state.hooks.length)?`\n\n**발행 제목 후킹 키워드(빈도순): ${state.hooks.slice(0,8).map(h=>h.word).join(', ')}**`:''}
+2) **제목 3개 (공식: 메인키워드 + 검증된 후킹 - 서술형 꼬리)**: ${(curHooks&&curHooks.length)?`아래 '발행 제목 후킹 키워드'는 실제 발행된 글 제목에서 자주 등장한, 검색에서 검증된 후킹어다. 메인 키워드에 이 후킹어를 결합해 제목을 만들어라.`:`네이버에서 이 키워드로 검색해 상위 뉴스·블로그 제목에 반복되는 후킹 키워드를 찾아 활용해라.`} 규칙: (a) 메인 키워드를 그대로 포함한다. (b) 후킹은 '그 자체로 검색되는 명사'여야 한다(단순 수식어 금지). (c) 제목은 **명사로 끝맺어라** — "~하세요/~합니다/~정리했습니다/~알아볼게요" 같은 서술형 꼬리와 "총정리·꼭·한번에·완벽" 같은 빈 수식어(TMI)는 빼라. 예: "...대응하세요"→"...대응방법".${(curHooks&&curHooks.length)?`\n\n**발행 제목 후킹 키워드(빈도순): ${curHooks.slice(0,8).map(h=>h.word).join(", ")}**`:''}
 3) **검색자의 핵심 질문 5개**: 연관키워드에서 검색자가 실제로 가질 법한 질문을 추출해라.
 4) **최종 목차**: 위 질문에 답하는 순서로, 가장 궁금해할 내용을 위에 배치해 짜라. 소제목은 검색 질문형으로.
 
@@ -765,8 +920,8 @@ async function analyze(){
       .slice(0, 15);
 
     // 자동완성 신규 키워드는 검색량을 검색광고 API로 재조회해 row로 만든다
-    // [v17.1] 동시성 3→2: STEP 3 발행량 조회와 같은 백엔드 API를 쓰므로 동시 압력을 낮춰 429를 줄인다.
-    const suggestRows = await mapLimit(newSuggestKws, 2, async d => {
+    // [v18.1] 동시성 2→1: 자동완성 신규 키워드가 많은 키워드(예: 나이스정보통신)에서 searchad 429가 재발 → 직렬에 가깝게.
+    const suggestRows = await mapLimit(newSuggestKws, 1, async d => {
       const sourceLabel = d.src === 'google' ? '구글 자동완성' : (d.src === 'naver' ? '네이버 자동완성' : '자동완성');
       try {
         const p = await fetchSearchAdCached(d.kw);
@@ -811,20 +966,10 @@ async function analyze(){
 
     // 연관키워드 묶음: 검색광고 + 자동완성 신규 합쳐 표시
     const relatedKeywords = uniqueByKeyword([...relatedRows, ...suggestRows]).map(r=>r.kw);
-    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooks:[], hookSamples:[] };
+    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooksByKw:{}, hookPending:{} };
     els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
-
-    // [v18] 추천 1위(허브) 키워드로 발행 제목을 조사해 후킹 키워드 추출 -> 제목 영역 갱신
-    const hubKw = recommended[0]?.kw;
-    if(hubKw){
-      fetchTitleHuntCached(hubKw).then(th => {
-        if(state.seed !== seed) return; // 그새 다른 분석 시작됐으면 무시
-        state.hooks = Array.isArray(th.hooks) ? th.hooks : [];
-        state.hookSamples = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
-        renderSelected(); // 후킹 반영해 제목 다시 그림
-      });
-    }
+    // 후킹은 renderSelected -> ensureHooksFor(선택 키워드)가 비동기로 가져온다.
   } catch(err){
     console.error(err);
     els.judgementTitle.textContent='분석 중 오류가 발생했습니다.';

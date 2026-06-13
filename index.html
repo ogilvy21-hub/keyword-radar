@@ -82,6 +82,30 @@
     @media (max-width:1100px){.hero,.layout{grid-template-columns:1fr}.side{position:static}h1{font-size:36px}.builder-grid{grid-template-columns:1fr}}
     @media (max-width:720px){.app{padding:16px}.search-zone,.content-zone{padding-left:18px;padding-right:18px}.steps{overflow-x:auto;padding-bottom:2px}.step{min-width:118px}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.decision{display:block}.strategy-list{margin-top:12px}}
     @media (max-width:520px){.summary-grid{grid-template-columns:1fr}.search-row{grid-template-columns:1fr;gap:12px}.search-row input{min-height:58px;padding:16px 18px;font-size:18px;border-radius:18px}.search-row button{min-height:56px;width:100%;border-radius:18px;font-size:18px;box-shadow:0 14px 28px rgba(17,24,39,.22)}.search-row button::before{content:"🔍 "}.step{min-width:105px;padding:9px 8px;font-size:11px;border-radius:14px}}
+    /* [v20] 제목 조합기 */
+    .tb-main{display:inline-flex;align-items:center;gap:8px;background:#111827;color:#fff;border-radius:12px;padding:9px 13px;font-weight:800;font-size:14px;margin-bottom:4px;overflow-wrap:anywhere;}
+    .tb-main .tb-tag{font-size:10px;background:rgba(255,255,255,.2);padding:2px 6px;border-radius:6px;font-weight:700;}
+    .tb-mini{font-size:11px;font-weight:900;color:#2563eb;letter-spacing:.06em;margin:12px 0 7px;}
+    .tb-mini span{color:#94a3b8;font-weight:700;letter-spacing:0;}
+    .tb-chips{display:flex;flex-wrap:wrap;gap:7px;}
+    .tb-chip{border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:11px;padding:7px 10px;cursor:pointer;font:inherit;text-align:left;transition:.12s;}
+    .tb-chip:hover{border-color:#2563eb;background:#dbeafe;}
+    .tb-chip.dim{opacity:.42;border-color:#e5e7eb;background:#f8fafc;}
+    .tb-chip.used{background:#2563eb;border-color:#2563eb;}
+    .tb-chip.used .tb-ct{color:#fff;} .tb-chip.used .tb-cm{color:#dbeafe;}
+    .tb-ct{display:block;font-weight:800;font-size:12px;color:#1e3a8a;overflow-wrap:anywhere;}
+    .tb-cm{display:block;font-size:10px;color:#64748b;margin-top:2px;font-weight:700;}
+    .tb-chosen{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+    .tb-pin{display:inline-flex;align-items:center;gap:5px;background:#dbeafe;color:#1e3a8a;border-radius:999px;padding:4px 7px 4px 10px;font-size:11px;font-weight:800;}
+    .tb-pin b{cursor:pointer;color:#2563eb;font-size:13px;}
+    .tb-preview{border:1px dashed #cbd5e1;border-radius:12px;padding:11px 12px;background:#f8fafc;}
+    .tb-pline{font-size:15px;font-weight:800;color:#111827;line-height:1.5;overflow-wrap:anywhere;}
+    .tb-edit{width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-size:14px;font-weight:700;margin-top:8px;outline:0;}
+    .tb-actions{display:flex;gap:8px;margin-top:11px;}
+    .tb-actions button{flex:1;border:0;border-radius:12px;padding:11px;font-weight:800;cursor:pointer;font-size:13px;}
+    .tb-apply{background:#2563eb;color:#fff;} .tb-clear{background:#f1f5f9;color:#475569;}
+    .tb-hint{font-size:11px;color:#94a3b8;margin-top:7px;line-height:1.5;}
+    .tb-empty{color:#94a3b8;font-size:12px;font-weight:600;padding:6px 0;line-height:1.5;}
   </style>
 </head>
 <body>
@@ -168,8 +192,14 @@
           </div>
           <div class="builder-grid">
             <div class="card"><h4>콘텐츠 클러스터 <span class="micro-hint">허브 1 + 스포크 5, 각 원고 프롬프트</span></h4><div id="clusterBox"></div></div>
-            <div class="card"><h4>검색자가 원하는 답</h4><div class="title-list" id="readerNeeds"></div></div>
-            <div class="card"><h4>제목 후보 <span class="micro-hint">발행 블로그 제목에서 뽑은 후킹</span></h4><div class="title-list" id="titleList"></div></div>
+            <div class="card">
+              <h4>제목 조합기 <span class="micro-hint">메인 + 후킹(연관어) 조합 → 프롬프트</span></h4>
+              <div id="titleBuilder"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <h4>발행 제목 참고 <span class="micro-hint">상위 블로그·뉴스가 제목에 쓴 후킹 (눈으로 참고해 편집칸에 활용)</span></h4>
+            <div class="title-list" id="titleList"></div>
           </div>
         </div>
       </section>
@@ -215,7 +245,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const els = {
-  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), readerNeeds:$('readerNeeds'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck')
+  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -691,6 +721,109 @@ function buildCluster(hubKw, rows){
   spokes.sort((a,b)=>b.monthly-a.monthly);
   return { hub:hubKw, spokes:spokes.slice(0,5), absorbed };
 }
+
+// ===== [v20] 제목 조합기 =====
+// 메인 = 선택 키워드(고정). 후킹 = 연관어(state.rows)를 경쟁비율 좋은 순 정렬, 메인 꼬리 추출.
+// 발행량 3000+ 후킹은 흐리게(초보 보수기준). 칩 클릭→미리보기 조합→편집→프롬프트 주입.
+function titleRatio(row){ const m=Number(row.monthly||0); if(m<=0) return Infinity; return Number(row.totalContent||0)/m; }
+function titleHookTail(relKw, mainKw){
+  const rel=normalizeKey(relKw), main=normalizeKey(mainKw);
+  let i=0; while(i<rel.length && i<main.length && rel[i]===main[i]) i++;
+  if(i<2) return normalizeSpace(relKw);   // 공통 접두 2글자 미만 → 연관어 통째
+  const tail=rel.slice(i);
+  return tail || normalizeSpace(relKw);
+}
+function buildTitleMaterial(seedKw, relatedRows){
+  const main=normalizeSpace(seedKw);
+  const sorted=[...(relatedRows||[])].filter(r=>r&&normalizeSpace(r.kw)&&normalizeKey(r.kw)!==normalizeKey(main))
+    .sort((a,b)=>{ const ra=titleRatio(a),rb=titleRatio(b); if(ra!==rb) return ra-rb; return Number(b.monthly||0)-Number(a.monthly||0); });
+  const hooks=[]; const seen=new Set([normalizeKey(main)]);
+  for(const r of sorted){
+    const tail=titleHookTail(r.kw,main); const tk=normalizeKey(tail);
+    if(!tk||seen.has(tk)) continue; seen.add(tk);
+    const total=Number(r.totalContent||0);
+    hooks.push({ tail, full:normalizeSpace(r.kw), monthly:Number(r.monthly||0), totalContent:total, ratio:titleRatio(r), dim: total>=3000 });
+  }
+  return { main, hooks };
+}
+function renderTitleBuilder(seedKw){
+  if(!els.titleBuilder) return;
+  const mat = buildTitleMaterial(seedKw, state.rows);
+  // 같은 메인이면 기존 선택 유지, 메인 바뀌면 초기화
+  if(!state.titleState || state.titleState.main !== mat.main){
+    state.titleState = { main:mat.main, hooks:mat.hooks, chosen:[] };
+  } else {
+    state.titleState.hooks = mat.hooks; // 데이터 갱신
+  }
+  drawTitleBuilder();
+}
+function drawTitleBuilder(){
+  const ts = state.titleState; if(!ts || !els.titleBuilder) return;
+  const chipsHtml = ts.hooks.length
+    ? ts.hooks.map((h,i)=>{
+        const used = ts.chosen.includes(i);
+        return `<button class="tb-chip ${h.dim?'dim':''} ${used?'used':''}" data-ti="${i}">
+          <span class="tb-ct">${escapeHTML(h.tail)}</span>
+          <span class="tb-cm">검색 ${format(h.monthly)} · 발행 ${format(h.totalContent)}${h.dim?' · 발행多':''}</span>
+        </button>`;
+      }).join('')
+    : `<div class="tb-empty">연관어가 없습니다. 메인키워드 단독으로 쓰거나, 아래 '발행 제목 참고'의 후킹을 편집칸에 직접 넣으세요.</div>`;
+  const tails = ts.chosen.map(i=>ts.hooks[i].tail);
+  const preview = [ts.main, ...tails].join(' ');
+  const pins = ts.chosen.map(i=>`<span class="tb-pin">${escapeHTML(ts.hooks[i].tail)} <b data-ti="${i}">×</b></span>`).join('');
+  els.titleBuilder.innerHTML = `
+    <div class="tb-mini">메인키워드 <span>· 고정</span></div>
+    <span class="tb-main">${escapeHTML(ts.main)} <span class="tb-tag">고정</span></span>
+    <div class="tb-mini">후킹 후보 <span>· 검색 많고 발행 적은 순 · 발행 3000+ 흐림</span></div>
+    <div class="tb-chips" id="tbChips">${chipsHtml}</div>
+    <div class="tb-mini">조합한 제목</div>
+    <div class="tb-chosen">${pins}</div>
+    <div class="tb-preview">
+      <div class="tb-pline" id="tbPreview">${escapeHTML(preview)}</div>
+      <input class="tb-edit" id="tbEdit" placeholder="직접 편집하려면 입력 (참고 후킹도 여기서 추가)" value="${escapeHTML(ts.edited||'')}"/>
+    </div>
+    <div class="tb-actions">
+      <button class="tb-clear" id="tbClear">초기화</button>
+      <button class="tb-apply" id="tbApply">이 제목 적용 → 프롬프트</button>
+    </div>
+    <p class="tb-hint">미리보기는 재료 확인용(나열식)입니다. 프롬프트로 가면 AI가 keyword soup 대신 자연어 의도형 제목으로 다듬습니다.</p>`;
+  // 이벤트 바인딩
+  els.titleBuilder.querySelectorAll('.tb-chip[data-ti]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(Number(b.dataset.ti))));
+  els.titleBuilder.querySelectorAll('.tb-pin b[data-ti]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(Number(b.dataset.ti))));
+  const editEl = $('tbEdit');
+  if(editEl) editEl.addEventListener('input', e=>{ state.titleState.edited = e.target.value; });
+  const clearEl = $('tbClear'); if(clearEl) clearEl.addEventListener('click', ()=>{ ts.chosen=[]; ts.edited=''; drawTitleBuilder(); });
+  const applyEl = $('tbApply'); if(applyEl) applyEl.addEventListener('click', applyTitleToPrompt);
+}
+function toggleTitleHook(i){
+  const ts=state.titleState; if(!ts) return;
+  const pos=ts.chosen.indexOf(i);
+  if(pos>=0) ts.chosen.splice(pos,1); else ts.chosen.push(i);
+  drawTitleBuilder();
+}
+function applyTitleToPrompt(){
+  const ts=state.titleState; if(!ts) return;
+  const tails = ts.chosen.map(i=>ts.hooks[i].tail);
+  const edited = normalizeSpace(ts.edited||'');
+  const draft = edited || [ts.main, ...tails].join(' ');
+  const block = `## 제목 설계 (작성자가 조합한 재료 — 이 의도를 우선 반영하라)
+- 메인키워드(반드시 제목에 포함): ${ts.main}
+- 후킹 재료(작성자가 고른 연관어): ${tails.join(', ') || '(없음 — 메인 단독)'}
+- 작성자 조합 초안: ${draft}
+규칙: 메인키워드를 앞쪽에 자연스럽게 1회 넣고, 후킹 재료를 단순 나열(keyword soup) 말고 검색 의도가 드러나는 자연어로 엮어라. 서술 꼬리("~하세요/합니다")와 빈 수식어(총정리·완벽 등 TMI)는 빼고 명사로 끝맺어라. 작성자 초안의 의도를 존중하되 더 자연스럽게 다듬어도 된다.`;
+  // draftPrompt의 제목 섹션을 이 블록으로 교체(있으면) 또는 맨 앞에 추가
+  const cur = els.draftPrompt.value || '';
+  let next;
+  if(cur.includes('## 제목 설계 (작성자가 조합한 재료')){
+    next = cur.replace(/## 제목 설계 \(작성자가 조합한 재료[\s\S]*?(?=\n## |\n### |$)/, block + '\n\n');
+  } else {
+    next = block + '\n\n' + cur;
+  }
+  els.draftPrompt.value = next.trim();
+  els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
+  const applyEl=$('tbApply'); if(applyEl){ applyEl.textContent='프롬프트에 반영됨 ✓'; setTimeout(()=>{ applyEl.textContent='이 제목 적용 → 프롬프트'; },1400); }
+}
+
 function titlesFromHooks(keyword, hooks){
   const kw = normalizeSpace(keyword);
   if(!Array.isArray(hooks) || hooks.length===0) return [];
@@ -762,7 +895,7 @@ function renderIdle(){
   els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
-  els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; els.readerNeeds.innerHTML=''; els.titleList.innerHTML='';
+  els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
   els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value='';
 }
 function renderRecommendTable(){
@@ -896,24 +1029,22 @@ function renderSelected(){
   ensureHooksFor(row.kw);
   const curHooks = (state.hooksByKw && state.hooksByKw[normalizeSpace(row.kw)]) || [];
   const intent = getIntentForSelected(row);
-  const needs = needsForIntent(intent), titles=titlesFor(row.kw,intent);
   els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=row.score; els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
   els.judgementTitle.textContent = `${row.kw}, ${row.grade}로 추천합니다`;
   els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 발행량이 적은 순으로 정렬했습니다.`;
   els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','제목은 선택 키워드와 검색자가 판단할 포인트를 함께 넣으세요.','각 스포크는 독립된 원고이며, 허브와 내부링크로 연결하세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
-  els.readerNeeds.innerHTML = needs.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
   // [v19] 콘텐츠 클러스터 렌더 (허브1 + 스포크5)
   renderCluster(row);
-  // [v19] 제목: 후킹(블로그 제목 기반)이 있으면 그걸로, 없으면 분야 템플릿. 후킹은 상위 3개만 + 근거 블로그 제목.
-  const hookTitles = titlesFromHooks(row.kw, curHooks);
-  const finalTitles = hookTitles.length ? hookTitles : titles;
+  // [v20] 제목 조합기: 선택 키워드를 메인으로, 연관어(state.rows)를 후킹 후보로
+  renderTitleBuilder(row.kw);
+  // [v20] 발행 제목 참고: 블로그 제목 후킹 칩 + 근거 제목 샘플 (눈으로 참고, 클릭 조합 없음)
   const top3 = curHooks.slice(0,3);
   const hookChips = top3.map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.55">${h.count}</b></span>`).join('');
   const samples = (state.hookSamplesByKw && state.hookSamplesByKw[normalizeSpace(row.kw)]) || [];
-  const sampleHtml = samples.slice(0,3).map(t=>`<div style="font-size:11px;opacity:.55;margin-top:2px">· ${escapeHTML(t)}</div>`).join('');
-  els.titleList.innerHTML =
-    (hookChips ? `<div style="margin-bottom:6px;font-size:12px;opacity:.7">발행 블로그 제목 후킹 TOP3</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${hookChips}</div>${sampleHtml?`<div style="margin:6px 0 10px">${sampleHtml}</div>`:''}` : '')
-    + finalTitles.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
+  const sampleHtml = samples.slice(0,5).map(t=>`<div style="font-size:11px;opacity:.6;margin-top:3px">· ${escapeHTML(t)}</div>`).join('');
+  els.titleList.innerHTML = hookChips
+    ? `<div style="margin-bottom:6px;font-size:12px;opacity:.7">상위 블로그 제목에 자주 쓰인 후킹</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${hookChips}</div>${sampleHtml?`<div>${sampleHtml}</div>`:''}`
+    : `<div class="tb-empty">아직 수집된 발행 제목이 없습니다. (네이버 검색 API 연결 시 표시됩니다)</div>`;
   els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');
   const hasRelated = state.relatedKeywords.length > 0; // [v20] 연관어 유무로 설계 보조지시 분기

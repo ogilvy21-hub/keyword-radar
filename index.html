@@ -469,6 +469,27 @@ function includesTerm(text, term){
   if(raw.includes(term)) return true;
   return compact.includes(termCompact);
 }
+// [v20] 클러스터 의도축(INTENT_AXES) 전용 매칭. includesTerm과 분리한 이유:
+// 의도축은 '제주가볼만한곳'에서 '주가'가 잘못 걸리는 오분류를 막아야 한다(정밀도 우선).
+// includesTerm은 점수 분류(INTENTS)에서 '축제/여행'이 복합어 어디 있든 걸려야 해(재현율 우선) 그대로 둔다.
+// 차이: 2글자 term은 띄어쓰기 단어단위 일치 OR 붙은 텍스트의 맨앞/맨뒤(경계)에서만 인정 → 중간 끼임 배제.
+function includesAxisTerm(text, term){
+  const raw = normalizeSpace(text);
+  const compact = normalizeKey(raw);
+  const termCompact = normalizeKey(term);
+  if(!termCompact) return false;
+  if(termCompact.length <= 1){
+    const words = raw.split(/\s+/).map(normalizeKey);
+    return words.some(w => w === termCompact);
+  }
+  if(termCompact.length === 2){
+    const words = raw.split(/\s+/).map(normalizeKey);
+    if(words.some(w => w === termCompact)) return true;
+    return compact.startsWith(termCompact) || compact.endsWith(termCompact);
+  }
+  if(raw.includes(term)) return true;
+  return compact.includes(termCompact);
+}
 function inferIntentFromEvidence(selectedKeyword, bundleRows){
   const selected = normalizeSpace(selectedKeyword || '');
   const bundleText = (bundleRows||[]).map(r=>r.kw).join(' ');
@@ -522,24 +543,26 @@ function sortCandidates(rows){
 }
 function getIntentForSelected(row){ return inferIntentFromEvidence(row?.kw || state.seed, state.rows); }
 
-// 플랫폼별 SEO 작성 방향 (네이버형 vs 구글형)
+// 플랫폼별 SEO 작성 방향. [v20] 기본 전략은 '구글 SEO 우선'.
+// 근거: 네이버도 구글식 SEO(검색의도 충족·구조화·완결성)를 점점 따라가는 추세라 구글형으로 쓰면 양쪽 노출에 유리하고,
+//       설령 네이버 노출이 덜해도 구글 유입을 1차 목표로 둔다. (그래서 키워드가 '네이버형'으로 분류돼도 작성은 구글 우선)
 function platformStrategy(platform){
   const naverType = ['네이버 블로그','네이버 홈판용'];
   if(naverType.includes(platform)){
-    return `이 글은 ${platform}에 발행한다. 네이버 검색 노출에 맞춰라: 제목과 첫 문단에 메인 키워드를 자연스럽게 1~2회 넣고, 사진을 넣을 위치를 [사진]으로 표시하며, 문단을 짧게 끊어 모바일 가독성을 높이고, 경험·후기 톤(직접 해보니/확인해보니)을 섞어 체류시간을 늘려라.`;
+    return `이 글은 ${platform}에 발행한다. 네이버 가독성(짧은 문단, [사진] 위치 표시, 경험·후기 톤)을 지키되, 글의 뼈대는 구글 SEO 구조로 잡아라: 검색 의도에 대한 결론을 도입부에서 먼저 제시하고, 소제목을 검색 질문형으로 달아 한 주제를 깊고 완결성 있게 다뤄라. 이 구조는 네이버 상위 노출에도 유리하다.`;
   }
-  return `이 글은 ${platform}에 발행한다. 구글 검색 노출(SEO)에 맞춰라: 검색 의도에 대한 결론을 도입부에서 먼저 제시하고(피처드 스니펫 대응), 소제목을 검색 질문형으로 달아 구조를 명확히 하며, 한 주제를 깊고 완결성 있게 다뤄 정보성 권위를 확보해라.`;
+  return `이 글은 ${platform}에 발행한다. 구글 검색 노출(SEO)을 1차 목표로 맞춰라: 검색 의도에 대한 결론을 도입부에서 먼저 제시하고(피처드 스니펫 대응), 소제목을 검색 질문형으로 달아 구조를 명확히 하며, 한 주제를 깊고 완결성 있게 다뤄 정보성 권위를 확보해라. (이 키워드가 '네이버형'으로 분류됐더라도 구글 구조로 쓴다 — 네이버도 같은 구조를 점점 따라가므로 양쪽 노출에 유리하다.)`;
 }
-// 분량 라벨을 명확한 기준으로 변환 (공백 제외 본문 순수 텍스트 기준, 출처·태그·표 안 텍스트 제외)
+// 분량 라벨을 명확한 기준으로 변환. [v20] 분량은 '목표치'이며, 채우려고 늘리는 것보다 모자란 게 낫다는 점을 명시.
 function lengthSpec(label){
   const map = {
-    '짧게 800자':'공백 제외 본문 순수 텍스트 800자 이상',
-    '일반 1500자':'공백 제외 본문 순수 텍스트 1,500자 이상',
-    '깊게 3000자':'공백 제외 본문 순수 텍스트 3,000자 이상',
-    '장문 5000자 이상':'공백 제외 본문 순수 텍스트 5,000자 이상',
+    '짧게 800자':'공백 제외 본문 순수 텍스트 약 800자',
+    '일반 1500자':'공백 제외 본문 순수 텍스트 약 1,500자',
+    '깊게 3000자':'공백 제외 본문 순수 텍스트 약 3,000자',
+    '장문 5000자 이상':'공백 제외 본문 순수 텍스트 약 5,000자',
   };
   const base = map[label] || label;
-  return `${base} (글자 수에 제목·목차·표 안 텍스트·FAQ·출처·태그는 포함하지 않는다. 본문 문단만 센다.)`;
+  return `${base}를 목표로 한다. 이는 채워야 할 최소치가 아니라 대략의 기준이다 — 내용이 충실하면 넘어도 좋고, 핵심을 다 담았다면 다소 모자라도 괜찮다. 분량을 채우려 같은 말을 반복하거나 빈 문단을 늘리지 마라. (글자 수에 제목·목차·표 안 텍스트·FAQ·출처·태그는 포함하지 않는다. 본문 문단만 센다.)`;
 }
 // 출력 형식 명세 — 텍스트/HTML 각각 포맷 규칙을 한 곳에 통합 (작성 조건과 2단계 중복 제거)
 function outputFormatSpec(output){
@@ -587,22 +610,49 @@ const INTENT_AXES = [
   {key:'인물', label:'출연진·등장인물', terms:['출연진','등장인물','인물관계도','참가자','심사위원','제작진','라인업','명단']},
   {key:'편성', label:'편성·재방송', terms:['OTT','재방송','시청률','몇부작','편성표','공개일','방영일','방송시간','회차','다시보기','보러가기']},
   {key:'원작', label:'원작·결말', terms:['원작','웹툰','결말','작가','OST','줄거리','뜻']},
+  // [v20] 여행·축제·이벤트 축 (실측 부산불꽃축제·제주도여행에서 '기타'로 빠진 단어들로 신설)
+  {key:'명소', label:'가볼만한곳·관광', terms:['가볼만한곳','갈만한곳','관광','여행지','놀거리','명소','가볼만한','실내']},
+  {key:'숙박', label:'숙박·숙소', terms:['숙소','펜션','호텔','단체숙소','민박','게스트하우스','리조트']},
+  {key:'코스', label:'코스·일정짜기', terms:['코스','2박3일','당일치기','패키지','투어','액티비티','패스','프리패스','투어패스']},
+  {key:'명당', label:'명당·관람위치', terms:['명당','유료좌석','좌석','인원','요트','유람선','명당자리']},
+  {key:'준비', label:'비용·준비물', terms:['준비물','여행사','지도','여행비용']},
   {key:'장소', label:'촬영지·장소', terms:['촬영지','촬영장소','배경','위치']},
   {key:'결제행동', label:'결제·거래', terms:['결제','결제내역','결제취소','자동이체','거래내역','명세','이체']},
   {key:'시세정보', label:'주가·시세', terms:['주가','시세','배당','전망','관련주','주식회사','공모주','상장']},
   {key:'금액', label:'금액·요금', terms:['요금','9900','29000','299000']},
   {key:'문의', label:'고객센터·문의', terms:['고객센터','홈페이지','채용','문의','번호']},
-  {key:'일정', label:'일정·기간', terms:['시험일정','일정','기간','날짜','접수','신청기간','마감','예매','예약']},
+  {key:'일정', label:'일정·기간', terms:['시험일정','일정','기간','날짜','접수','신청기간','마감','예매','예약','시간','포스터','티켓']},
   {key:'자격', label:'자격·난이도', terms:['응시자격','자격','조건','난이도','합격률','대상','요건','시험과목','준비물']},
   {key:'방법', label:'방법·신청', terms:['신청방법','방법','신청','조회','등록','발급','해지','환불','취소','취득','다운로드','만드는법','되는법']},
   {key:'증상', label:'증상·치료', terms:['초기증상','전조증상','증상','원인','검사','치료','생존율','좋은음식','부작용']},
   {key:'정보', label:'기본정보', terms:['기본정보','정보','정의','종류','순위','비용','가격','후기','평점','관람평']},
 ];
 function intentAxisOf(kw){
-  for(const a of INTENT_AXES){ if(a.terms.some(t=>includesTerm(kw,t))) return a; }
+  for(const a of INTENT_AXES){ if(a.terms.some(t=>includesAxisTerm(kw,t))) return a; }
   return {key:'기타', label:'기타', terms:[]};
 }
+// [v20] 메인 키워드의 '핵심명사'를 그대로 안고 있는 연관어 = 동의어성 중복 → 스포크 부적합.
+// 예) 메인 "부산불꽃축제"의 핵심 "불꽃축제" → "광안리불꽃축제"는 사실상 같은 주제(거름).
+//     "광안리맛집"은 "불꽃축제" 미포함 → 별개 주제(유지).
+function mainCoreTokens(hubKw){
+  const cleaned = normalizeSpace(hubKw).replace(/\d+/g,' ');
+  const chunks = cleaned.split(/\s+/).filter(Boolean);
+  const tokens = new Set();
+  for(const c of chunks){
+    const k = normalizeKey(c);
+    if(k.length>=3) tokens.add(k);
+    if(k.length>=4) tokens.add(k.slice(-4));
+    if(k.length>=3) tokens.add(k.slice(-3));
+  }
+  return [...tokens];
+}
+function isSynonymDup(kw, hubKw){
+  const core = mainCoreTokens(hubKw);
+  const k = normalizeKey(kw);
+  return core.some(t => t.length>=3 && k.includes(t));
+}
 const SPOKE_MIN_MONTHLY = 400; // 이 이상 검색량이면 독립 스포크(별도 글), 미만은 허브로 흡수
+const ETC_AXIS_LABEL = '세부 주제'; // [v20] '기타'를 사용자에게 보일 땐 부드럽게
 function buildCluster(hubKw, rows){
   const hubKey = normalizeKey(hubKw);
   const hubAxis = intentAxisOf(hubKw).key;
@@ -611,15 +661,32 @@ function buildCluster(hubKw, rows){
     const ax = intentAxisOf(r.kw);
     (byAxis[ax.key] = byAxis[ax.key] || {label:ax.label, rows:[]}).rows.push(r);
   }
-  const spokes=[], absorbed=[];
+  const spokes=[], absorbed=[], etcRows=[];
   for(const [key,grp] of Object.entries(byAxis)){
     grp.rows.sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
     const rep=grp.rows[0], repM=Number(rep.monthly||0);
-    // 허브와 같은 의도거나 '기타'면 흡수(자기잠식 방지). 검색량 약해도 흡수.
-    if(key===hubAxis || key==='기타' || repM<SPOKE_MIN_MONTHLY){
+    if(key==='기타'){
+      // [v20-FIX2] 기타는 무조건 흡수하지 않고 모아둔다. 아래서 검색량 큰 것만 독립 스포크로 살림.
+      // (이렇게 해야 패딩처럼 연관어가 많지만 의도축에 안 걸리는 키워드도 글감을 잃지 않는다.)
+      etcRows.push(...grp.rows); continue;
+    }
+    // 허브와 같은 의도거나 검색량 약하면 흡수(자기잠식 방지).
+    if(key===hubAxis || repM<SPOKE_MIN_MONTHLY){
       absorbed.push(...grp.rows.map(x=>x.kw)); continue;
     }
     spokes.push({ axisKey:key, axisLabel:grp.label, kw:rep.kw, monthly:repM, also:grp.rows.slice(1).map(x=>x.kw) });
+  }
+  // [v20-FIX2+길A] 정규 축 스포크가 5개 미만이면, 검색량 큰 '기타'를 독립 스포크로 채운다.
+  // 단 메인과 동의어성 중복(불꽃축제↔광안리불꽃축제)은 스포크로 올리지 않고 흡수.
+  etcRows.sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
+  for(const r of etcRows){
+    if(spokes.length>=5){ if(!absorbed.includes(r.kw)) absorbed.push(r.kw); continue; }
+    if(isSynonymDup(r.kw, hubKw)){ if(!absorbed.includes(r.kw)) absorbed.push(r.kw); continue; }
+    if(Number(r.monthly||0) >= SPOKE_MIN_MONTHLY){
+      spokes.push({ axisKey:'기타', axisLabel:ETC_AXIS_LABEL, kw:r.kw, monthly:Number(r.monthly||0), also:[] });
+    } else {
+      if(!absorbed.includes(r.kw)) absorbed.push(r.kw);
+    }
   }
   spokes.sort((a,b)=>b.monthly-a.monthly);
   return { hub:hubKw, spokes:spokes.slice(0,5), absorbed };
@@ -847,6 +914,7 @@ function renderSelected(){
     + finalTitles.map(x=>`<div class="title-item">${escapeHTML(x)}</div>`).join('');
   els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');
+  const hasRelated = state.relatedKeywords.length > 0; // [v20] 연관어 유무로 설계 보조지시 분기
   els.draftPrompt.value = `# 블로그 원고 작성 의뢰
 
 ## 메인 키워드
@@ -860,8 +928,9 @@ ${row.kw}
 - 구글 유입 적합도: ${row.googleFit||'네이버형'}
 
 ## 실제 검색 연관키워드 (네이버·구글 자동완성)
-${promptRelated || '(연관키워드 없음 — 메인 키워드 의도로만 설계)'}
-※ 위 연관키워드는 사람들이 실제로 검색한 표현이다. 검색자의 숨은 고민을 읽는 핵심 단서이니 적극 활용해라.
+${hasRelated ? promptRelated + `
+※ 위 연관키워드는 사람들이 실제로 검색한 표현이다. 검색자의 숨은 고민을 읽는 핵심 단서이니 적극 활용해라.` : `(연관키워드 없음 — 최신 이슈성 키워드이거나 검색 데이터가 적은 경우다.)
+※ 연관키워드가 없으니, 이 키워드를 검색하는 사람의 유형·상황·궁금증을 너가 직접 3가지로 구체적으로 추정한 뒤(예: 누가·언제·왜 이 검색을 하는가), 그 추정을 근거로 의도와 목차를 설계해라. 막연히 일반론으로 채우지 말고, 추정한 검색자 시나리오에 답하는 글을 써라.`}
 
 ## 작성 조건
 - 플랫폼: ${els.platformSelect.value} / 문체: ${els.toneSelect.value} / 출력: ${els.outputSelect.value}
@@ -890,9 +959,9 @@ ${promptRelated || '(연관키워드 없음 — 메인 키워드 의도로만 �
 
 ### 1단계 — 설계 (본문 쓰기 전에 먼저 하고, 결과를 보여줘라)
 아래 항목을 너가 직접 새로 만들어라. 프로그램이 준 자동 분류는 참고만 하고 정답으로 여기지 마라.
-1) **검색 의도 재정의**: 메인 키워드 "${row.kw}"를 검색하는 사람이 진짜 알고 싶은 게 무엇인지 한 문장으로 규정해라. 위 연관키워드가 가장 좋은 근거다. (자동 분류 의도 "${intent.label}"가 안 맞으면 무시하고 너의 판단을 따르라.)
+1) **검색 의도 재정의**: 메인 키워드 "${row.kw}"를 검색하는 사람이 진짜 알고 싶은 게 무엇인지 한 문장으로 규정해라. ${hasRelated ? '위 연관키워드가 가장 좋은 근거다.' : '위에서 추정한 검색자 시나리오가 근거다.'} (자동 분류 의도 "${intent.label}"가 안 맞으면 무시하고 너의 판단을 따르라.)
 2) **제목 3개 (공식: 메인키워드 + 검증된 후킹 - 서술형 꼬리)**: ${(curHooks&&curHooks.length)?`아래 '발행 제목 후킹 키워드'는 실제 발행된 글 제목에서 자주 등장한, 검색에서 검증된 후킹어다. 메인 키워드에 이 후킹어를 결합해 제목을 만들어라.`:`네이버에서 이 키워드로 검색해 상위 뉴스·블로그 제목에 반복되는 후킹 키워드를 찾아 활용해라.`} 규칙: (a) 메인 키워드를 그대로 포함한다. (b) 후킹은 '그 자체로 검색되는 명사'여야 한다(단순 수식어 금지). (c) 제목은 **명사로 끝맺어라** — "~하세요/~합니다/~정리했습니다/~알아볼게요" 같은 서술형 꼬리와 "총정리·꼭·한번에·완벽" 같은 빈 수식어(TMI)는 빼라. 예: "...대응하세요"→"...대응방법".${(curHooks&&curHooks.length)?`\n\n**발행 제목 후킹 키워드(빈도순): ${curHooks.slice(0,8).map(h=>h.word).join(", ")}**`:''}
-3) **검색자의 핵심 질문 5개**: 연관키워드에서 검색자가 실제로 가질 법한 질문을 추출해라.
+3) **검색자의 핵심 질문 5개**: ${hasRelated ? '연관키워드에서 검색자가 실제로 가질 법한 질문을 추출해라.' : '위에서 추정한 검색자 유형·상황을 근거로, 그들이 실제로 가질 법한 질문 5개를 구체적으로 뽑아라.'}
 4) **최종 목차**: 위 질문에 답하는 순서로, 가장 궁금해할 내용을 위에 배치해 짜라. 소제목은 검색 질문형으로.
 
 ${competitionStrategy(row)}

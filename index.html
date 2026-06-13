@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v19 | 허브-스포크 클러스터</title>
+  <title>글감레이더 v19.1 | 스포크후킹+검증표접기</title>
   <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
@@ -55,6 +55,12 @@
     .cluster-node.single { background:#fff7ed; border-color:#fed7aa; }
     .cl-line { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px; margin-bottom:6px; }
     .cl-btn { padding:6px 10px; font-size:11px; }
+    .detail-fold { margin:18px 0; border:1px solid #e5e7eb; border-radius:12px; padding:4px 14px; background:#fafafa; }
+    .detail-fold summary { cursor:pointer; padding:10px 0; list-style:none; display:flex; align-items:center; gap:8px; }
+    .detail-fold summary::-webkit-details-marker { display:none; }
+    .detail-fold summary::before { content:'▶'; font-size:11px; color:#94a3b8; transition:transform .15s; }
+    .detail-fold[open] summary::before { transform:rotate(90deg); }
+    .fold-title { font-size:15px; font-weight:900; color:#111827; }
     .pill { display:inline-flex; align-items:center; justify-content:center; padding:6px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:900; white-space:nowrap; }
     .pill.green { background:#dcfce7; color:#047857; } .pill.yellow { background:#fef3c7; color:#a16207; } .pill.red { background:#fee2e2; color:#b91c1c; } .pill.gray { background:#f1f5f9; color:#475569; }
     .pill.cpc { background:#fde68a; color:#92400e; }
@@ -82,8 +88,8 @@
   <div class="app">
     <header class="hero">
       <div>
-        <p class="eyebrow">SEARCHAD × SUGGEST ENGINE</p>
-        <h1>글감레이더 v19<br>허브-스포크</h1>
+        <p class="eyebrow">검색량 많고 경쟁 적은 글감 발굴기</p>
+        <h1>글감레이더 v19.1<br>스포크 후킹</h1>
         <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
       </div>
       <div class="status-card">
@@ -102,17 +108,17 @@
         </div>
 
         <div class="search-zone">
-          <h2>키워드 검색 → API 묶음 수집 → 블루오션 정렬</h2>
+          <h2>키워드 하나로, 쓸 글감과 제목까지</h2>
           <div class="search-row">
             <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
             <button id="analyzeBtn">분석하기</button>
           </div>
           <div class="steps">
-            <div class="step active">STEP 1<br>검색광고 API</div>
-            <div class="step active">STEP 2<br>자동완성 결합</div>
-            <div class="step active">STEP 3<br>검색량·발행량</div>
-            <div class="step active">STEP 4<br>블루오션 정렬</div>
-            <div class="step active">STEP 5<br>제목·목차</div>
+            <div class="step active">STEP 1<br>검색량 수집</div>
+            <div class="step active">STEP 2<br>연관·신조어 발굴</div>
+            <div class="step active">STEP 3<br>경쟁 발행량 확인</div>
+            <div class="step active">STEP 4<br>블루오션 선별</div>
+            <div class="step active">STEP 5<br>허브·스포크·제목</div>
           </div>
         </div>
 
@@ -145,20 +151,19 @@
             </table>
           </div>
 
-          <div class="section-title">
-            <h3>상세 후보 검증표</h3>
-            <span class="micro-hint">API 원자료 + 의도근거 가공 결과</span>
-          </div>
-          <p class="table-caption">검색광고 API의 keywordList를 표준 row로 바꾸고, 각 키워드별 블로그·카페 total을 붙인 표입니다.</p>
-          <div class="table-wrap detail-table">
-            <table>
-              <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그</th><th>카페</th><th>발행량</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>점수</th><th>추천 이유</th></tr></thead>
-              <tbody id="detailKeywordTable"></tbody>
-            </table>
-          </div>
+          <details class="detail-fold">
+            <summary><span class="fold-title">상세 후보 검증표</span> <span class="micro-hint">추천 근거가 궁금할 때 펼쳐보세요</span></summary>
+            <p class="table-caption">각 키워드의 검색량·발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
+            <div class="table-wrap detail-table">
+              <table>
+                <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그</th><th>카페</th><th>발행량</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>점수</th><th>추천 이유</th></tr></thead>
+                <tbody id="detailKeywordTable"></tbody>
+              </table>
+            </div>
+          </details>
 
           <div class="section-title">
-            <h3>선택 키워드 기반 제목·목차</h3>
+            <h3>선택 키워드 기반 클러스터·제목</h3>
             <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
           </div>
           <div class="builder-grid">
@@ -754,26 +759,34 @@ async function generateClusterPrompt(kind, idx){
   if(!cluster) return;
   const targetKw = kind==='hub' ? cluster.hub : (cluster.spokes[idx]?.kw);
   if(!targetKw) return;
-  els.draftPrompt.value = `"${targetKw}" 관련 검색어를 조사해 원고 프롬프트를 만드는 중...`;
-  // 스포크 키워드로 자동완성 재조회 (가벼운 suggest만 사용 → 429 방지)
-  let subKeywords = [];
+  els.draftPrompt.value = `"${targetKw}" 관련 검색어와 발행 제목을 조사해 원고 프롬프트를 만드는 중...`;
+  // 스포크 키워드로 자동완성(섹션 재료) + 발행 블로그 제목(후킹)을 병렬 조회
+  let subKeywords = [], spokeHooks = [];
   try {
-    const sug = await fetchSuggestCached(targetKw);
+    const [sug, th] = await Promise.all([
+      fetchSuggestCached(targetKw),
+      fetchTitleHuntCached(targetKw),
+    ]);
     subKeywords = (sug.suggestions || []).filter(k => normalizeKey(k)!==normalizeKey(targetKw)).slice(0, 12);
-  } catch(e){ subKeywords = []; }
+    spokeHooks = (th.hooks || []).slice(0, 5);
+  } catch(e){ subKeywords = []; spokeHooks = []; }
   // 같은 클러스터의 흡수 키워드도 섹션 재료로 포함
   if(kind==='spoke'){ subKeywords = [...new Set([...(cluster.spokes[idx].also||[]), ...subKeywords])]; }
   const isSingle = subKeywords.length < 3; // 연관어 빈약 → 단독 원고 모드
   // 다른 스포크들 = 내부링크 후보
   const siblings = cluster.spokes.filter((_,i)=> kind==='hub' || i!==idx).map(s=>s.kw);
   const linkTargets = [kind==='spoke' ? cluster.hub : null, ...siblings].filter(Boolean);
-  els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, isSingle, linkTargets, hub:cluster.hub, kind });
+  els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub:cluster.hub, kind });
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
-function buildSpokePrompt({ targetKw, subKeywords, isSingle, linkTargets, hub, kind }){
+function buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub, kind }){
   const role = kind==='hub' ? '허브(대표) 원고' : '스포크(세부) 원고';
   const sectionSrc = subKeywords.length ? subKeywords.join(', ') : '(연관 검색어가 적어 핵심 정보 위주로 구성)';
+  const hooks = (spokeHooks || []).map(h => h.word);
+  const titleHint = hooks.length
+    ? `메인 키워드에 아래 '검증된 후킹'을 결합하라. 이는 실제 발행된 블로그 제목에서 자주 쓰인, 상위 노출을 노려 고른 키워드다.\n  검증된 후킹: ${hooks.join(', ')}`
+    : `네이버에서 이 키워드로 검색해 상위 블로그 제목에 반복되는 후킹 키워드를 찾아 활용하라.`;
   const linkBlock = linkTargets.length
     ? `\n## 내부링크 (원고 하단 또는 본문 자연스러운 위치)\n아래 키워드를 다루는 다른 글로 내부링크를 걸어라(앵커텍스트=키워드). 이들은 같은 주제 묶음의 형제 글이다:\n${linkTargets.map(k=>`- ${k}`).join('\n')}\n`
     : '';
@@ -791,7 +804,8 @@ ${sectionSrc}
 ## 설계 지침
 ${modeNote}
 - 먼저 검색 의도를 한 문장으로 규정하라.
-- 제목: 메인 키워드 + 검증된 후킹(그 자체로 검색되는 명사). "~하세요/~합니다" 서술형 꼬리와 "총정리·꼭·완벽" 같은 빈 수식어(TMI)는 빼고 명사로 끝맺어라.
+- 제목: ${titleHint}
+  규칙: 메인 키워드를 그대로 포함하고, "~하세요/~합니다" 서술형 꼬리와 "총정리·꼭·완벽" 같은 빈 수식어(TMI)는 빼고 명사로 끝맺어라.
 - 목차: 위 섹션 재료를 검색 질문형 소제목으로 바꿔 짜라. 도입부 다음에 '## 목차'로 본문에 직접 넣어라.
 ${linkBlock}
 ## 사실 검증 (필수)

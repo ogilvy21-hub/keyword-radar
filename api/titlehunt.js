@@ -110,6 +110,26 @@ function canonicalize(word) {
   return word;
 }
 
+// [v20] 비명사 후킹 거르기 (보수적). 후킹은 '그 자체로 검색되는 명사'여야 하는데,
+// "여신룩 따라 입는 법" 같은 제목에서 '따라/입기/감탄' 같은 동사·부사 조각이 후킹으로 섞이는 걸 막는다.
+// 원칙: 의심스러우면 살린다(작성자가 최종 선택). 명백한 비명사만 제거.
+// 주의: '기$' 같은 거친 글자패턴은 안 쓴다 — '세탁기/건조기' 같은 멀쩡한 명사를 잘못 거른다(검증으로 확인됨).
+const NON_NOUN_HOOK = new Set([
+  // 단독 부사·접속·동사어간 (명사로 검색되지 않음)
+  '따라','통해','위해','대해','함께','보다','부터','까지','마다','조차',
+  // 동사 명사화 ~기류 (개별 등록 — 패턴 대신 명시)
+  '입기','하기','되기','보기','읽기','쓰기','먹기','따라잡기',
+  // 관형형·동사 활용 조각
+  '감탄','부르는','나오는','입는','하는','되는','보는','만한','싶은','같은','오는','가는','드는',
+]);
+// 서술형 어미로 끝나는 조각 (활용형 — 명사 아님). '기/서/게'는 명사 오인 위험 커서 제외.
+const NARRATIVE_FRAG = /(다는|는데|은데|았|었|아쉽|니다|어요|아요|네요)$/;
+function isNounHook(word) {
+  if (NON_NOUN_HOOK.has(word)) return false;
+  if (word.length >= 2 && NARRATIVE_FRAG.test(word)) return false;
+  return true;
+}
+
 // 제목 묶음 -> 후킹 후보(빈도순)
 function extractHooks(titles, mainKeyword) {
   const kwSet = keywordTokens(mainKeyword);
@@ -121,6 +141,7 @@ function extractHooks(titles, mainKeyword) {
     for (let tok of tokenize(cleaned)) {
       tok = canonicalize(tok);               // 동의어 통일
       if (COMMON_STOP.has(tok)) continue;
+      if (!isNounHook(tok)) continue;        // [v20] 비명사 조각(따라/입기/감탄 등) 제외
       if (kwSet.has(tok)) continue;          // 메인키워드 구성어 제외
       if (kwFlat.includes(tok)) continue;    // 메인키워드에 포함된 조각 제외
       if (/^\d+$/.test(tok)) continue;       // 순수 숫자 제외

@@ -106,6 +106,16 @@
     .tb-apply{background:#2563eb;color:#fff;} .tb-clear{background:#f1f5f9;color:#475569;}
     .tb-hint{font-size:11px;color:#94a3b8;margin-top:7px;line-height:1.5;}
     .tb-empty{color:#94a3b8;font-size:12px;font-weight:600;padding:6px 0;line-height:1.5;}
+    /* [v20] 발행 제목 목록 (짤림 없이 전체 표시) */
+    .pt-list{display:flex;flex-direction:column;gap:6px;}
+    .pt-item{font-size:12.5px;line-height:1.5;color:#374151;padding:7px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:9px;overflow-wrap:anywhere;word-break:keep-all;}
+    .pt-item .pt-num{display:inline-block;min-width:18px;color:#94a3b8;font-weight:800;font-size:11px;}
+    .pt-more{margin-top:8px;}
+    .pt-more summary{cursor:pointer;font-size:12px;font-weight:800;color:#2563eb;list-style:none;padding:6px 0;}
+    .pt-more summary::-webkit-details-marker{display:none;}
+    .pt-more summary::before{content:'▸ ';}
+    .pt-more[open] summary::before{content:'▾ ';}
+    .pt-more .pt-list{margin-top:7px;}
   </style>
 </head>
 <body>
@@ -1037,13 +1047,22 @@ function renderSelected(){
   renderCluster(row);
   // [v20] 제목 조합기: 선택 키워드를 메인으로, 연관어(state.rows)를 후킹 후보로
   renderTitleBuilder(row.kw);
-  // [v20] 발행 제목 참고: 블로그 제목 후킹 칩 + 근거 제목 샘플 (눈으로 참고, 클릭 조합 없음)
+  // [v20] 발행 제목 참고: 블로그 제목 후킹 칩 + 제목 목록 (상위5 펼침 + 나머지 접기, 짤림 없음)
   const top3 = curHooks.slice(0,3);
   const hookChips = top3.map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.55">${h.count}</b></span>`).join('');
   const samples = (state.hookSamplesByKw && state.hookSamplesByKw[normalizeSpace(row.kw)]) || [];
-  const sampleHtml = samples.slice(0,5).map(t=>`<div style="font-size:11px;opacity:.6;margin-top:3px">· ${escapeHTML(t)}</div>`).join('');
-  els.titleList.innerHTML = hookChips
-    ? `<div style="margin-bottom:6px;font-size:12px;opacity:.7">상위 블로그 제목에 자주 쓰인 후킹</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${hookChips}</div>${sampleHtml?`<div>${sampleHtml}</div>`:''}`
+  const head = samples.slice(0,5);
+  const rest = samples.slice(5);
+  const itemHtml = (t,i)=>`<div class="pt-item"><span class="pt-num">${i+1}</span>${escapeHTML(t)}</div>`;
+  const headHtml = head.length ? `<div class="pt-list">${head.map((t,i)=>itemHtml(t,i)).join('')}</div>` : '';
+  const restHtml = rest.length
+    ? `<details class="pt-more"><summary>나머지 발행 제목 ${rest.length}개 펼쳐보기</summary><div class="pt-list">${rest.map((t,i)=>itemHtml(t,i+5)).join('')}</div></details>`
+    : '';
+  const chipBlock = hookChips
+    ? `<div style="margin-bottom:6px;font-size:12px;opacity:.7">상위 블로그 제목에 자주 쓰인 후킹</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${hookChips}</div>`
+    : '';
+  els.titleList.innerHTML = (chipBlock || headHtml || restHtml)
+    ? (chipBlock + headHtml + restHtml)
     : `<div class="tb-empty">아직 수집된 발행 제목이 없습니다. (네이버 검색 API 연결 시 표시됩니다)</div>`;
   els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');

@@ -190,7 +190,7 @@ export default async function handler(req, res) {
       blogCount: blogTitles.length,
       newsCount: newsTitles.length,
       hooks,                                   // [{word, count}] 블로그 제목 기반 후킹(검증된 키워드)
-      sampleTitles: blogTitles.slice(0, 8),    // 후킹 근거로 보여줄 블로그 제목
+      sampleTitles: blogTitles.slice(0, 15),   // 후킹 근거 + 벤치마킹용 블로그 제목 (상위5 + 나머지 펼침)
       newsTitles: newsTitles.slice(0, 6),      // 맥락·최신성 파악용 뉴스 제목 (후킹엔 미사용)
     });
   } catch (error) {

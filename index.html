@@ -583,6 +583,32 @@ function sortCandidates(rows){
     return 0;
   });
 }
+// [v20] 추천(블루오션) 적격 티어. 낮을수록 좋음, 0 = 추천 부적격(상세표엔 남김).
+// 사용자 기준: 명백한 블루오션만 추천. 검색<발행(레드오션)은 추천에서 빼되 상세표로 넘겨 직접 판단.
+function recoTier(row){
+  const m=Number(row.monthly||0), r=ratioValue(row);
+  if(m<300) return 0;
+  if(r<0.5) return 1;                  // 1순위: 확실한 블루오션(발행이 검색의 절반 미만)
+  if(r<1.0) return 2;                  // 2순위: 발행 < 검색
+  if(m>=30000 && r<2.0) return 3;      // 3순위: 검색 수요가 큰데 발행이 다소 많은 경우
+  return 0;                            // 그 외: 추천 부적격
+}
+// [v20] 추천 순차 채우기: 1순위부터 want개 채우고, 부족하면 2→3순위로 보충.
+function fillRecommended(sorted, want=6){
+  const out=[];
+  for(const tier of [1,2,3]){
+    for(const row of sorted){
+      if(out.length>=want) break;
+      if(recoTier(row)===tier) out.push(row);
+    }
+    if(out.length>=want) break;
+  }
+  return out;
+}
+// [v20] 발행 많음 힌트(자르지 않고 거들기만). 복지·자격증·연례행사 등 주기성 키워드는 연도/변형으로 돌파 가능.
+function publishHint(row){
+  return Number(row.totalContent||0) >= 3000 ? '발행 많음 · 연도·변형 키워드로 차별화 추천' : '';
+}
 function getIntentForSelected(row){ return inferIntentFromEvidence(row?.kw || state.seed, state.rows); }
 
 // 플랫폼별 SEO 작성 방향. [v20] 기본 전략은 '구글 SEO 우선'.
@@ -913,7 +939,14 @@ function renderIdle(){
 function renderRecommendTable(){
   const rows=state.recommended;
   if(!rows.length){ els.keywordTable.innerHTML='<tr><td colspan="10"><div class="empty"><strong>추천 가능한 키워드가 부족합니다.</strong>원키워드와 API 연관검색어 묶음 기준으로 글감 설계를 만듭니다.</div></td></tr>'; return; }
-  els.keywordTable.innerHTML = rows.map((row,i)=>`<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.totalContent)}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`).join('');
+  const notice = state._noBlueOcean
+    ? `<tr><td colspan="10"><div class="empty" style="background:#fffbeb;color:#92400e;border-color:#fde68a;"><strong>이 주제엔 명확한 블루오션 키워드가 없습니다.</strong> 검색 수요 대비 발행량이 많은 키워드뿐이라, 아래는 참고용입니다. 아깝다 싶은 후보는 '상세 후보 검증표'에서 직접 확인해 고르세요.</div></td></tr>`
+    : '';
+  els.keywordTable.innerHTML = notice + rows.map((row,i)=>{
+    const hint = publishHint(row);
+    const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
+    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.totalContent)}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
+  }).join('');
   els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); renderRecommendTable(); renderSelected(); }));
 }
 function renderDetailTable(){
@@ -1202,9 +1235,13 @@ async function analyze(){
     });
     const enrichedRaw = uniqueByKeyword(hydrated).map(row=>enrichScore(row, hydrated));
     const sorted = sortCandidates(enrichedRaw);
-    // 월 300회 이상만 추천 (고단가 틈새 포함). 후보 부족하면 기준 완화
-    let recommended = sorted.filter(row=>Number(row.monthly||0)>=300).slice(0,6);
-    if(recommended.length < 3) recommended = sorted.filter(row=>Number(row.monthly||0)>0).slice(0,6);
+    // [v20] 추천 = 명백한 블루오션만 티어 순(1→2→3)으로 채운다. 적격 없으면 비워두고 상세표로 유도.
+    let recommended = fillRecommended(sorted, 6);
+    state._noBlueOcean = recommended.length === 0;  // 추천 0개 = 블루오션 없음 신호
+    if(!recommended.length && exactRow){
+      // 블루오션은 없지만 시드 자체로 글감 설계는 할 수 있게 시드 1개는 넣어둔다(상세표 안내와 함께)
+      recommended = [exactRow];
+    }
     if(!recommended.length) recommended = [{ ...exactRow, sourceType:'원키워드 fallback', grade:'API 수치 부족', score:20, reason:'API 후보가 부족해 원키워드 기준으로 글감 설계를 만듭니다.', intentEvidence:'일반정보' }];
 
     // 연관키워드 묶음: 검색광고 + 자동완성 신규 합쳐 표시

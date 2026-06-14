@@ -402,13 +402,15 @@ function scoreRatio(row){
   const r = ratioValue(row);
   // 발행량이 비현실적으로 0에 가까우면 '수요 없는 허수'일 수 있어 살짝 보정
   if(content < 50) return 28;
-  if(r<1) return 40;
-  if(r<3) return 36;
-  if(r<5) return 30;
-  if(r<10) return 24;
-  if(r<20) return 17;
-  if(r<50) return 10;
-  if(r<100) return 5;
+  // [v20] 경쟁비율 1.0(발행량=검색량)이 블루오션/레드오션 분기점. 1.0 넘으면 발행이 검색보다 많아 노출 경쟁이 빡세다.
+  if(r<0.3) return 40;   // 압도적 블루오션
+  if(r<0.5) return 37;
+  if(r<0.8) return 33;
+  if(r<1.0) return 28;   // 발행이 검색에 근접 — 아직 해볼 만
+  if(r<1.5) return 20;   // 발행>검색 — 경쟁 빡셈
+  if(r<2.5) return 13;
+  if(r<5)   return 8;
+  if(r<10)  return 4;
   return 0;
 }
 function relevanceScore(row, seed){
@@ -457,10 +459,10 @@ function googleFitLabel(intentKey, kw){
 
 function classify(row){
   const m=Number(row.monthly||0), c=Number(row.totalContent||0), r=ratioValue(row), clarity=Number(row.intentClarityScore||0);
-  // 블루오션 기준: 검색 수요 있으면서 경쟁비율 낮은 것을 상위로
-  if(m>=500 && r<3 && clarity>=10) return '즉시 글감';
-  if(m>=300 && r<5) return '우선 후보';
-  if(m>=300 && r<20) return '차순위 글감';
+  // [v20] 블루오션 기준: 경쟁비율 1.0(발행량=검색량)이 분기점. 그 이하라야 검색 수요가 발행을 앞선다.
+  if(m>=500 && r<0.5 && clarity>=10) return '즉시 글감';   // 발행이 검색의 절반 미만 = 확실한 블루오션
+  if(m>=300 && r<1.0) return '우선 후보';                   // 발행<검색
+  if(m>=300 && r<2.0) return '차순위 글감';                 // 발행이 검색의 2배 미만 — 경쟁 있음
   if(m>0) return '관찰키워드';
   return 'API 수치 부족';
 }

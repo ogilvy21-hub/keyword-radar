@@ -92,6 +92,11 @@
     .tb-chip:hover{border-color:#2563eb;background:#dbeafe;}
     .tb-chip.dim{opacity:.42;border-color:#e5e7eb;background:#f8fafc;}
     .tb-chip.used{background:#2563eb;border-color:#2563eb;}
+    .tb-chip-blog{border-color:#ddd6fe;background:#f5f3ff;}
+    .tb-chip-blog:hover{border-color:#7c3aed;background:#ede9fe;}
+    .tb-chip-blog .tb-ct{color:#5b21b6;}
+    .tb-chip-blog.used{background:#7c3aed;border-color:#7c3aed;}
+    .tb-chip-blog.used .tb-ct,.tb-chip-blog.used .tb-cm{color:#fff;}
     .tb-chip.used .tb-ct{color:#fff;} .tb-chip.used .tb-cm{color:#dbeafe;}
     .tb-ct{display:block;font-weight:800;font-size:12px;color:#1e3a8a;overflow-wrap:anywhere;}
     .tb-cm{display:block;font-size:10px;color:#64748b;margin-top:2px;font-weight:700;}
@@ -784,36 +789,65 @@ function buildTitleMaterial(seedKw, relatedRows){
   }
   return { main, hooks };
 }
-function renderTitleBuilder(seedKw){
+function renderTitleBuilder(seedKw, blogHooks){
   if(!els.titleBuilder) return;
   const mat = buildTitleMaterial(seedKw, state.rows);
-  // 같은 메인이면 기존 선택 유지, 메인 바뀌면 초기화
+  // [v20] 연관 검색어 후킹(수치 있음) + 블로그 제목 후킹(빈도만)을 한 배열로 합치되 kind로 구분.
+  //  방식2(C): 블로그 후킹은 추가 API 호출 없이 titlehunt가 이미 가져온 것 재활용.
+  const relHooks = mat.hooks.map(h=>({ ...h, kind:'rel' }));
+  const mainKey = normalizeKey(mat.main);
+  const relTailKeys = new Set(relHooks.map(h=>normalizeKey(h.tail)));
+  const blogList = Array.isArray(blogHooks) ? blogHooks : [];
+  const blogConv = [];
+  for(const b of blogList){
+    const w = normalizeSpace(b.word||'');
+    const wk = normalizeKey(w);
+    if(!w || wk===mainKey || relTailKeys.has(wk)) continue;  // 메인·연관어 중복 제거
+    if(blogConv.some(x=>normalizeKey(x.tail)===wk)) continue;
+    blogConv.push({ tail:w, full:w, count:Number(b.count||0), kind:'blog' });
+  }
+  const hooks = [...relHooks, ...blogConv];
   if(!state.titleState || state.titleState.main !== mat.main){
-    state.titleState = { main:mat.main, hooks:mat.hooks, chosen:[] };
+    state.titleState = { main:mat.main, hooks, chosen:[] };
   } else {
-    state.titleState.hooks = mat.hooks; // 데이터 갱신
+    state.titleState.hooks = hooks; // 데이터 갱신, 선택은 유지
+    // 선택 인덱스가 새 배열 길이를 넘으면 정리
+    state.titleState.chosen = state.titleState.chosen.filter(i=>i < hooks.length);
   }
   drawTitleBuilder();
 }
 function drawTitleBuilder(){
   const ts = state.titleState; if(!ts || !els.titleBuilder) return;
-  const chipsHtml = ts.hooks.length
-    ? ts.hooks.map((h,i)=>{
-        const used = ts.chosen.includes(i);
-        return `<button class="tb-chip ${h.dim?'dim':''} ${used?'used':''}" data-ti="${i}">
-          <span class="tb-ct">${escapeHTML(h.tail)}</span>
-          <span class="tb-cm">검색 ${format(h.monthly)} · 발행 ${format(h.totalContent)}${h.dim?' · 발행多':''}</span>
-        </button>`;
-      }).join('')
-    : `<div class="tb-empty">연관어가 없습니다. 메인키워드 단독으로 쓰거나, 아래 '발행 제목 참고'의 후킹을 편집칸에 직접 넣으세요.</div>`;
+  const relHooks = ts.hooks.map((h,i)=>({h,i})).filter(x=>x.h.kind!=='blog');
+  const blogHooks = ts.hooks.map((h,i)=>({h,i})).filter(x=>x.h.kind==='blog');
+  const relChip = ({h,i})=>{
+    const used = ts.chosen.includes(i);
+    return `<button class="tb-chip ${h.dim?'dim':''} ${used?'used':''}" data-ti="${i}">
+      <span class="tb-ct">${escapeHTML(h.tail)}</span>
+      <span class="tb-cm">검색 ${format(h.monthly)} · 발행 ${format(h.totalContent)}${h.dim?' · 발행多':''}</span>
+    </button>`;
+  };
+  const blogChip = ({h,i})=>{
+    const used = ts.chosen.includes(i);
+    return `<button class="tb-chip tb-chip-blog ${used?'used':''}" data-ti="${i}">
+      <span class="tb-ct">${escapeHTML(h.tail)}</span>
+      <span class="tb-cm">블로그 제목 ${format(h.count)}회</span>
+    </button>`;
+  };
+  const relHtml = relHooks.length
+    ? `<div class="tb-mini">연관 검색어 <span>· 검색 많고 발행 적은 순 · 발행 3000+ 흐림</span></div><div class="tb-chips">${relHooks.map(relChip).join('')}</div>`
+    : `<div class="tb-mini">연관 검색어 <span>· 자동완성</span></div><div class="tb-empty">연관 검색어가 없습니다. 아래 블로그 제목 후킹으로 조합하거나 직접 편집하세요.</div>`;
+  const blogHtml = blogHooks.length
+    ? `<div class="tb-mini" style="margin-top:14px">블로그 제목 후킹 <span>· 상위 블로그가 제목에 쓴 단어(검증된 후킹)</span></div><div class="tb-chips">${blogHooks.map(blogChip).join('')}</div>`
+    : '';
   const tails = ts.chosen.map(i=>ts.hooks[i].tail);
   const preview = [ts.main, ...tails].join(' ');
   const pins = ts.chosen.map(i=>`<span class="tb-pin">${escapeHTML(ts.hooks[i].tail)} <b data-ti="${i}">×</b></span>`).join('');
   els.titleBuilder.innerHTML = `
     <div class="tb-mini">메인키워드 <span>· 고정</span></div>
     <span class="tb-main">${escapeHTML(ts.main)} <span class="tb-tag">고정</span></span>
-    <div class="tb-mini">후킹 후보 <span>· 검색 많고 발행 적은 순 · 발행 3000+ 흐림</span></div>
-    <div class="tb-chips" id="tbChips">${chipsHtml}</div>
+    ${relHtml}
+    ${blogHtml}
     <div class="tb-mini">조합한 제목</div>
     <div class="tb-chosen">${pins}</div>
     <div class="tb-preview">
@@ -1081,7 +1115,7 @@ function renderSelected(){
   // [v19] 콘텐츠 클러스터 렌더 (허브1 + 스포크5)
   renderCluster(row);
   // [v20] 제목 조합기: 선택 키워드를 메인으로, 연관어(state.rows)를 후킹 후보로
-  renderTitleBuilder(row.kw);
+  renderTitleBuilder(row.kw, curHooks);
   // [v20] 발행 제목 참고: 블로그 제목 후킹 칩 + 제목 목록 (상위5 펼침 + 나머지 접기, 짤림 없음)
   const top3 = curHooks.slice(0,3);
   const hookChips = top3.map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.55">${h.count}</b></span>`).join('');

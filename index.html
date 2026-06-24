@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v20 | 스포크후킹+검증표접기</title>
-  <meta name="description" content="네이버 검색광고에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
+  <title>글감레이더 v21 | 실제경험 입력칸</title>
+  <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <style>
     * { box-sizing: border-box; }
@@ -77,6 +77,12 @@
     textarea { width:100%; min-height:230px; border:1px solid #e5e7eb; border-radius:16px; padding:13px; resize:vertical; color:#334155; font-size:13px; line-height:1.6; outline:0; }
     .option-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; } .option-field label { display:block; margin:0 0 6px; color:#475569; font-size:12px; font-weight:900; } .option-field select { width:100%; border:1px solid #e5e7eb; border-radius:14px; background:#fff; padding:11px 10px; color:#334155; font-size:13px; font-weight:800; outline:0; }
     .format-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; } .check-item { display:flex; align-items:center; gap:7px; padding:10px; border-radius:14px; background:#fff; border:1px solid #e5e7eb; color:#334155; font-size:12px; font-weight:900; cursor:pointer; } .check-item input{accent-color:#2563eb}
+    .exp-box { margin-top:12px; padding:13px 14px; border-radius:16px; background:#fffdf5; border:1px solid #fde68a; }
+    .exp-head { font-size:13px; font-weight:900; color:#92400e; margin-bottom:8px; line-height:1.4; }
+    .exp-head .exp-tip { display:block; margin-top:2px; font-size:11px; font-weight:700; color:#a16207; }
+    .exp-box textarea { width:100%; min-height:64px; border:1px solid #fcd34d; border-radius:12px; padding:10px 12px; resize:vertical; color:#334155; font-size:13px; line-height:1.6; outline:0; background:#fff; }
+    .exp-box textarea:focus { border-color:#f59e0b; }
+    .exp-hint { margin:8px 0 0; font-size:11px; color:#b45309; line-height:1.5; font-weight:700; }
     .action-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; } .action-row button,.full-btn { border:0; border-radius:18px; padding:16px 12px; font-weight:900; cursor:pointer; } .green{background:#10b981;color:#fff}.black{background:#111827;color:#fff}.blue{background:#2563eb;color:#fff}.full-btn{width:100%;margin-top:10px;}
     .empty { padding:22px 20px; border-radius:22px; background:#fff; border:1px solid #e5e7eb; color:#334155; font-weight:800; line-height:1.6; } .empty strong { display:block; margin-bottom:6px; color:#111827; font-size:17px; }
     @media (max-width:1100px){.hero,.layout{grid-template-columns:1fr}.side{position:static}h1{font-size:36px}.builder-grid{grid-template-columns:1fr}}
@@ -128,13 +134,13 @@
     <header class="hero">
       <div>
         <p class="eyebrow">검색량 많고 경쟁 적은 글감 발굴기</p>
-        <h1>글감레이더 v20<br>스포크 후킹</h1>
-        <p class="desc">네이버 검색광고 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
+        <h1>글감레이더 v21<br>실제 경험</h1>
+        <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드(예: 연도 포함)까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
       </div>
       <div class="status-card">
         <span>현재 버전</span>
-        <strong>v19 Cluster</strong>
-        <p>검색광고 연관키워드 + 네이버/구글 자동완성을 합쳐 후보를 넓히고, 자동완성 키워드는 검색량을 재조회해 점수화합니다.</p>
+        <strong>v21 경험입력</strong>
+        <p>블루오션 키워드 발굴부터 허브·스포크 클러스터, 제목 조합까지. 직접 겪은 경험을 입력하면 'AI가 모르는 빈틈'을 원고 프롬프트에 녹입니다.</p>
       </div>
     </header>
 
@@ -244,6 +250,11 @@
             <div class="option-field"><label for="outputSelect">출력</label><select id="outputSelect"><option>텍스트</option><option>HTML</option></select></div>
           </div>
           <div class="format-options"><label class="check-item"><input id="tableCheck" type="checkbox" checked /> 표 포함</label><label class="check-item"><input id="faqCheck" type="checkbox" checked /> FAQ 포함</label></div>
+          <div class="exp-box">
+            <div class="exp-head">✍️ 직접 겪은 경험·주의점 <span class="exp-tip">AI가 모르는 '나만 아는 빈틈' (비우면 안 넣음)</span></div>
+            <textarea id="expInput" rows="3" placeholder="직접 겪은 경험·주의점을 적으면 글에 녹입니다."></textarea>
+            <p class="exp-hint" id="expHint">공식·광고·AI는 좋은 말만 합니다. 해본 사람만 아는 '안 되는 것·막히는 것·다른 것'이 검색 상위로 갑니다.</p>
+          </div>
         </section>
 
         <section class="side-box">
@@ -260,7 +271,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const els = {
-  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck')
+  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -662,6 +673,60 @@ function factCheckByIntent(intent, row){
   return lines.join('\n');
 }
 
+// [v21] 실제 경험 입력칸 — 의도 key별 placeholder.
+// 근거: 네이버 'AI 시대 콘텐츠 가이드'(2026.6) = "직접 경험한 사람만 아는 정보가 상위에 온다."
+// 공식/광고/AI는 좋은 말만 하는데, 해본 사람은 '안 되는 것·막히는 것·다른 것'을 안다 → 그 빈틈을 입력.
+const EXP_PLACEHOLDER = {
+  policy:  '신청하다 막히는 지점 (예: 복지로 신청 버튼이 공지란으로 감, 인증에서 막힘)',
+  finance: '실제 신청·조회 시 막히거나 헷갈린 점 (예: 부결 사유, 서류 반려)',
+  content: '검색 구분 포인트·스포일러 범위 (예: 넷플릭스 독점, 결말 스포 주의)',
+  place:   '현장에서야 아는 것 (예: 주차 지옥, 오후 역광, 웨이팅 1시간)',
+  recipe:  '실패하기 쉬운 지점·대체재 (예: 이 단계서 잘 탐, 재료 없으면 대체)',
+  shopping:'실사용 단점 (예: 사진과 발색 다름, 정사이즈인데 어깨 작음)',
+  health:  '직접 겪은 증상·과정 (예: 이 검사 아팠음, 회복에 실제 걸린 기간)',
+  career:  '실제 현장 차이 (예: 공고와 다른 업무, 면접에서 진짜 물어본 것)',
+  auto:    '실사용 단점·세팅 함정 (예: 광고보다 연비 낮음, 이 옵션 없으면 불편)',
+  tech:    '실사용 단점·세팅 함정 (예: 배터리 광고보다 짧음, 이 설정 안 하면 느림)',
+  parenting:'직접 해보고 안 것 (예: 이 시기엔 이게 안 됨, 실제로 필요했던 준비물)',
+  law:     '실제 절차에서 막힌 점 (예: 이 서류 추가로 요구받음, 예상보다 오래 걸림)',
+  sports:  '직접 본 사람만 아는 것 (예: 현장 view, 예매 실전 팁)',
+  education:'직접 공부하며 안 것 (예: 이 부분 함정, 실제 효과 본 자료)',
+};
+const EXP_PLACEHOLDER_DEFAULT = '직접 겪은 경험·주의점 (공식·광고가 말 안 하는 막히는 점·다른 점)';
+function expPlaceholderFor(intentKey){
+  return EXP_PLACEHOLDER[intentKey] || EXP_PLACEHOLDER_DEFAULT;
+}
+// 입력된 경험을 프롬프트 블록으로. 비면 '' 반환 → 블록 자체를 안 넣음(없는 경험 환각 방지 = 핵심 안전장치).
+function experienceBlock(){
+  const exp = normalizeSpace(els.expInput ? els.expInput.value : '');
+  if(!exp) return '';
+  return `
+
+## 작성자 실제 경험 (이 글의 핵심 차별점 — 반드시 본문에 자연스럽게 녹여라)
+아래는 작성자가 이 주제를 직접 겪으며 알게 된 내용이다. 공식 정보·일반론과 달리, 검색자가 진짜 원하는 '해본 사람만 아는 정보'다.
+"${exp}"
+- 이 경험을 관련 소제목 본문에 1인칭 경험담으로 구체적으로 녹여라(예: "실제로 신청해 보니 ~에서 막혔다").
+- **단, 위에 적힌 내용만 사용하라. 작성자가 말하지 않은 경험을 지어내지 마라.** 적힌 사실을 자연스럽게 풀어 쓰는 것이지, 없는 디테일을 창작하는 게 아니다.`;
+}
+// [v21] 드라마 일반명사 겹침 감지: 짧은 일반명사 키워드인데 연관어에 OTT·회차 단서가 붙으면
+// → "콘텐츠인데 일반명사와 겹치니 제목에 플랫폼·구분어를 넣어라"를 AI에 지시.
+// (사람들이 스스로 "드라마OOO 넷플릭스"로 구분어를 붙여 검색하는 이유와 같은 원리.)
+const CONTENT_OVERLAP_SIGNALS = ['넷플릭스','티빙','웨이브','디즈니','쿠팡플레이','OTT','출연진','등장인물','몇부작','재방송','다시보기','회차','결말','줄거리','시청률','방영','공개일','드라마','웹툰','시즌'];
+function contentOverlapNote(row){
+  const kw = normalizeSpace(row?.kw || '');
+  const compact = normalizeKey(kw);
+  // 짧은 일반명사(공백 없는 4글자 이하)일 때만 — 이미 구체적인 긴 키워드는 겹침 위험 적음
+  if(!kw || kw.includes(' ') || compact.length > 4) return '';
+  const relText = (state.relatedKeywords||[]).join(' ');
+  const hits = CONTENT_OVERLAP_SIGNALS.filter(s => includesTerm(relText, s));
+  if(hits.length < 2) return '';  // OTT/회차 단서가 2개 이상 붙어야 콘텐츠로 판단
+  return `
+
+## 일반명사 겹침 주의 (제목 구분어 필수)
+"${kw}"는 짧은 일반명사라 다른 뜻과 검색 결과가 섞인다. 그런데 연관어에 콘텐츠 단서(${hits.slice(0,4).join(', ')})가 붙어 있어 사람들이 '작품'으로 찾고 있다.
+- 제목에 반드시 플랫폼·구분어(예: 넷플릭스, 드라마, 출연진 등)를 넣어 일반명사와 구분되게 하라. 메인 키워드 단독 제목은 다른 검색 결과에 묻힌다.`;
+}
+
 // 블루오션/경쟁 상황에 따른 전략 지시. [v20.1] 경쟁비율 구간별 문구 (화면 등급과 일치, 블루오션 고정 제거)
 function competitionStrategy(row){
   const r = ratioValue(row);
@@ -988,6 +1053,7 @@ function renderIdle(){
   els.detailKeywordTable.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
   els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value='';
+  if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
 }
 function renderRecommendTable(){
   const rows=state.recommended;
@@ -1127,6 +1193,8 @@ function renderSelected(){
   ensureHooksFor(row.kw);
   const curHooks = (state.hooksByKw && state.hooksByKw[normalizeSpace(row.kw)]) || [];
   const intent = getIntentForSelected(row);
+  // [v21] 경험 입력칸 placeholder를 의도 유형에 맞게 갱신 (값은 보존)
+  if(els.expInput) els.expInput.placeholder = expPlaceholderFor(intent.key);
   els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=row.score; els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
   els.judgementTitle.textContent = `${row.kw}, ${row.grade}로 추천합니다`;
   els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 발행량이 적은 순으로 정렬했습니다.`;
@@ -1187,7 +1255,7 @@ ${hasRelated ? promptRelated + `
 - "예산 소진 시 조기 종료", "○○개 매장 참여" 같은 **클릭을 유도하는 미확인 정보**를 임의로 넣지 마라.
 - 근거로 댈 수 있는 출처는 **기업 공식 발표·공식 홈페이지, 정부/공공기관, 주요 언론사**뿐이다. 그 외(영화DB, 팬커뮤니티, 출처불명 블로그 등)는 근거로 쓰지 마라.
 - **본문 주제와 무관한 출처는 절대 넣지 마라.** (예: 환급 글에 스포츠·연예 기사) 검색 결과가 섞여 들어와도 걸러내라.
-${factCheckByIntent(intent, row)}
+${factCheckByIntent(intent, row)}${experienceBlock()}${contentOverlapNote(row)}
 
 ## 출처 표기 형식
 글 끝 '자료 출처'에는 **실제로 근거로 삼은 것만** 다음 형식으로 적어라:
@@ -1314,6 +1382,8 @@ els.copyPromptBtn.addEventListener('click',()=>copyText(els.draftPrompt.value, e
 els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${row.score}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });
 [els.platformSelect,els.toneSelect,els.lengthSelect,els.outputSelect,els.tableCheck,els.faqCheck].forEach(el=>el.addEventListener('change', renderSelected));
+// [v21] 경험 입력 시 프롬프트 실시간 갱신 (입력값은 renderSelected가 placeholder만 바꾸고 value는 건드리지 않음)
+if(els.expInput) els.expInput.addEventListener('input', renderSelected);
 renderIdle();
 </script>
 </body>

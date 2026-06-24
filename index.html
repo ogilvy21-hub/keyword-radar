@@ -763,91 +763,138 @@ function needsForIntent(intent){
 // hooks: [{word,count}] (titlehunt API 결과). 없으면 빈 배열 반환 -> 호출부에서 템플릿으로 폴백.
 // [v19] 허브-스포크 클러스터: 연관키워드를 의도축으로 가르고, 검색량으로 키워드형(독립스포크)/의도형(흡수) 구분.
 // 의도축 = 후킹이 '의도'로 쓰일 때 붙는 라벨. 실제 사용 데이터(드라마·금융·시험·복지·의료)에서 추출.
-const INTENT_AXES = [
-  {key:'인물', label:'출연진·등장인물', terms:['출연진','등장인물','인물관계도','참가자','심사위원','제작진','라인업','명단']},
-  {key:'편성', label:'편성·재방송', terms:['OTT','재방송','시청률','몇부작','편성표','공개일','방영일','방송시간','회차','다시보기','보러가기']},
-  {key:'원작', label:'원작·결말', terms:['원작','웹툰','결말','작가','OST','줄거리','뜻']},
-  // [v20] 여행·축제·이벤트 축 (실측 부산불꽃축제·제주도여행에서 '기타'로 빠진 단어들로 신설)
-  {key:'명소', label:'가볼만한곳·관광', terms:['가볼만한곳','갈만한곳','관광','여행지','놀거리','명소','가볼만한','실내']},
-  {key:'숙박', label:'숙박·숙소', terms:['숙소','펜션','호텔','단체숙소','민박','게스트하우스','리조트']},
-  {key:'코스', label:'코스·일정짜기', terms:['코스','2박3일','당일치기','패키지','투어','액티비티','패스','프리패스','투어패스']},
-  {key:'명당', label:'명당·관람위치', terms:['명당','유료좌석','좌석','인원','요트','유람선','명당자리']},
-  {key:'준비', label:'비용·준비물', terms:['준비물','여행사','지도','여행비용']},
-  {key:'장소', label:'촬영지·장소', terms:['촬영지','촬영장소','배경','위치']},
-  {key:'결제행동', label:'결제·거래', terms:['결제','결제내역','결제취소','자동이체','거래내역','명세','이체']},
-  {key:'시세정보', label:'주가·시세', terms:['주가','시세','배당','전망','관련주','주식회사','공모주','상장']},
-  {key:'금액', label:'금액·요금', terms:['요금','9900','29000','299000']},
-  {key:'문의', label:'고객센터·문의', terms:['고객센터','홈페이지','채용','문의','번호']},
-  {key:'일정', label:'일정·기간', terms:['시험일정','일정','기간','날짜','접수','신청기간','마감','예매','예약','시간','포스터','티켓']},
-  {key:'자격', label:'자격·난이도', terms:['응시자격','자격','조건','난이도','합격률','대상','요건','시험과목','준비물']},
-  {key:'방법', label:'방법·신청', terms:['신청방법','방법','신청','조회','등록','발급','해지','환불','취소','취득','다운로드','만드는법','되는법']},
-  {key:'증상', label:'증상·치료', terms:['초기증상','전조증상','증상','원인','검사','치료','생존율','좋은음식','부작용']},
-  {key:'정보', label:'기본정보', terms:['기본정보','정보','정의','종류','순위','비용','가격','후기','평점','관람평']},
+// ===== [v21] 카테고리 기반 스포크 분류 (1년치 실측 검증 완료) =====
+// 카테고리마다 쪼갬/묶음이 다르다는 발견에 기반. 정책=지역·대상 스포크+속성 소제목+딴주제 제외,
+// 콘텐츠/뷰티=축별 쪼갬, 건강=암종류만 독립, 인물=단독글, 축제=장소 스포크, 시험=자격증별 독립.
+const CATEGORIES = [
+  { key:'beauty', label:'뷰티·화장품', mode:'split',
+    terms:['나스','NARS','롬앤','립스틱','틴트','쿠션','파운데이션','섀도우','아이섀도우','팔레트','블러쉬','블러셔','립글로스','컬렉션','파데','발색','매트','글로우','립밤','마스카라','네일'] },
+  { key:'content', label:'작품·방송', mode:'split',
+    terms:['드라마','출연진','등장인물','인물관계도','몇부작','재방송','다시보기','시청률','편성표','회차','원작','웹툰','줄거리','결말','OTT','방영','공개일','촬영지','OST','예능','참가자','심사위원','탈락자','서바이벌','시즌'] },
+  { key:'movie', label:'영화', mode:'split',
+    terms:['영화','개봉','개봉일','관람평','평점','상영','감독','시사회'] },
+  { key:'concert', label:'콘서트·공연', mode:'split',
+    terms:['콘서트','공연','내한','투어','월드투어','좌석','티켓','예매','티켓팅','선예매','페스티벌','라인업'] },
+  { key:'sports', label:'스포츠·경기', mode:'split',
+    terms:['경기','중계','대표팀','명단','대진','올림픽','월드컵','WBC','LCK','프로야구','리그','선수','조편성','개막'] },
+  { key:'policy', label:'정책·지원금', mode:'policy',
+    terms:['지원금','장려금','보조금','수당','급여','환급','바우처','통장','연금','지급일','소득기준','재산기준','복지','정부','지자체'] },
+  { key:'finance', label:'금융·세금', mode:'merge',
+    terms:['대출','적금','예금','연말정산','세금','소득공제','공제','펀드','공모주','금리','한도','상환','이자','계좌','청약','ETF','만기'] },
+  { key:'exam', label:'시험·자격', mode:'exam',
+    terms:['시험일정','자격증','기능사','기사','국가고시','공무원','응시자격','합격률','난이도','필기','실기','과목','접수','기출','정시','수능','대학','등급'] },
+  { key:'health', label:'건강·질병', mode:'merge',
+    terms:['초기증상','전조증상','증상','원인','검사','치료','생존율','통증','부작용','암','폐렴','경색','전이','좋은음식'] },
+  { key:'festival', label:'축제·관광', mode:'festival',
+    terms:['축제','관광','가볼만한곳','맛집','숙소','펜션','주차','입장료','초대가수','벚꽃','단풍','야간개장','계곡'] },
+  { key:'life', label:'생활·민원', mode:'merge',
+    terms:['여권','비자','비짓재팬','보육료','버스정보','준비물','발급','갱신','재발급','등록방법'] },
+  { key:'person', label:'인물·프로필', mode:'single',
+    terms:['프로필','나이','학력','고향','와이프','배우자','병명','사건','논란','국적','출생지','본명','경력','지지율','나무위키'] },
+  { key:'product', label:'제품·리뷰', mode:'merge',
+    terms:['리콜','독소','후기','내돈내산','드라이버','사용법','단점','비교'] },
+  { key:'season', label:'시즌·명절', mode:'season',
+    terms:['설날','추석','어버이날','명절','연휴','기차표','택배','선물','일출','해돋이'] },
+  { key:'recipe', label:'레시피·요리', mode:'split',
+    terms:['레시피','만드는법','끓이는법','재료','대체재','요리','버터떡'] },
+  { key:'religion', label:'종교·행사', mode:'festival',
+    terms:['불교박람회','연등회','연등축제','법회','템플스테이'] },
 ];
-function intentAxisOf(kw){
-  for(const a of INTENT_AXES){ if(a.terms.some(t=>includesAxisTerm(kw,t))) return a; }
-  return {key:'기타', label:'기타', terms:[]};
-}
-// [v20] 메인 키워드의 '핵심명사'를 그대로 안고 있는 연관어 = 동의어성 중복 → 스포크 부적합.
-// 예) 메인 "부산불꽃축제"의 핵심 "불꽃축제" → "광안리불꽃축제"는 사실상 같은 주제(거름).
-//     "광안리맛집"은 "불꽃축제" 미포함 → 별개 주제(유지).
-function mainCoreTokens(hubKw){
-  const cleaned = normalizeSpace(hubKw).replace(/\d+/g,' ');
-  const chunks = cleaned.split(/\s+/).filter(Boolean);
-  const tokens = new Set();
-  for(const c of chunks){
-    const k = normalizeKey(c);
-    if(k.length>=3) tokens.add(k);
-    if(k.length>=4) tokens.add(k.slice(-4));
-    if(k.length>=3) tokens.add(k.slice(-3));
+const BEAUTY_BRANDS = ['나스','NARS','롬앤','클리오','에뛰드','맥','MAC','디올','샤넬','입생로랑','3CE','페리페라','어뮤즈','힌스','데이지크'];
+function detectCategory(mainKw, relatedRows){
+  const main = normalizeSpace(mainKw);
+  const relText = (relatedRows||[]).map(r=>r.kw).join(' ');
+  for(const b of BEAUTY_BRANDS){ if(main.startsWith(b)) return CATEGORIES.find(c=>c.key==='beauty'); }
+  let best = null, bestScore = 0;
+  for(const cat of CATEGORIES){
+    let score = 0;
+    for(const t of cat.terms){
+      if(main.includes(t)) score += 3;
+      if(relText.includes(t)) score += 1;
+    }
+    if(score > bestScore){ bestScore = score; best = cat; }
   }
-  return [...tokens];
+  return best && bestScore >= 1 ? best : { key:'general', label:'일반', mode:'merge', terms:[] };
 }
-function isSynonymDup(kw, hubKw){
-  const core = mainCoreTokens(hubKw);
-  const k = normalizeKey(kw);
-  return core.some(t => t.length>=3 && k.includes(t));
+
+const SIDO = ['서울','경기','인천','대구','대전','부산','광주','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];
+const TARGET_MODIFIERS = ['소상공인','청년','신혼','다자녀','저소득','중소기업','대학생','신혼부부','어르신','노인','장애인','한부모','반기','정기','1차','2차'];
+const ATTRIBUTE_TERMS = ['기준','대상','조건','금액','지급일','자격','소득기준','재산기준','신청기간','사용처','제외','종류','신청','조회','방법','신청방법','조회방법','거주지'];
+const LONGTAIL_TERMS = ['다운로드','드라이버','전화번호','ARS','가입방법','홈페이지','고객센터','프로그램','앱','어플','출력','프린트','서식','양식'];
+function hasSido(kw, mainKw){ return SIDO.find(s => kw.includes(s) && !(mainKw||'').includes(s)) || null; }
+function hasTargetModifier(kw, mainKw){ return TARGET_MODIFIERS.find(m => kw.includes(m) && !(mainKw||'').includes(m)) || null; }
+function hasAttribute(kw, mainKw){ const rest = normalizeKey(kw).replace(normalizeKey(mainKw), ''); return ATTRIBUTE_TERMS.find(a => rest.includes(normalizeKey(a)) || kw.includes(a)) || null; }
+function hasLongtail(kw){ return LONGTAIL_TERMS.find(l => kw.includes(l)) || null; }
+function sharesCoreFestival(kw, mainKw){
+  const core = normalizeKey(mainKw).replace(/(축제|박람회|페스티벌|2026|2025|2027).*$/g,'').replace(/^20\d\d/,'');
+  if(core.length < 2) return false;
+  return normalizeKey(kw).includes(core);
 }
-const SPOKE_MIN_MONTHLY = 400; // 이 이상 검색량이면 독립 스포크(별도 글), 미만은 허브로 흡수
-const ETC_AXIS_LABEL = '세부 주제'; // [v20] '기타'를 사용자에게 보일 땐 부드럽게
+// 연관어 한 개를 4갈래(spoke/section/longtail/drop)로 분류
+function classifyRelated(mainKw, row, category){
+  const kw = normalizeSpace(row.kw);
+  const monthly = Number(row.monthly||0);
+  if(category.mode === 'policy'){
+    const policyCore = normalizeKey(mainKw).replace(/(신청|조회|방법|기준|대상|조건|금액|지급일|자격).*$/g,'');
+    const sharesPolicy = policyCore.length>=3 && normalizeKey(kw).includes(policyCore);
+    const lt = hasLongtail(kw);
+    if(lt) return { tag:'longtail', reason:`수익형 롱테일(${lt})` };
+    const sido = hasSido(kw, mainKw);
+    if(sido && sharesPolicy) return { tag:'spoke', axis:'지역', reason:`지역축(${sido}) — 지역마다 공고·신청 다름` };
+    const tm = hasTargetModifier(kw, mainKw);
+    if(tm && sharesPolicy) return { tag:'spoke', axis:'대상', reason:`대상·시점축(${tm})` };
+    const attr = hasAttribute(kw, mainKw);
+    if(attr && sharesPolicy) return { tag:'section', reason:`속성축(${attr})` };
+    if(!sharesPolicy) return { tag:'drop', reason:'메인 지원금과 다른 주제' };
+    return { tag:'section', reason:'약한 변종 → 허브 흡수' };
+  }
+  if(category.mode === 'festival'){
+    const isOtherFestival = /축제|박람회|페스티벌/.test(kw) && !sharesCoreFestival(kw, mainKw);
+    if(isOtherFestival && monthly>=400) return { tag:'spoke', axis:'다른 축제', reason:'다른 축제 — 독립글' };
+    const sido = hasSido(kw, mainKw);
+    if(sido && monthly>=400) return { tag:'spoke', axis:'지역', reason:`지역축(${sido})` };
+    const placeWords = ['맛집','숙소','펜션','민박','글램핑','캠핑','캠핑장','가볼만한곳','놀거리','관광','계곡','해수욕장'];
+    if(placeWords.some(p=>kw.includes(p)) && monthly>=400) return { tag:'spoke', axis:'장소', reason:'장소 스포크(맛집·숙소·관광)' };
+    return { tag:'section', reason:'축제 속성(날짜·주차·입장료)' };
+  }
+  if(category.mode === 'exam'){
+    if(/[0-9]급/.test(kw) || hasSido(kw, mainKw)) return { tag:'spoke', axis:'급수·지역', reason:'급수·지역 다름 — 독립' };
+    const mainCore = normalizeKey(mainKw).replace(/(시험일정|자격증|시험|필기|실기|일정|과목|난이도|합격률|접수|인강|학원|기출).*$/g,'');
+    const sharesMain = mainCore.length>=2 && normalizeKey(kw).includes(mainCore);
+    if(!sharesMain) return monthly>=400 ? { tag:'spoke', axis:'다른 자격증', reason:'다른 자격증 — 독립글' } : { tag:'section', reason:'검색량 낮음 → 흡수' };
+    return { tag:'section', reason:'메인 자격증 내부 속성' };
+  }
+  if(category.mode === 'merge'){
+    if(category.key==='health'){
+      const cancers = ['폐암','위암','간암','췌장암','갑상선암','후두암','혈액암','대장암','유방암','신장암'];
+      const c = cancers.find(x=>kw.includes(x) && !mainKw.includes(x));
+      if(c) return { tag:'spoke', axis:'다른 암종', reason:`다른 암종(${c}) — 독립글` };
+    }
+    return { tag:'section', reason:'묶는 형 — 한 글에 섹션' };
+  }
+  if(category.mode === 'single') return { tag:'section', reason:'인물 단독글 — 섹션' };
+  return monthly >= 400 ? { tag:'spoke', axis:'세부', reason:'쪼개는 형 — 축별 독립' } : { tag:'section', reason:'검색량 낮음 → 흡수' };
+}
+
+// [v21] 카테고리 기반 클러스터 빌드. 기존 반환형({hub, spokes, absorbed}) 유지 + category/longtail/sections 추가.
 function buildCluster(hubKw, rows){
   const hubKey = normalizeKey(hubKw);
-  const hubAxis = intentAxisOf(hubKw).key;
-  const byAxis = {};
-  for(const r of (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey)){
-    const ax = intentAxisOf(r.kw);
-    (byAxis[ax.key] = byAxis[ax.key] || {label:ax.label, rows:[]}).rows.push(r);
+  const others = (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey);
+  const category = detectCategory(hubKw, others);
+  const spokesRaw=[], sections=[], longtail=[], absorbed=[];
+  for(const r of others){
+    const c = classifyRelated(hubKw, r, category);
+    if(c.tag==='spoke') spokesRaw.push({ kw:r.kw, monthly:Number(r.monthly||0), axisLabel:c.axis||'세부 주제' });
+    else if(c.tag==='longtail') longtail.push(r.kw);
+    else if(c.tag==='drop') { /* 클러스터에서 제외 — 아무 버킷에도 안 넣음 */ }
+    else { sections.push(r.kw); absorbed.push(r.kw); }
   }
-  const spokes=[], absorbed=[], etcRows=[];
-  for(const [key,grp] of Object.entries(byAxis)){
-    grp.rows.sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
-    const rep=grp.rows[0], repM=Number(rep.monthly||0);
-    if(key==='기타'){
-      // [v20-FIX2] 기타는 무조건 흡수하지 않고 모아둔다. 아래서 검색량 큰 것만 독립 스포크로 살림.
-      // (이렇게 해야 패딩처럼 연관어가 많지만 의도축에 안 걸리는 키워드도 글감을 잃지 않는다.)
-      etcRows.push(...grp.rows); continue;
-    }
-    // 허브와 같은 의도거나 검색량 약하면 흡수(자기잠식 방지).
-    if(key===hubAxis || repM<SPOKE_MIN_MONTHLY){
-      absorbed.push(...grp.rows.map(x=>x.kw)); continue;
-    }
-    spokes.push({ axisKey:key, axisLabel:grp.label, kw:rep.kw, monthly:repM, also:grp.rows.slice(1).map(x=>x.kw) });
-  }
-  // [v20-FIX2+길A] 정규 축 스포크가 5개 미만이면, 검색량 큰 '기타'를 독립 스포크로 채운다.
-  // 단 메인과 동의어성 중복(불꽃축제↔광안리불꽃축제)은 스포크로 올리지 않고 흡수.
-  etcRows.sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
-  for(const r of etcRows){
-    if(spokes.length>=5){ if(!absorbed.includes(r.kw)) absorbed.push(r.kw); continue; }
-    if(isSynonymDup(r.kw, hubKw)){ if(!absorbed.includes(r.kw)) absorbed.push(r.kw); continue; }
-    if(Number(r.monthly||0) >= SPOKE_MIN_MONTHLY){
-      spokes.push({ axisKey:'기타', axisLabel:ETC_AXIS_LABEL, kw:r.kw, monthly:Number(r.monthly||0), also:[] });
-    } else {
-      if(!absorbed.includes(r.kw)) absorbed.push(r.kw);
-    }
-  }
-  spokes.sort((a,b)=>b.monthly-a.monthly);
-  return { hub:hubKw, spokes:spokes.slice(0,5), absorbed };
+  // 스포크는 검색량 높은 순 상위 5개. also에 흡수 키워드 일부 참고용.
+  spokesRaw.sort((a,b)=>b.monthly-a.monthly);
+  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly, also:[] }));
+  return { hub:hubKw, spokes, absorbed, category, sections, longtail };
 }
+
 
 // ===== [v20] 제목 조합기 =====
 // 메인 = 선택 키워드(고정). 후킹 = 연관어(state.rows)를 경쟁비율 좋은 순 정렬, 메인 꼬리 추출.
@@ -1099,7 +1146,8 @@ function renderCluster(hubRow){
   if(!els.clusterBox) return;
   const cluster = buildCluster(hubRow.kw, state.rows);
   state.currentCluster = cluster;
-  const hubHtml = `<div class="cluster-node hub"><div class="cl-line"><b>허브</b> <span>${escapeHTML(cluster.hub)}</span></div>
+  const catLabel = cluster.category ? cluster.category.label : '일반';
+  const hubHtml = `<div class="cluster-node hub"><div class="cl-line"><b>허브</b> <span>${escapeHTML(cluster.hub)}</span> <span class="pill gray" style="font-size:10px">${escapeHTML(catLabel)}</span></div>
     <button class="pick-btn cl-btn" data-cluster="hub">이 허브 원고 프롬프트</button></div>`;
   let spokeHtml = '';
   if(cluster.spokes.length){
@@ -1109,9 +1157,17 @@ function renderCluster(hubRow){
       <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
     </div>`).join('');
   } else {
-    spokeHtml = `<div class="cluster-node single"><div class="cl-line" style="opacity:.7">독립 글감이 충분치 않습니다. 이 키워드는 <b>단독 원고</b>로 작성하세요. (최신 이슈성 키워드일 수 있음)</div></div>`;
+    spokeHtml = `<div class="cluster-node single"><div class="cl-line" style="opacity:.7">독립 글감이 충분치 않습니다. 이 키워드는 <b>단독 원고</b>로 작성하세요. (속성·세부 정보는 허브 한 글에 모으는 게 유리합니다.)</div></div>`;
   }
-  els.clusterBox.innerHTML = hubHtml + spokeHtml;
+  // [v21] 수익형 롱테일 키워드 안내 (다운로드·전화번호·드라이버 류 — 거르지 않고 별도 글감으로 살림)
+  let longtailHtml = '';
+  if(cluster.longtail && cluster.longtail.length){
+    longtailHtml = `<div class="cluster-node" style="background:#fffdf5;border-color:#fde68a;">
+      <div class="cl-line" style="font-size:12px;color:#92400e;"><b>💰 수익형 롱테일</b> <span style="opacity:.7">독립 글감으로 따로 노려볼 키워드</span></div>
+      <div style="font-size:12px;color:#b45309;line-height:1.6;">${cluster.longtail.map(escapeHTML).join(' · ')}</div>
+    </div>`;
+  }
+  els.clusterBox.innerHTML = hubHtml + spokeHtml + longtailHtml;
   els.clusterBox.querySelectorAll('.cl-btn').forEach(btn=>btn.addEventListener('click',()=>{
     generateClusterPrompt(btn.dataset.cluster, Number(btn.dataset.idx||0));
   }));

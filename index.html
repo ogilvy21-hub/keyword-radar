@@ -252,7 +252,7 @@
           <div class="format-options"><label class="check-item"><input id="tableCheck" type="checkbox" checked /> 표 포함</label><label class="check-item"><input id="faqCheck" type="checkbox" checked /> FAQ 포함</label></div>
           <div class="exp-box">
             <div class="exp-head">✍️ 직접 겪은 경험·주의점 <span class="exp-tip">AI가 모르는 '나만 아는 빈틈' (비우면 안 넣음)</span></div>
-            <textarea id="expInput" rows="3" placeholder="직접 겪은 경험·주의점을 적으면 글에 녹입니다."></textarea>
+            <textarea id="expInput" rows="3" placeholder="직접 겪은 경험·주의점을 적으면 글에 녹입니다." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
             <p class="exp-hint" id="expHint">공식·광고·AI는 좋은 말만 합니다. 해본 사람만 아는 '안 되는 것·막히는 것·다른 것'이 검색 상위로 갑니다.</p>
           </div>
         </section>
@@ -728,6 +728,20 @@ function contentOverlapNote(row){
 }
 
 // 블루오션/경쟁 상황에 따른 전략 지시. [v20.1] 경쟁비율 구간별 문구 (화면 등급과 일치, 블루오션 고정 제거)
+// [v21] 내부링크 블록 — 같은 클러스터의 스포크를 '함께 보면 좋은 글'로 제안.
+// 근거: 내부링크는 체류시간·페이지뷰·광고클릭을 올리는 핵심 수익 장치(추가 API 없이 이미 계산된 클러스터 재활용).
+function internalLinkBlock(){
+  const cl = state.currentCluster;
+  if(!cl || !cl.spokes || !cl.spokes.length) return '';
+  const targets = cl.spokes.map(s=>s.kw).slice(0,5);
+  if(!targets.length) return '';
+  return `
+
+## 내부링크 — 함께 보면 좋은 글 (글 하단에 배치)
+이 글과 같은 주제 묶음의 글들이다. 글 끝에 '함께 보면 좋은 글' 섹션으로 아래 키워드를 다루는 글 링크를 넣어라(앵커텍스트=키워드 그대로). 독자가 다음 글로 이어 보게 해 체류시간을 늘리는 장치다. 링크 URL은 비워두고 작성자가 나중에 채울 수 있게 \`[키워드](링크)\` 형식으로만 남겨라.
+${targets.map(k=>`- ${k}`).join('\n')}`;
+}
+
 function competitionStrategy(row){
   const r = ratioValue(row);
   if(r < 0.5) return `이 키워드는 경쟁비율 ${ratioText(row)}로, 검색 수요 대비 발행된 글이 매우 적은 블루오션이다. 깊이 있고 완결성 있게 작성해 이 주제를 선점해라. 기본만 잘 다뤄도 상위 노출 가능성이 높으니, 한 번에 제대로 써서 오래가는 글을 만들어라.`;
@@ -995,7 +1009,7 @@ function drawTitleBuilder(){
   els.titleBuilder.querySelectorAll('.tb-pin b[data-ti]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(Number(b.dataset.ti))));
   const editEl = $('tbEdit');
   if(editEl) editEl.addEventListener('input', e=>{ state.titleState.edited = e.target.value; });
-  const clearEl = $('tbClear'); if(clearEl) clearEl.addEventListener('click', ()=>{ ts.chosen=[]; ts.edited=''; drawTitleBuilder(); });
+  const clearEl = $('tbClear'); if(clearEl) clearEl.addEventListener('click', ()=>{ ts.chosen=[]; ts.edited=''; state.titleApplied=null; drawTitleBuilder(); renderSelected(); });
   const applyEl = $('tbApply'); if(applyEl) applyEl.addEventListener('click', applyTitleToPrompt);
 }
 function toggleTitleHook(i){
@@ -1009,22 +1023,24 @@ function applyTitleToPrompt(){
   const tails = ts.chosen.map(i=>ts.hooks[i].tail);
   const edited = normalizeSpace(ts.edited||'');
   const draft = edited || [ts.main, ...tails].join(' ');
-  const block = `## 제목 설계 (작성자가 조합한 재료 — 이 의도를 우선 반영하라)
-- 메인키워드(반드시 제목에 포함): ${ts.main}
-- 후킹 재료(작성자가 고른 연관어): ${tails.join(', ') || '(없음 — 메인 단독)'}
-- 작성자 조합 초안: ${draft}
-규칙: 메인키워드를 앞쪽에 자연스럽게 1회 넣고, 후킹 재료를 단순 나열(keyword soup) 말고 검색 의도가 드러나는 자연어로 엮어라. 서술 꼬리("~하세요/합니다")와 빈 수식어(총정리·완벽 등 TMI)는 빼고 명사로 끝맺어라. 작성자 초안의 의도를 존중하되 더 자연스럽게 다듬어도 된다.`;
-  // draftPrompt의 제목 섹션을 이 블록으로 교체(있으면) 또는 맨 앞에 추가
-  const cur = els.draftPrompt.value || '';
-  let next;
-  if(cur.includes('## 제목 설계 (작성자가 조합한 재료')){
-    next = cur.replace(/## 제목 설계 \(작성자가 조합한 재료[\s\S]*?(?=\n## |\n### |$)/, block + '\n\n');
-  } else {
-    next = block + '\n\n' + cur;
-  }
-  els.draftPrompt.value = next.trim();
+  // [v21] 확정 제목을 state에 저장 → 플랫폼/문체 바꿔 프롬프트 재생성돼도 유지되게.
+  state.titleApplied = { main:ts.main, tails:[...tails], draft };
+  // 옵션 변경으로 프롬프트가 재생성되며 제목 블록이 본문에 박히도록 renderSelected 호출
+  renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
   const applyEl=$('tbApply'); if(applyEl){ applyEl.textContent='프롬프트에 반영됨 ✓'; setTimeout(()=>{ applyEl.textContent='이 제목 적용 → 프롬프트'; },1400); }
+}
+// [v21] 확정 제목 블록 생성 (작성자가 고른 키워드는 전부 살리고 표현만 다듬게 규칙 명시)
+function appliedTitleBlock(){
+  const ta = state.titleApplied;
+  if(!ta) return '';
+  const kws = [ta.main, ...ta.tails].filter(Boolean);
+  return `## 제목 — 작성자 확정 (이 제목으로 쓴다. 새로 만들지 마라)
+작성자가 검색량·경쟁비율을 보고 직접 고른 제목 재료다. 아래 키워드는 상위노출을 위해 의도적으로 고른 것이니 **하나도 빼거나 다른 말로 바꾸지 마라.**
+- 반드시 제목에 모두 포함할 키워드: ${kws.join(', ')}
+- 작성자 조합안: ${ta.draft}
+다듬어도 되는 범위(이것만 허용): 어순 조정, 조사/연결어 추가, 단순 나열(keyword soup) 방지를 위한 자연스러운 연결, 서술 꼬리("~하세요/합니다")·빈 수식어(총정리·완벽 등 TMI) 제거, 명사로 끝맺기.
+금지: 위 키워드를 빼거나 동의어로 교체하거나 제목을 통째로 새로 짓는 것. 제목은 이 재료로 만든 1개로 확정한다.`;
 }
 
 function titlesFromHooks(keyword, hooks){
@@ -1093,7 +1109,7 @@ function outlinesFor(keyword, intent){
 function pillClass(value){ if(['즉시 글감','우선 후보'].includes(value)) return 'pill green'; if(['차순위 글감','관찰키워드'].includes(value)) return 'pill yellow'; if(['API 수치 부족'].includes(value)) return 'pill red'; return 'pill gray'; }
 function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'score low'; }
 function renderIdle(){
-  state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
+  state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null, titleApplied:null };
   els.totalKeywords.textContent='0개'; els.bestKeywordText.textContent='-'; els.bestScoreText.textContent='0'; els.intentShortText.textContent='대기';
   els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
@@ -1113,7 +1129,7 @@ function renderRecommendTable(){
     const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
     return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.totalContent)}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
   }).join('');
-  els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); renderRecommendTable(); renderSelected(); }));
+  els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; renderRecommendTable(); renderSelected(); }));
 }
 function renderDetailTable(){
   const rows=state.rows;
@@ -1284,7 +1300,7 @@ function renderSelected(){
 
 ## 메인 키워드
 ${row.kw}
-
+${state.titleApplied ? '\n'+appliedTitleBlock()+'\n' : ''}
 ## 데이터 (네이버 API 기준)
 - 월간 검색수: ${format(row.monthly)}회 (PC ${format(row.pc)} / 모바일 ${format(row.mo)})
 - 발행량: ${format(row.totalContent)}건 (블로그 ${format(row.blog)} / 카페 ${format(row.cafe)})
@@ -1305,19 +1321,14 @@ ${hasRelated ? promptRelated + `
 
 ---
 
-## 가장 중요한 규칙 — 사실 검증 (이걸 어기면 글 전체가 무효다)
-이 글에는 금액·기간·한도·신청방법·대상·일정처럼 **시점에 따라 바뀌고, 틀리면 독자가 실제 손해를 보는 정보**가 들어간다. 반드시 지켜라.
-- 확실하지 않은 수치·날짜·조건은 **지어내지 마라.** 모르면 "공식 페이지에서 확인 필요"라고 쓰고 넘어가라. 그럴듯한 추측을 사실처럼 단정하는 것이 가장 큰 잘못이다.
-- "예산 소진 시 조기 종료", "○○개 매장 참여" 같은 **클릭을 유도하는 미확인 정보**를 임의로 넣지 마라.
-- 근거로 댈 수 있는 출처는 **기업 공식 발표·공식 홈페이지, 정부/공공기관, 주요 언론사**뿐이다. 그 외(영화DB, 팬커뮤니티, 출처불명 블로그 등)는 근거로 쓰지 마라.
-- **본문 주제와 무관한 출처는 절대 넣지 마라.** (예: 환급 글에 스포츠·연예 기사) 검색 결과가 섞여 들어와도 걸러내라.
+## 사실 검증 (이걸 어기면 글 전체가 무효)
+금액·기간·한도·신청방법·대상·일정처럼 **시점에 따라 바뀌고 틀리면 독자가 손해 보는 정보**가 들어간다.
+- 확실하지 않은 수치·날짜·조건은 **지어내지 마라.** 모르면 "공식 페이지에서 확인 필요"로 처리하라. 추측을 사실처럼 단정하는 게 가장 큰 잘못이다.
+- "예산 소진 시 조기 종료" 같은 **클릭 유도용 미확인 정보**를 임의로 넣지 마라.
+- 출처는 **공식 발표·공식 홈페이지·정부/공공기관·주요 언론사**만. 본문 주제와 무관한 출처(환급 글에 연예 기사 등)는 검색에 섞여 와도 빼라.
 ${factCheckByIntent(intent, row)}${experienceBlock()}${contentOverlapNote(row)}
 
-## 출처 표기 형식
-글 끝 '자료 출처'에는 **실제로 근거로 삼은 것만** 다음 형식으로 적어라:
-\`매체명 — 기사/페이지 제목 (날짜)\`
-- 확인한 출처가 없으면 출처를 비우고, 대신 "발행 전 공식 페이지에서 최신 정보 확인 권장" 같은 안내 문구만 남겨라.
-- 출처 개수를 억지로 채우려고 만들어내지 마라. 1개라도 진짜면 된다.
+글 끝 '자료 출처'는 **실제 근거로 삼은 것만** \`매체명 — 제목 (날짜)\` 형식으로. 없으면 비우고 "발행 전 공식 페이지 확인 권장"만 남겨라. 개수 채우려 만들어내지 마라.
 
 ---
 
@@ -1326,10 +1337,12 @@ ${factCheckByIntent(intent, row)}${experienceBlock()}${contentOverlapNote(row)}
 ### 1단계 — 설계 (본문 쓰기 전에 먼저 하고, 결과를 보여줘라)
 아래 항목을 너가 직접 새로 만들어라. 프로그램이 준 자동 분류는 참고만 하고 정답으로 여기지 마라.
 1) **검색 의도 재정의**: 메인 키워드 "${row.kw}"를 검색하는 사람이 진짜 알고 싶은 게 무엇인지 한 문장으로 규정해라. ${hasRelated ? '위 연관키워드가 가장 좋은 근거다.' : '위에서 추정한 검색자 시나리오가 근거다.'} (자동 분류 의도 "${intent.label}"가 안 맞으면 무시하고 너의 판단을 따르라.)
-2) **제목 3개 (공식: 메인키워드 + 검증된 후킹 - 서술형 꼬리)**: ${(curHooks&&curHooks.length)?`아래 '발행 제목 후킹 키워드'는 실제 발행된 글 제목에서 자주 등장한, 검색에서 검증된 후킹어다. 메인 키워드에 이 후킹어를 결합해 제목을 만들어라.`:`네이버에서 이 키워드로 검색해 상위 뉴스·블로그 제목에 반복되는 후킹 키워드를 찾아 활용해라.`}
+2) ${state.titleApplied
+  ? `**제목**: 위 '제목 — 작성자 확정' 블록의 키워드를 전부 포함해 **1개로 확정**하라. 새 제목을 만들지 말고, 허용된 범위(어순·연결·꼬리 제거)에서만 자연스럽게 다듬어라.`
+  : `**제목 3개 (공식: 메인키워드 + 검증된 후킹 - 서술형 꼬리)**: ${(curHooks&&curHooks.length)?`아래 '발행 제목 후킹 키워드'는 실제 발행된 글 제목에서 자주 등장한, 검색에서 검증된 후킹어다. 메인 키워드에 이 후킹어를 결합해 제목을 만들어라.`:`네이버에서 이 키워드로 검색해 상위 뉴스·블로그 제목에 반복되는 후킹 키워드를 찾아 활용해라.`}
    - 규칙 1: 메인 키워드를 제목에 그대로 포함한다.
    - 규칙 2: 후킹은 '그 자체로 검색되는 명사'여야 한다(단순 수식어 금지).
-   - 규칙 3: 제목은 명사로 끝맺어라. "~하세요/~합니다/~정리했습니다/~알아볼게요" 같은 서술형 꼬리와 "총정리·꼭·한번에·완벽" 같은 빈 수식어(TMI)는 빼라. (예: "...대응하세요" → "...대응방법")${(curHooks&&curHooks.length)?`\n\n**발행 제목 후킹 키워드(빈도순): ${curHooks.slice(0,8).map(h=>h.word).join(", ")}**`:''}
+   - 규칙 3: 제목은 명사로 끝맺어라. "~하세요/~합니다/~정리했습니다/~알아볼게요" 같은 서술형 꼬리와 "총정리·꼭·한번에·완벽" 같은 빈 수식어(TMI)는 빼라. (예: "...대응하세요" → "...대응방법")${(curHooks&&curHooks.length)?`\n\n**발행 제목 후킹 키워드(빈도순): ${curHooks.slice(0,8).map(h=>h.word).join(", ")}**`:''}`}
 3) **검색자의 핵심 질문 5개**: ${hasRelated ? '연관키워드에서 검색자가 실제로 가질 법한 질문을 추출해라.' : '위에서 추정한 검색자 유형·상황을 근거로, 그들이 실제로 가질 법한 질문 5개를 구체적으로 뽑아라.'}
 4) **최종 목차**: 위 질문에 답하는 순서로, 가장 궁금해할 내용을 위에 배치해 짜라. 소제목은 검색 질문형으로.${fewRelated ? ' (연관 검색어가 적은 키워드다. 무리하게 섹션을 늘리지 말고, 검색자가 진짜 궁금해할 핵심만 추려 깊게 다뤄라.)' : ''}
 
@@ -1340,10 +1353,12 @@ ${platformStrategy(els.platformSelect.value)}
 
 **[가장 중요] 도입부 바로 다음에, [1단계]에서 설계한 최종 목차를 본문 안에 '## 목차' 형태로 반드시 직접 넣어라.** 티스토리는 목차 자동생성이 약하므로 본문에 직접 박아야 한다. 목차 항목은 아래 본문 소제목과 글자까지 정확히 일치시켜라.
 
-- 도입부 3줄 안에 검색 의도에 대한 직접적인 답을 먼저 제시해라.
-- 주체와 대상을 분명히 쓰고, 기계적·번역투 표현을 피해 자연스러운 한국어로 써라.
+- 도입부 3줄 안에 검색 의도에 대한 답을 먼저 제시하라. 검색한 사람이 이 글만 읽고 더 검색할 필요가 없는 '완결된 답'을 목표로 하라.
+- 전문용어는 풀어 써라. "꼼꼼히·구석구석·제대로" 같은 추상적 표현 대신 구체적인 수치·부위·기간·방법으로 쓴다. (예: "자주 청소하세요" → "6개월에 한 번, 필터와 송풍구를")
+- 주체와 대상을 분명히 쓰고, 번역투를 피해 초등학생도 이해할 자연스러운 한국어로 써라.
 - 키워드를 억지로 반복하지 말고, 검색자가 판단할 포인트를 소제목과 본문에 자연스럽게 녹여라.
 ${els.tableCheck.checked?'- 비교·기준·수치는 표로 정리하되, 표 안의 숫자도 위 사실 검증 규칙을 똑같이 지켜라.\n':''}${els.faqCheck.checked?'- 마지막에 FAQ(자주 묻는 질문)를 3~5개 넣어라.\n':''}- 분량·SEO·자연스러움이 충돌하면 우선순위는 **정확성 > 자연스러움 > 분량**이다. 분량을 채우려 같은 말을 반복하거나 내용 없는 문단을 늘리지 마라.
+${internalLinkBlock()}
 
 먼저 [1단계] 설계 결과(의도·제목·질문·목차)를 정리해 보여준 뒤, 확정된 목차대로 [2단계] 본문을 작성해줘.`;
 }
@@ -1420,7 +1435,7 @@ async function analyze(){
 
     // 연관키워드 묶음: 검색광고 + 자동완성 신규 합쳐 표시
     const relatedKeywords = uniqueByKeyword([...relatedRows, ...suggestRows]).map(r=>r.kw);
-    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooksByKw:{}, hookPending:{} };
+    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooksByKw:{}, hookPending:{}, titleApplied:null };
     els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
     // 후킹은 renderSelected -> ensureHooksFor(선택 키워드)가 비동기로 가져온다.
@@ -1441,6 +1456,8 @@ els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdl
 // [v21] 경험 입력 시 프롬프트 실시간 갱신 (입력값은 renderSelected가 placeholder만 바꾸고 value는 건드리지 않음)
 if(els.expInput) els.expInput.addEventListener('input', renderSelected);
 renderIdle();
+// [v21] 새로고침 시 브라우저가 textarea 값을 자동복원하는 것을 방지 — 로드 완료 후 한 번 더 비운다.
+window.addEventListener('load', ()=>{ if(els.expInput) els.expInput.value=''; });
 </script>
 </body>
 </html>

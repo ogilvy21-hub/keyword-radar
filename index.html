@@ -949,7 +949,7 @@ function buildCluster(hubKw, rows){
   }
   // 스포크는 검색량 높은 순 상위 5개. also에 흡수 키워드 일부 참고용.
   spokesRaw.sort((a,b)=>b.monthly-a.monthly);
-  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly, also:[] }));
+  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:(s.axes && s.axes[0]) ? s.axes[0].label : '세부', axisLabel:(s.axes && s.axes[0]) ? s.axes[0].label : '세부', kw:s.kw, monthly:s.monthly, also:[] }));
   return { hub:hubKw, spokes, absorbed, category, sections, longtail };
 }
 
@@ -1259,8 +1259,8 @@ function renderCluster(hubRow){
   let spokeHtml = '';
   if(cluster.spokes.length){
     spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
-      <div class="cl-line"><b>스포크 ${i+1}</b> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
-      ${s.also.length?`<div style="font-size:11px;opacity:.5;margin:2px 0 4px">+ ${s.also.map(escapeHTML).join(', ')}</div>`:''}
+      <div class="cl-line"><b>스포크 ${i+1}</b> <span class="pill gray">${escapeHTML((s.axes && s.axes[0]) ? s.axes[0].label : '세부')}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
+      
       <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
     </div>`).join('');
   } else {

@@ -777,87 +777,43 @@ function needsForIntent(intent){
 // hooks: [{word,count}] (titlehunt API 결과). 없으면 빈 배열 반환 -> 호출부에서 템플릿으로 폴백.
 // [v19] 허브-스포크 클러스터: 연관키워드를 의도축으로 가르고, 검색량으로 키워드형(독립스포크)/의도형(흡수) 구분.
 // 의도축 = 후킹이 '의도'로 쓰일 때 붙는 라벨. 실제 사용 데이터(드라마·금융·시험·복지·의료)에서 추출.
-// ===== [v22] 범용 축 분류기 (카테고리보다 우선, GI+MDA+PR 공식 적용) =====
-// PR(문제재정의): "카테고리 확장이 해법" → "범용 축 분류가 우선"으로 180도 회전
-// 15개 범용 축으로 모든 키워드를 분해. 카테고리는 보정값일 뿐.
-const UNIVERSAL_AXES = [
-  { key:'basic', label:'기본정보', terms:['기본','정보','뜻','의미','개요','설명','무엇','이란'] },
-  { key:'action', label:'행동', terms:['신청','조회','발급','예매','다운로드','등록','신청','설치','가입','접수'] },
-  { key:'eligibility', label:'대상·조건', terms:['대상','조건','자격','기준','제외','요건','필수','신원','나이','소득'] },
-  { key:'money', label:'비용·혜택', terms:['금액','가격','환급','한도','금리','할인','혜택','수수료','비용','지원금','장려금'] },
-  { key:'time', label:'시점·일정', terms:['기간','일정','지급일','공개일','시험일','신청일','마감','시작','종료','언제','몇월','날짜'] },
-  { key:'place', label:'장소', terms:['장소','위치','주차','촬영지','맛집','숙소','지역','거리','주소','어디','어느지역'] },
-  { key:'audience', label:'대상군', terms:['청년','소상공인','신혼','다자녀','저소득','중소기업','학생','부모','어린이','노인','장애인'] },
-  { key:'platform', label:'플랫폼', terms:['앱','홈페이지','정부24','홈택스','모바일','웹','넷플릭스','유튜브','카카오','네이버','구글'] },
-  { key:'problem', label:'문제·리스크', terms:['안됨','오류','부결','지연','실패','리콜','논란','버그','불가','거부','반려'] },
-  { key:'compare', label:'비교·선택', terms:['차이','비교','순위','추천','장단점','선택','우위','vs','대비','경쟁'] },
-  { key:'people', label:'인물·구성원', terms:['출연진','등장인물','감독','배우','작가','배우','캐스팅','프로필','나이','직업'] },
-  { key:'story', label:'서사·평가', terms:['줄거리','결말','원작','웹툰','평점','후기','평가','평판','점수','리뷰','감상'] },
-  { key:'format', label:'구성·포맷', terms:['몇부작','회차','편성','재방송','OTT','채널','시간','분량','에피소드'] },
-  { key:'document', label:'자료·준비물', terms:['서류','준비물','양식','문제집','기출','교재','파일','서식','다운','필요한'] },
-  { key:'outcome', label:'결과', terms:['합격률','취업률','순위','진출','수상','시청률','관객수','판매량','매출','성공률'] }
-];
-
-// GI + MDA 적용: 키워드에서 축 감지 (O=관찰 깊이, C=연결 다양성, P=패턴 명확성)
-function detectAxes(keyword) {
-  const norm = normalizeKey(keyword);
-  const detected = [];
-  for (const axis of UNIVERSAL_AXES) {
-    for (const term of axis.terms) {
-      if (norm.includes(normalizeKey(term))) {
-        detected.push({ axis: axis.key, label: axis.label, term });
-        break;
-      }
-    }
-  }
-  return detected.length ? detected : [{ axis:'basic', label:'기본정보', term:'(기본값)' }];
-}
-
-// [v22] 카테고리 프로필로 축 가중치 보정 (MDA D5 계층 반영)
-const CATEGORY_PROFILES = {
-  content: { spokeAxes:['people','format','story','place'], sectionAxes:['basic','time','problem'], label:'작품형' },
-  policy: { spokeAxes:['audience','place','problem','time'], sectionAxes:['eligibility','action','money','document'], label:'정책형' },
-  finance: { spokeAxes:['compare','problem','audience','time'], sectionAxes:['eligibility','money','action','document'], label:'금융형' },
-  exam: { spokeAxes:['time','place','compare','audience'], sectionAxes:['document','outcome','eligibility','action'], label:'시험형' },
-  health: { spokeAxes:['problem','audience','compare'], sectionAxes:['basic','story','document','outcome'], label:'건강형' },
-  eventPlace: { spokeAxes:['place','time','audience','compare'], sectionAxes:['basic','action','money','platform'], label:'축제·관광형' },
-  product: { spokeAxes:['compare','problem','audience','platform'], sectionAxes:['money','basic','story'], label:'상품형' },
-  person: { spokeAxes:['problem','story','outcome'], sectionAxes:['basic','people'], label:'인물형' },
-  general: { spokeAxes:['problem','compare','place','audience','platform','time'], sectionAxes:['basic','action','money'], label:'일반형' }
-};
-
-// PR(문제재정의) 적용: 축 기반 카테고리 감지 (기존 detectCategory 대체)
-function detectCategoryByAxes(mainKw, detectedAxes) {
-  const axisKeys = detectedAxes.map(a=>a.axis);
-  if(axisKeys.includes('people') && axisKeys.includes('format')) return CATEGORY_PROFILES.content;
-  if(axisKeys.includes('eligibility') && axisKeys.includes('money')) return CATEGORY_PROFILES.policy;
-  if(axisKeys.includes('money') && axisKeys.includes('compare')) return CATEGORY_PROFILES.finance;
-  if(axisKeys.includes('outcome') && axisKeys.includes('eligibility')) return CATEGORY_PROFILES.exam;
-  if(axisKeys.includes('problem') && (mainKw.includes('증상')||mainKw.includes('암'))) return CATEGORY_PROFILES.health;
-  if(axisKeys.includes('place') && axisKeys.includes('time')) return CATEGORY_PROFILES.eventPlace;
-  return CATEGORY_PROFILES.general;
-}
-
-// IA(인사이트증폭) + GI 적용: 축 기반 허브/스포크/섹션 판정 (Why 5번+What if 내재화)
-function classifyByUniversalAxes(mainKw, row, profile) {
-  const axes = detectAxes(row.kw);
-  const monthly = Number(row.monthly||0);
-  const ratio = ratioValue(row);
-  
-  // Why: 이 축이 왜 스포크가 될 수 있나? (독립 검색 의도)
-  const isStrongSpoke = axes.some(a=>profile.spokeAxes.includes(a.axis));
-  // What if: 만약 경쟁비율이 좋으면? (파고들기)
-  const hasGoodRatio = ratio < 1.0;
-  // 최종 판정 (GI: O×C×P×S 점수화 내재)
-  if(isStrongSpoke && monthly >= 400) return { tag:'spoke', axes, reason:'독립 검색 의도의 축입니다' };
-  if(isStrongSpoke && hasGoodRatio && monthly >= 200) return { tag:'spoke', axes, reason:'경쟁비율이 좋은 스포크 후보' };
-  if(axes.some(a=>profile.sectionAxes.includes(a.axis))) return { tag:'section', axes, reason:'허브 섹션 정보' };
-  return { tag:'section', axes, reason:'허브에 흡수' };
-}
-
-const CATEGORIES = CATEGORY_PROFILES;
+// ===== [v21] 카테고리 기반 스포크 분류 (1년치 실측 검증 완료) =====
 // 카테고리마다 쪼갬/묶음이 다르다는 발견에 기반. 정책=지역·대상 스포크+속성 소제목+딴주제 제외,
 // 콘텐츠/뷰티=축별 쪼갬, 건강=암종류만 독립, 인물=단독글, 축제=장소 스포크, 시험=자격증별 독립.
+const CATEGORIES = [
+  { key:'beauty', label:'뷰티·화장품', mode:'split',
+    terms:['나스','NARS','롬앤','립스틱','틴트','쿠션','파운데이션','섀도우','아이섀도우','팔레트','블러쉬','블러셔','립글로스','컬렉션','파데','발색','매트','글로우','립밤','마스카라','네일'] },
+  { key:'content', label:'작품·방송', mode:'split',
+    terms:['드라마','출연진','등장인물','인물관계도','몇부작','재방송','다시보기','시청률','편성표','회차','원작','웹툰','줄거리','결말','OTT','방영','공개일','촬영지','OST','예능','참가자','심사위원','탈락자','서바이벌','시즌'] },
+  { key:'movie', label:'영화', mode:'split',
+    terms:['영화','개봉','개봉일','관람평','평점','상영','감독','시사회'] },
+  { key:'concert', label:'콘서트·공연', mode:'split',
+    terms:['콘서트','공연','내한','투어','월드투어','좌석','티켓','예매','티켓팅','선예매','페스티벌','라인업'] },
+  { key:'sports', label:'스포츠·경기', mode:'split',
+    terms:['경기','중계','대표팀','명단','대진','올림픽','월드컵','WBC','LCK','프로야구','리그','선수','조편성','개막'] },
+  { key:'policy', label:'정책·지원금', mode:'policy',
+    terms:['지원금','장려금','보조금','수당','급여','환급','바우처','통장','연금','지급일','소득기준','재산기준','복지','정부','지자체'] },
+  { key:'finance', label:'금융·세금', mode:'merge',
+    terms:['대출','적금','예금','연말정산','세금','소득공제','공제','펀드','공모주','금리','한도','상환','이자','계좌','청약','ETF','만기'] },
+  { key:'exam', label:'시험·자격', mode:'exam',
+    terms:['시험일정','자격증','기능사','기사','국가고시','공무원','응시자격','합격률','난이도','필기','실기','과목','접수','기출','정시','수능','대학','등급'] },
+  { key:'health', label:'건강·질병', mode:'merge',
+    terms:['초기증상','전조증상','증상','원인','검사','치료','생존율','통증','부작용','암','폐렴','경색','전이','좋은음식'] },
+  { key:'festival', label:'축제·관광', mode:'festival',
+    terms:['축제','관광','가볼만한곳','맛집','숙소','펜션','주차','입장료','초대가수','벚꽃','단풍','야간개장','계곡'] },
+  { key:'life', label:'생활·민원', mode:'merge',
+    terms:['여권','비자','비짓재팬','보육료','버스정보','준비물','발급','갱신','재발급','등록방법'] },
+  { key:'person', label:'인물·프로필', mode:'single',
+    terms:['프로필','나이','학력','고향','와이프','배우자','병명','사건','논란','국적','출생지','본명','경력','지지율','나무위키'] },
+  { key:'product', label:'제품·리뷰', mode:'merge',
+    terms:['리콜','독소','후기','내돈내산','드라이버','사용법','단점','비교'] },
+  { key:'season', label:'시즌·명절', mode:'season',
+    terms:['설날','추석','어버이날','명절','연휴','기차표','택배','선물','일출','해돋이'] },
+  { key:'recipe', label:'레시피·요리', mode:'split',
+    terms:['레시피','만드는법','끓이는법','재료','대체재','요리','버터떡'] },
+  { key:'religion', label:'종교·행사', mode:'festival',
+    terms:['불교박람회','연등회','연등축제','법회','템플스테이'] },
+];
 const BEAUTY_BRANDS = ['나스','NARS','롬앤','클리오','에뛰드','맥','MAC','디올','샤넬','입생로랑','3CE','페리페라','어뮤즈','힌스','데이지크'];
 function detectCategory(mainKw, relatedRows){
   const main = normalizeSpace(mainKw);
@@ -949,57 +905,12 @@ function buildCluster(hubKw, rows){
   }
   // 스포크는 검색량 높은 순 상위 5개. also에 흡수 키워드 일부 참고용.
   spokesRaw.sort((a,b)=>b.monthly-a.monthly);
-  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:(s.axes && s.axes[0]) ? s.axes[0].label : '세부', axisLabel:(s.axes && s.axes[0]) ? s.axes[0].label : '세부', kw:s.kw, monthly:s.monthly, also:[] }));
+  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly, also:[] }));
   return { hub:hubKw, spokes, absorbed, category, sections, longtail };
 }
 
 
-// ===== [v22] 제목 조합기 재설계: 패턴 기반 제목 생성 (AI 제목 생성 제거) =====
-// CC(창의적연결) + IW(통합적지혜) 적용: 역설적 연결(언제/어떻게/얼마)과 공감(사용자 의도 정확히)
-const TITLE_PATTERNS = [
-  { key:'when', label:'언제형', trigger:['지급일','환급일','기간','일정','공개일','시험일정','신청일','마감'], 
-    template:'{메인} {시점어}은 언제? {보조어} 기준' },
-  { key:'how', label:'신청형', trigger:['신청','신청방법','접수','발급','등록','가입','신청'], 
-    template:'{메인} {행동어}방법, 대상·조건부터 확인' },
-  { key:'who', label:'대상형', trigger:['대상','조건','자격','기준'], 
-    template:'{메인} 대상자 기준, 신청 전 확인할 조건' },
-  { key:'howmuch', label:'금액형', trigger:['금액','환급금','지원금','한도','이자'], 
-    template:'{메인} 얼마 받을 수 있나? 금액·기준' },
-  { key:'what', label:'조회형', trigger:['조회','확인','결과조회','상태조회'], 
-    template:'{메인} 조회방법, {행동어} 확인 순서' },
-  { key:'compare', label:'비교형', trigger:['차이','비교','vs','장단점'], 
-    template:'{메인} 차이 비교, 선택 전 볼 기준' },
-  { key:'where', label:'장소형', trigger:['어디서','OTT','재방송','다시보기','편성표','영상'], 
-    template:'{메인} 어디서 볼 수 있나? OTT·재방송' },
-  { key:'who-people', label:'인물형', trigger:['출연진','등장인물','인물관계도','배우','감독'], 
-    template:'{메인} {인물어}·등장인물, 관계부터 정리' },
-  { key:'how-do', label:'방법형', trigger:['레시피','만드는법','사용법','해결','해결법','오류'], 
-    template:'{메인} {행동어}법, 실패 줄이는 순서와 주의점' },
-  { key:'why', label:'배경형', trigger:['이유','배경','필요','영향','의의'], 
-    template:'{메인} 왜 필요한가? 배경·영향·대상' }
-];
-
-// IA + CC 적용: 후킹어 감지 → 패턴 자동 추천 (Why 5번 반복 내재)
-function autoDetectTitlePattern(hookingTerms) {
-  if (!hookingTerms || hookingTerms.length === 0) return TITLE_PATTERNS[0]; // 기본값 = 언제형
-  const hookStr = hookingTerms.join(' ').toLowerCase();
-  for (const p of TITLE_PATTERNS) {
-    if (p.trigger.some(t => hookStr.includes(t))) return p;
-  }
-  return TITLE_PATTERNS[0]; // 기본값
-}
-
-// 패턴 + 후킹 → 제목 자동 생성 (수학적, AI 환각 제거)
-function generateTitleByPattern(mainKw, hookingTerms, pattern) {
-  if (!pattern) pattern = autoDetectTitlePattern(hookingTerms);
-  let result = pattern.template;
-  result = result.replace('{메인}', mainKw);
-  result = result.replace('{시점어}', hookingTerms[0] || '일정');
-  result = result.replace('{행동어}', hookingTerms[0] || '신청');
-  result = result.replace('{인물어}', hookingTerms[0] || '출연진');
-  result = result.replace('{보조어}', hookingTerms.slice(1).join('·') || '기준');
-  return normalizeSpace(result);
-}
+// ===== [v20] 제목 조합기 =====
 // 메인 = 선택 키워드(고정). 후킹 = 연관어(state.rows)를 경쟁비율 좋은 순 정렬, 메인 꼬리 추출.
 // 발행량 3000+ 후킹은 흐리게(초보 보수기준). 칩 클릭→미리보기 조합→편집→프롬프트 주입.
 function titleRatio(row){ const m=Number(row.monthly||0); if(m<=0) return Infinity; return Number(row.totalContent||0)/m; }
@@ -1110,12 +1021,10 @@ function toggleTitleHook(i){
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;
   const tails = ts.chosen.map(i=>ts.hooks[i].tail);
-  const pattern = autoDetectTitlePattern(tails);
   const edited = normalizeSpace(ts.edited||'');
-  const generated = generateTitleByPattern(ts.main, tails, pattern);
-  const draft = edited || generated;
+  const draft = edited || [ts.main, ...tails].join(' ');
   // [v21] 확정 제목을 state에 저장 → 플랫폼/문체 바꿔 프롬프트 재생성돼도 유지되게.
-  state.titleApplied = { main:ts.main, tails:[...tails], pattern, draft };
+  state.titleApplied = { main:ts.main, tails:[...tails], draft };
   // 옵션 변경으로 프롬프트가 재생성되며 제목 블록이 본문에 박히도록 renderSelected 호출
   renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1259,8 +1168,8 @@ function renderCluster(hubRow){
   let spokeHtml = '';
   if(cluster.spokes.length){
     spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
-      <div class="cl-line"><b>스포크 ${i+1}</b> <span class="pill gray">${escapeHTML((s.axes && s.axes[0]) ? s.axes[0].label : '세부')}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
-      
+      <div class="cl-line"><b>스포크 ${i+1}</b> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
+      ${s.also.length?`<div style="font-size:11px;opacity:.5;margin:2px 0 4px">+ ${s.also.map(escapeHTML).join(', ')}</div>`:''}
       <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
     </div>`).join('');
   } else {

@@ -857,7 +857,7 @@ const CATEGORIES = [
   { key:'life', label:'생활·민원', mode:'merge',
     terms:['여권','비자','비짓재팬','보육료','버스정보','준비물','발급','갱신','재발급','등록방법'] },
   { key:'person', label:'인물·프로필', mode:'single',
-    terms:['프로필','나이','학력','고향','와이프','배우자','병명','사건','논란','국적','출생지','본명','경력','지지율','나무위키'] },
+    terms:['프로필','학력','고향','와이프','배우자','병명','사건','논란','국적','출생지','본명','경력','지지율','나무위키'] },
   { key:'product', label:'제품·리뷰', mode:'merge',
     terms:['리콜','독소','후기','내돈내산','드라이버','사용법','단점','비교'] },
   { key:'season', label:'시즌·명절', mode:'season',
@@ -906,7 +906,7 @@ const UNIVERSAL_AXES = {
   platform: { label:'플랫폼축', terms:['넷플릭스','티빙','웨이브','디즈니플러스','쿠팡플레이','홈택스','정부24','복지로','티머니','모바일티머니','카카오페이','네이버페이','앱','어플','홈페이지'] },
   problem: { label:'문제·리스크축', terms:['안됨','오류','실패','부결','반려','거절','누락','지연','해지','취소','환불','리콜','독소','논란','불법','경고','문제점','부작용'] },
   compare: { label:'비교·선택축', terms:['차이','비교','vs','VS','순위','추천','장단점','리스트','BEST','대신','갈아타기'] },
-  people: { label:'인물·구성원축', terms:['출연진','등장인물','인물관계도','배우','감독','작가','제작진','PD','MC','참가자','심사위원','라인업','명단','프로필','국적','학력','나이'] },
+  people: { label:'인물·구성원축', terms:['출연진','등장인물','인물관계도','배우','감독','작가','제작진','PD','MC','참가자','심사위원','라인업','명단','프로필','국적','학력'] },
   story: { label:'서사·평가축', terms:['줄거리','결말','결말해석','원작','웹툰','실화','모티브','관람평','평점','후기','리뷰','쿠키','예고편'] },
   format: { label:'구성·포맷축', terms:['몇부작','회차','편성표','재방송','다시보기','OTT','시청률','공개시간','방송시간','시즌','파트2'] },
   document: { label:'자료·준비물축', terms:['서류','준비물','제출서류','필요서류','증빙','확인서','양식','서식','문제집','기출문제','책'] },
@@ -1014,7 +1014,7 @@ function classifyRelated(mainKw, row, category){
 
 // [v22.2] 하이브리드 분류기: policy·festival·exam·health(1년치 실측검증 + 지역축·대상축·drop)는 구버전 classifyRelated,
 // 나머지(general 포함)는 범용축 classifyRelatedV22. 검증된 로직은 유지하고, 약했던 general만 범용축으로 보강.
-const HYBRID_LEGACY_MODES = ['policy','festival','exam'];
+const HYBRID_LEGACY_MODES = ['policy','festival','exam','single'];
 function classifyRelatedHybrid(mainKw, row, category){
   const useLegacy = HYBRID_LEGACY_MODES.includes(category.mode) || category.key === 'health';
   return useLegacy ? classifyRelated(mainKw, row, category) : classifyRelatedV22(mainKw, row, category);

@@ -881,7 +881,9 @@ function detectCategory(mainKw, relatedRows){
     }
     if(score > bestScore){ bestScore = score; best = cat; }
   }
-  return best && bestScore >= 1 ? best : { key:'general', label:'일반', mode:'merge', terms:[] };
+  // [v22.3] 기준점 1→2로 상향: 연관어 34개 중 1개만 우연히 걸려도 카테고리가 확정되던 문제(나이/발급 등) 방지.
+  // 메인키워드 자체 매칭(3점)이나, 연관어 2개 이상 매칭이어야 그 카테고리로 확정.
+  return best && bestScore >= 2 ? best : { key:'general', label:'일반', mode:'merge', terms:[] };
 }
 
 const SIDO = ['서울','경기','인천','대구','대전','부산','광주','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];

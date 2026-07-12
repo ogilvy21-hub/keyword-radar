@@ -718,8 +718,10 @@ function factCheckByIntent(intent, row){
   if(pastYears.length){
     lines.push(`- 연관어에 과거 연도(${pastYears.join(', ')})가 섞여 있다. 그 정보를 현재 기준으로 단정하지 말고, 발행 시점(${currentYear}년) 기준 공식 안내를 확인해 최신 연도로 갱신해 써라.`);
   }
-  if(key==='policy' || key==='finance'){
-    lines.push(`- **이 키워드는 정책·지원금/금융형이다. 금액·지급일·신청기간·소득/재산 기준·대상 조건·신청 경로·전화번호는 해마다 바뀌고 틀리면 독자가 직접 손해를 본다.** 제공된 공식 출처가 없으면 이 수치들을 절대 단정하지 말고 "공식 페이지(국세청·홈택스 등)에서 최신 정보 확인 필요"로 처리하라.`);
+  if(key==='policy'){
+    lines.push(`- **이 키워드는 정책·지원금형이다. 금액·지급일·신청기간·소득/재산 기준·대상 조건·신청 경로·전화번호는 해마다 바뀌고 틀리면 독자가 직접 손해를 본다.** 제공된 공식 출처가 없으면 이 수치들을 절대 단정하지 말고 "공식 페이지(정부24·해당 지자체·국세청·홈택스 등)에서 최신 정보 확인 필요"로 처리하라.`);
+  } else if(key==='finance'){
+    lines.push(`- **이 키워드는 민간 금융형이다(대출·카드·결제·투자 등 정부 지원금이 아니다).** 금액·한도·금리·결제 주체·환불 절차·전화번호는 상품·업체마다 다르고 틀리면 독자가 직접 손해를 본다. 제공된 공식 출처가 없으면 이 수치·절차를 단정하지 말고, "해당 카드사·PG사·금융사 공식 고객센터" 또는 부정 결제·사기 의심 시 "금융감독원(1332) 확인 필요"로 처리하라. 정부 지원금 관련 문구(국세청·홈택스 등)를 근거 없이 끌어오지 마라.`);
   } else if(key==='content'){
     lines.push(`- 이 키워드는 방송·콘텐츠형이다. 공개 플랫폼·공개일·회차·원작 여부·출연진/등장인물·다시보기 가능 여부는 추측하지 말고, 확인되지 않으면 "공식 공개 정보 확인 필요"로 남겨라. 줄거리·결말 스포일러는 신중히.`);
   }
@@ -1392,7 +1394,7 @@ function renderRecommendTable(){
     const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
     return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
   }).join('');
-  els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; renderRecommendTable(); renderSelected(); }));
+  els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } renderRecommendTable(); renderSelected(); }));
 }
 function renderDetailTable(){
   const rows=state.rows;
@@ -1675,6 +1677,7 @@ async function analyze(){
   const seed=normalizeSpace(els.keywordInput.value);
   if(!seed){ renderIdle(); return; }
   els.analyzeBtn.disabled=true; els.analyzeBtn.textContent='분석 중...';
+  if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } // [v22.6] 키워드 바뀌면 경험 메모 초기화(오염 방지)
   state.seed = seed;
   try{
     // STEP 1: 검색광고 API 연관키워드

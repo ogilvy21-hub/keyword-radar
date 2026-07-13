@@ -13,128 +13,99 @@
   <style>
     * { box-sizing: border-box; }
     :root {
-      --page:#E4DCC6; --panel:#EDE6D6; --card:#F5F0E4; --white:#FBF8F1;
-      --ink:#1B2A2E; --ink-soft:#3E4E52;
+      --paper:#EDE6D6; --paper-2:#F5F0E4; --ink:#1B2A2E; --ink-soft:#3E4E52;
       --deep:#123642; --shallow:#4F8FA6; --clear:#1F8F73; --clear-soft:#E4F0EA;
       --flag:#B8431F; --flag-soft:#F6E3DB; --sand:#8A7F63; --line:#D8CFB8;
     }
-    body { margin:0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",sans-serif; background:var(--page); color:var(--ink); line-height:1.5; }
+    body { margin:0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",sans-serif; background:var(--paper); color:var(--ink); line-height:1.5; }
     button,input,select,textarea { font:inherit; }
     .num { font-family:'IBM Plex Mono',monospace; }
-    .app { max-width:1280px; margin:0 auto; padding:36px 28px 100px; }
+    .wrap { max-width:960px; margin:0 auto; padding:48px 24px 120px; }
 
-    /* 히어로: 제목+카피 한 블록 */
-    .hero { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:34px 36px; margin-bottom:20px; }
-    .eyebrow { margin:0 0 10px; color:var(--clear); font-size:12px; font-weight:700; letter-spacing:.1em; }
-    h1 { margin:0 0 10px; font-size:32px; line-height:1.15; letter-spacing:-.6px; color:var(--ink); }
-    .desc { max-width:74ch; margin:0; color:var(--ink-soft); font-size:14px; line-height:1.7; }
+    .topline{display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:40px;}
+    .brand{display:flex; align-items:baseline; gap:10px;}
+    .brand b{font-size:21px; font-weight:600; letter-spacing:-.2px;}
+    .brand span{font-size:12px; color:var(--ink-soft);}
 
-    /* 좌우 완전분리 패널 */
-    .layout { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; align-items:start; }
-    @media (max-width:1100px){ .layout{grid-template-columns:1fr;} }
-    .panel-left { background:var(--panel); border:1px solid var(--line); color:var(--ink); border-radius:16px; padding:26px 30px; }
-    .panel-right { background:var(--panel); border:1px solid var(--line); color:var(--ink); border-radius:16px; padding:24px 24px;
-      position:sticky; top:24px; max-height:calc(100vh - 48px); overflow-y:auto; }
-
-    /* 검색창 · STEP (왼쪽 패널 안) */
-    .search-row { display:flex; gap:10px; margin-bottom:14px; }
-    .search-row input { flex:1; border:1px solid var(--ink); background:var(--white); outline:0; padding:14px 16px; border-radius:10px; font-size:15px; }
-    .search-row button { border:0; border-radius:10px; background:var(--ink); color:var(--panel); font-weight:600; padding:0 24px; cursor:pointer; font-size:14px; }
-    .steps { display:flex; gap:6px; margin-bottom:28px; flex-wrap:wrap; }
-    .step { flex:1; min-width:110px; padding:8px 8px; border-radius:8px; background:var(--card); border:1px solid var(--line); color:var(--ink-soft); font-size:10.5px; font-weight:600; line-height:1.3; text-align:center; }
-    .step.active { background:var(--clear-soft); color:var(--clear); border-color:var(--clear); }
+    .search-row{display:flex; gap:10px; margin-bottom:10px;}
+    .search-row input{flex:1; border:1px solid var(--ink); background:var(--paper-2); padding:16px 18px; font-size:16px; font-family:inherit; color:var(--ink); border-radius:3px; outline:0;}
+    .search-row button{border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:0 26px; font-size:14px; font-weight:500; cursor:pointer; border-radius:3px; font-family:inherit;}
+    .steps{display:flex; gap:8px; margin:14px 0 56px; flex-wrap:wrap;}
+    .step{flex:1; min-width:130px; padding:10px 12px; border:1px solid var(--line); background:var(--paper-2); font-size:11px; color:var(--ink-soft); text-align:center; border-radius:3px; font-weight:600;}
+    .step.active{border-color:var(--clear); color:var(--clear); background:var(--clear-soft);}
 
     /* 판단 헤드라인 */
-    .summary-grid { display:flex; gap:18px; flex-wrap:wrap; font-size:12px; margin:14px 0 4px; }
-    .summary-grid .metric { display:flex; flex-direction:column; gap:3px; }
-    .summary-grid .metric p { margin:0; color:var(--ink-soft); font-size:10.5px; }
-    .summary-grid .metric strong { font-weight:600; font-size:13px; }
+    .summary-grid{ display:flex; gap:20px; flex-wrap:wrap; font-size:12px; margin-bottom:14px; }
+    .summary-grid .metric{ display:flex; flex-direction:column; gap:3px; }
+    .summary-grid .metric p{ margin:0; color:var(--ink-soft); font-size:11px; }
+    .summary-grid .metric strong{ font-weight:600; font-size:14px; }
 
-    .decision { margin:14px 0 18px; padding:0; display:grid; grid-template-columns:96px 1fr; gap:20px; align-items:start; }
-    .big-score-mark { border:1px solid var(--clear); background:var(--clear-soft); border-radius:10px; padding:12px 8px; text-align:center; }
-    .big-score-mark .v { font-size:30px; font-weight:600; line-height:1; color:var(--clear); }
-    .big-score-mark .l { font-size:10px; color:var(--ink-soft); margin-top:4px; }
-    .decision h3 { margin:0 0 8px; font-size:18px; line-height:1.35; letter-spacing:-.3px; }
-    .decision p { margin:0; color:var(--ink-soft); font-size:13px; line-height:1.55; }
-    .strategy-list { display:flex; flex-direction:column; gap:6px; margin-top:14px; grid-column:1/-1; }
-    .strategy-item { padding:8px 12px; border-radius:6px; background:var(--card); border:1px solid var(--line); color:var(--ink-soft); font-size:12px; line-height:1.5; }
+    .decision{ display:grid; grid-template-columns:150px 1fr; gap:32px; align-items:start; margin-bottom:20px; }
+    .big-score-mark{ border:1px solid var(--ink); background:var(--clear-soft); border-radius:4px; padding:18px 10px; text-align:center; }
+    .big-score-mark .v{ font-size:44px; font-weight:600; line-height:1; }
+    .big-score-mark .l{ font-size:11px; color:var(--ink-soft); margin-top:6px; }
+    .decision h1{ font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:-.3px; }
+    .decision p{ font-size:14px; color:var(--ink-soft); margin:0 0 16px; max-width:60ch; }
+    .strategy-list{ display:flex; flex-direction:column; gap:8px; margin:24px 0 8px; max-width:70ch; grid-column:1/-1; }
+    .strategy-item{ font-size:13px; color:var(--ink-soft); padding-left:16px; border-left:2px solid var(--clear); }
 
-    .section-title { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin:26px 0 10px; }
-    .section-title h3 { margin:0; font-size:13px; font-weight:600; }
-    .micro-hint { font-size:11px; color:var(--ink-soft); white-space:nowrap; }
-    .table-caption { color:var(--ink-soft); font-size:11.5px; line-height:1.5; margin:-2px 0 8px; }
+    .section-title{ display:flex; align-items:baseline; justify-content:space-between; margin:64px 0 18px; }
+    .section-title h3{ font-size:15px; font-weight:600; margin:0; }
+    .micro-hint{ font-size:11px; color:var(--ink-soft); white-space:nowrap; }
+    .table-caption{ font-size:12px; color:var(--ink-soft); margin:-8px 0 14px; }
 
-    .table-wrap { overflow:auto; max-height:420px; border-radius:10px; border:1px solid var(--line); background:var(--white); }
-    table { width:100%; border-collapse:collapse; min-width:900px; }
-    th { position:sticky; top:0; z-index:1; background:var(--card); color:var(--ink-soft); font-weight:600; }
-    th,td { padding:9px 10px; border-bottom:1px solid var(--line); text-align:left; font-size:11.5px; white-space:nowrap; }
-    td { color:var(--ink); }
-    .recommend-table th:first-child,.recommend-table td:first-child,.detail-table th:first-child,.detail-table td:first-child { position:sticky; left:0; z-index:2; background:var(--white); }
-    .recommend-table th:first-child,.detail-table th:first-child { z-index:4; background:var(--card); }
-    .recommend-table td:first-child,.detail-table td:first-child { min-width:180px; max-width:260px; white-space:normal; line-height:1.4; font-weight:600; }
-    tr.selected td { background:var(--clear-soft); }
-    .pick-btn { border:0; border-radius:8px; padding:6px 10px; background:var(--ink); color:var(--panel); font-size:11px; font-weight:600; cursor:pointer; }
+    .table-wrap{ overflow:auto; max-height:440px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; min-width:880px; }
+    th{ position:sticky; top:0; background:var(--paper-2); text-align:left; color:var(--ink-soft); font-weight:600; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td{ padding:11px 12px; border-bottom:1px solid var(--line); color:var(--ink); white-space:nowrap; }
+    .recommend-table td:first-child,.detail-table td:first-child{ font-weight:500; white-space:normal; min-width:180px; }
+    tr.selected td{ background:var(--clear-soft); }
+    .pick-btn{ border:1px solid var(--ink); border-radius:6px; padding:6px 10px; background:transparent; color:var(--ink); font-size:11px; font-weight:600; cursor:pointer; }
+    .reason-cell{ max-width:280px; white-space:normal; color:var(--ink-soft); }
+    .detail-table table{ min-width:1200px; }
 
-    .detail-fold { margin:14px 0; border:1px solid var(--line); border-radius:10px; padding:2px 14px; background:var(--card); }
-    .detail-fold summary { cursor:pointer; padding:10px 0; list-style:none; display:flex; align-items:center; gap:8px; }
-    .detail-fold summary::-webkit-details-marker { display:none; }
-    .detail-fold summary::before { content:'▶'; font-size:10px; color:var(--shallow); transition:transform .15s; }
-    .detail-fold[open] summary::before { transform:rotate(90deg); }
-    .fold-title { font-size:13px; font-weight:600; color:var(--ink); }
+    .pill{ display:inline-flex; align-items:center; padding:4px 9px; border-radius:8px; background:var(--paper-2); color:var(--ink-soft); font-size:10.5px; font-weight:600; white-space:nowrap; }
+    .pill.green{ background:var(--clear-soft); color:var(--clear); } .pill.yellow{ background:#F3E7C8; color:#8A6A16; } .pill.red{ background:var(--flag-soft); color:var(--flag); } .pill.gray{ background:var(--paper-2); color:var(--ink-soft); }
+    .pill.cpc{ background:var(--flag-soft); color:var(--flag); }
+    .score{ display:inline-flex; min-width:36px; height:24px; align-items:center; justify-content:center; border-radius:8px; background:var(--clear-soft); color:var(--clear); font-weight:600; font-size:11.5px; } .score.mid{ background:#F3E7C8; color:#8A6A16; } .score.low{ background:var(--flag-soft); color:var(--flag); }
 
-    .pill { display:inline-flex; align-items:center; justify-content:center; padding:4px 8px; border-radius:8px; background:var(--card); color:var(--ink-soft); font-size:10.5px; font-weight:600; white-space:nowrap; }
-    .pill.green { background:var(--clear-soft); color:var(--clear); } .pill.yellow { background:#F3E7C8; color:#8A6A16; } .pill.red { background:var(--flag-soft); color:var(--flag); } .pill.gray { background:var(--card); color:var(--ink-soft); }
-    .pill.cpc { background:var(--flag-soft); color:var(--flag); }
-    .score { display:inline-flex; min-width:36px; height:24px; align-items:center; justify-content:center; border-radius:8px; background:var(--clear-soft); color:var(--clear); font-weight:600; font-size:11.5px; } .score.mid { background:#F3E7C8; color:#8A6A16; } .score.low { background:var(--flag-soft); color:var(--flag); }
-    .reason-cell { max-width:320px; white-space:normal; line-height:1.5; color:var(--ink-soft); } .detail-table table { min-width:1280px; }
+    details{ border:1px solid var(--line); border-radius:4px; margin-bottom:14px; background:var(--paper-2); }
+    details summary{ padding:16px 18px; font-size:13.5px; font-weight:600; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+    details summary::-webkit-details-marker{ display:none; }
+    details summary::after{ content:'열기'; font-size:11px; color:var(--shallow); font-weight:500; }
+    details[open] summary::after{ content:'닫기'; }
+    .detail-fold .fold-title{ font-weight:600; }
+    details > .body, details > p.table-caption, details > div.table-wrap{ margin:0 18px 18px; }
+    details p.table-caption{ margin-top:0; }
+    details .table-wrap{ margin-top:0; }
 
-    .builder-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    @media (max-width:700px){ .builder-grid{grid-template-columns:1fr;} }
-    .card { padding:14px 16px; border-radius:10px; background:var(--card); border:1px solid var(--line); }
-    .card h4 { margin:0 0 10px; font-size:12.5px; font-weight:600; }
-    .chip-wrap { display:flex; flex-wrap:wrap; gap:6px; } .chip { padding:6px 9px; border-radius:8px; background:var(--white); border:1px solid var(--line); color:var(--ink-soft); font-size:11px; font-weight:600; } .chip.hot { background:var(--shallow); color:#fff; border-color:var(--shallow); }
-    .title-list,.outline-list { display:grid; gap:7px; } .title-item,.outline-item { padding:10px; border-radius:8px; background:var(--white); border:1px solid var(--line); color:var(--ink); font-size:11.5px; line-height:1.5; }
-    .outline-item { display:flex; gap:9px; } .outline-item span { flex:0 0 20px; width:20px; height:20px; display:grid; place-items:center; border-radius:50%; background:var(--ink); color:var(--panel); font-size:10px; font-weight:600; }
+    .builder-grid{ display:flex; flex-direction:column; gap:0; }
+    .card{ padding:0; }
+    .card h4{ font-size:14px; font-weight:600; margin:0 0 14px; }
+    .cluster-row{ display:flex; gap:10px; margin-bottom:9px; align-items:center; font-size:13px; }
+    .cluster-row .axis{ font-size:10px; padding:3px 8px; border-radius:8px; background:var(--paper); border:1px solid var(--line); color:var(--ink-soft); flex-shrink:0; }
+    .cluster-row .kw{ flex:1; }
+    .cluster-row .n{ color:var(--sand); font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    .cluster-node{ margin-bottom:10px; }
+    .cluster-node.hub .cl-line::before{ content:'허브 · '; color:var(--ink-soft); font-weight:600; font-size:11px; }
+    .cluster-node.spoke .cl-line::before{ content:'스포크 · '; color:var(--ink-soft); font-weight:600; font-size:11px; }
+    .cl-line{ font-size:13px; margin-bottom:6px; }
+    .cl-btn{ border:1px solid var(--ink); border-radius:6px; padding:6px 10px; background:transparent; font-size:11px; cursor:pointer; }
 
-    /* 오른쪽 패널 */
-    .side-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:16px; }
-    .side-label { margin:0 0 6px; color:var(--shallow); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-    .side-head h2 { margin:0; font-size:18px; line-height:1.3; letter-spacing:-.3px; }
-    .badge { flex:0 0 auto; padding:5px 10px; border-radius:8px; background:var(--clear-soft); color:var(--clear); font-size:11px; font-weight:600; }
-    .side-box { margin-top:12px; padding:15px 16px; border-radius:10px; background:var(--card); border:1px solid var(--line); }
-    .side-box.dark { background:var(--card); }
-    .side-box h3 { margin:0 0 10px; font-size:12.5px; font-weight:600; }
-    .side-box p { margin:0; color:var(--ink-soft); font-size:12px; line-height:1.6; }
-    .opportunity { display:grid; grid-template-columns:64px 1fr; gap:12px; align-items:center; }
-    .big-score { width:60px; height:60px; display:grid; place-items:center; border-radius:10px; background:var(--clear); color:#fff; font-size:22px; font-weight:600; }
-    .mini-list { display:grid; gap:6px; }
-    .mini-list div { display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:6px; background:var(--white); color:var(--ink); font-size:12px; font-weight:500; }
-    textarea { width:100%; min-height:150px; border:1px solid var(--line); border-radius:8px; padding:11px; resize:vertical; color:var(--ink); background:var(--white); font-size:12px; line-height:1.6; outline:0; font-family:'IBM Plex Mono',monospace; }
+    .chip-wrap{ display:flex; flex-wrap:wrap; gap:6px; }
+    .chip{ padding:8px 12px; border-radius:12px; background:var(--flag-soft); border:1px solid var(--flag); color:var(--flag); font-size:12px; }
+    .chip.hot{ background:var(--shallow); color:#fff; border-color:var(--shallow); }
 
-    .option-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .option-field label { display:block; margin:0 0 4px; color:var(--ink-soft); font-size:10.5px; font-weight:600; }
-    .option-field select { width:100%; border:1px solid var(--line); border-radius:6px; background:var(--white); padding:8px 8px; color:var(--ink); font-size:12px; outline:0; }
-    .format-options { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
-    .check-item { display:flex; align-items:center; gap:6px; padding:8px; border-radius:6px; background:var(--white); border:1px solid var(--line); color:var(--ink); font-size:11.5px; font-weight:500; cursor:pointer; }
-    .check-item input{ accent-color:var(--clear); }
-    .exp-box { margin-top:10px; padding:11px 12px; border-radius:8px; background:var(--flag-soft); border:1px solid var(--flag); }
-    .exp-head { font-size:11.5px; font-weight:600; color:var(--flag); margin-bottom:6px; line-height:1.4; }
-    .exp-head .exp-tip { display:block; margin-top:2px; font-size:10px; font-weight:500; color:var(--flag); opacity:.85; }
-    .exp-box textarea { min-height:56px; border:1px solid var(--line); font-size:12px; background:var(--white); font-family:inherit; }
-    .exp-hint { margin:6px 0 0; font-size:10px; color:var(--flag); opacity:.85; line-height:1.5; }
-    .action-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px; }
-    .action-row button,.full-btn { border:1px solid var(--ink); border-radius:8px; padding:12px 10px; font-weight:600; cursor:pointer; font-size:12.5px; background:transparent; color:var(--ink); }
-    .green{ background:var(--clear); color:#fff; border-color:var(--clear); } .black{ background:var(--ink); color:var(--panel); } .blue{ background:var(--clear); color:#fff; border-color:var(--clear); }
-    .full-btn{ width:100%; margin-top:10px; }
-    .empty { padding:16px 16px; border-radius:10px; background:var(--white); border:1px solid var(--line); color:var(--ink); line-height:1.6; font-size:12.5px; } .empty strong { display:block; margin-bottom:5px; font-size:14px; }
+    .title-list,.outline-list{ display:flex; flex-direction:column; gap:6px; }
+    .title-item,.outline-item{ padding:10px 12px; border:1px solid var(--line); border-radius:4px; background:#fff; font-size:12.5px; color:var(--ink); }
 
     /* 제목 조합기 */
-    .tb-main{ display:inline-flex; align-items:center; gap:8px; background:var(--ink); color:var(--panel); border-radius:8px; padding:8px 12px; font-weight:600; font-size:13px; margin-bottom:4px; overflow-wrap:anywhere; }
-    .tb-main .tb-tag{ font-size:9.5px; background:rgba(255,255,255,.2); padding:2px 6px; border-radius:5px; font-weight:500; }
-    .tb-mini{ font-size:10.5px; font-weight:700; color:var(--clear); letter-spacing:.05em; margin:10px 0 6px; }
+    .tb-main{ display:inline-flex; align-items:center; gap:8px; background:var(--ink); color:var(--paper); border-radius:8px; padding:9px 13px; font-weight:600; font-size:14px; margin-bottom:6px; overflow-wrap:anywhere; }
+    .tb-main .tb-tag{ font-size:10px; background:rgba(255,255,255,.2); padding:2px 7px; border-radius:6px; font-weight:500; }
+    .tb-mini{ font-size:11px; font-weight:700; color:var(--clear); letter-spacing:.05em; margin:14px 0 8px; }
     .tb-mini span{ color:var(--ink-soft); font-weight:500; letter-spacing:0; }
-    .tb-chips{ display:flex; flex-wrap:wrap; gap:6px; }
-    .tb-chip{ border:1px solid var(--shallow); background:var(--white); border-radius:8px; padding:6px 9px; cursor:pointer; font:inherit; text-align:left; transition:.12s; }
+    .tb-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .tb-chip{ border:1px solid var(--shallow); background:var(--paper); border-radius:12px; padding:8px 12px; cursor:pointer; font:inherit; text-align:left; transition:.12s; }
     .tb-chip:hover{ border-color:var(--clear); background:var(--clear-soft); }
     .tb-chip.dim{ opacity:.4; }
     .tb-chip.used{ background:var(--shallow); border-color:var(--shallow); }
@@ -144,158 +115,188 @@
     .tb-chip-blog.used{ background:var(--flag); border-color:var(--flag); }
     .tb-chip-blog.used .tb-ct,.tb-chip-blog.used .tb-cm{ color:#fff; }
     .tb-chip.used .tb-ct{ color:#fff; } .tb-chip.used .tb-cm{ color:#EAF3EE; }
-    .tb-ct{ display:block; font-weight:600; font-size:11.5px; color:var(--ink); overflow-wrap:anywhere; }
-    .tb-cm{ display:block; font-size:9.5px; color:var(--ink-soft); margin-top:2px; font-weight:500; }
-    .tb-chosen{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
-    .tb-pin{ display:inline-flex; align-items:center; gap:5px; background:var(--clear-soft); color:var(--clear); border-radius:8px; padding:4px 7px 4px 10px; font-size:10.5px; font-weight:600; }
-    .tb-pin b{ cursor:pointer; color:var(--clear); font-size:12px; }
-    .tb-preview{ border:1px dashed var(--line); border-radius:8px; padding:10px 11px; background:var(--white); }
-    .tb-pline{ font-size:14px; font-weight:600; color:var(--ink); line-height:1.5; overflow-wrap:anywhere; }
-    .tb-edit{ width:100%; border:1px solid var(--line); border-radius:6px; padding:9px; font-size:13px; font-weight:500; margin-top:8px; outline:0; background:var(--white); color:var(--ink); }
-    .tb-actions{ display:flex; gap:8px; margin-top:10px; }
-    .tb-actions button{ flex:1; border:0; border-radius:8px; padding:10px; font-weight:600; cursor:pointer; font-size:12px; }
-    .tb-apply{ background:var(--clear); color:#fff; } .tb-clear{ background:var(--white); border:1px solid var(--line); color:var(--ink-soft); }
-    .tb-hint{ font-size:10.5px; color:var(--ink-soft); margin-top:7px; line-height:1.5; }
-    .tb-empty{ color:var(--ink-soft); font-size:11.5px; font-weight:500; padding:6px 0; line-height:1.5; }
+    .tb-ct{ display:block; font-weight:600; font-size:12.5px; color:var(--ink); overflow-wrap:anywhere; }
+    .tb-cm{ display:block; font-size:10px; color:var(--ink-soft); margin-top:2px; font-weight:500; }
+    .tb-chosen{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+    .tb-pin{ display:inline-flex; align-items:center; gap:5px; background:var(--clear-soft); color:var(--clear); border-radius:10px; padding:5px 8px 5px 12px; font-size:11px; font-weight:600; }
+    .tb-pin b{ cursor:pointer; color:var(--clear); font-size:13px; }
+    .tb-preview{ margin-top:16px; border:1px dashed var(--line); border-radius:4px; padding:14px 16px; background:var(--paper); }
+    .tb-pline{ font-size:15px; font-weight:600; color:var(--ink); line-height:1.5; overflow-wrap:anywhere; }
+    .tb-edit{ width:100%; margin-top:8px; border:1px solid var(--line); border-radius:3px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }
+    .tb-actions{ display:flex; gap:8px; margin-top:12px; }
+    .tb-actions button{ flex:1; border:1px solid var(--ink); background:transparent; padding:10px; font-size:12.5px; font-family:inherit; cursor:pointer; border-radius:3px; }
+    .tb-apply{ background:var(--clear); color:#fff; border-color:var(--clear); } .tb-clear{ background:transparent; }
+    .tb-hint{ font-size:11px; color:var(--ink-soft); margin-top:9px; line-height:1.5; }
+    .tb-empty{ color:var(--ink-soft); font-size:12px; padding:8px 0; }
 
-    /* 발행 제목 목록: 스크롤 박스 */
-    .pt-list{ max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; border:1px dashed var(--line); border-radius:8px; padding:10px 11px; background:var(--white); }
-    .pt-item{ font-size:11.5px; line-height:1.5; color:var(--ink-soft); overflow-wrap:anywhere; word-break:keep-all; }
-    .pt-item .pt-num{ display:inline-block; min-width:16px; color:var(--sand); font-weight:600; font-size:10px; font-family:'IBM Plex Mono',monospace; }
-    .pt-more{ margin-top:6px; }
-    .pt-more summary{ cursor:pointer; font-size:11px; font-weight:600; color:var(--clear); list-style:none; padding:4px 0; }
+    /* 발행 제목 목록 */
+    .pt-list{ max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:5px; border:1px dashed var(--line); border-radius:4px; padding:14px 16px; background:var(--paper); margin-top:12px; }
+    .pt-item{ font-size:12.5px; line-height:1.7; color:var(--ink-soft); overflow-wrap:anywhere; }
+    .pt-item .pt-num{ display:inline-block; min-width:18px; color:var(--sand); font-weight:600; font-size:10.5px; font-family:'IBM Plex Mono',monospace; }
+    .pt-more{ margin-top:8px; }
+    .pt-more summary{ cursor:pointer; font-size:11.5px; font-weight:600; color:var(--clear); list-style:none; padding:6px 0; background:none; border:none; }
     .pt-more summary::-webkit-details-marker{ display:none; }
+    .pt-more summary::after{ content:''; }
     .pt-more summary::before{ content:'▸ '; }
     .pt-more[open] summary::before{ content:'▾ '; }
-    .pt-more .pt-list{ margin-top:6px; max-height:120px; }
+    .pt-more .pt-list{ margin-top:7px; }
 
-    @media (max-width:520px){
-      .search-row{ grid-template-columns:1fr; }
-      .decision{ grid-template-columns:1fr; }
-    }
+    /* 원고 옵션 */
+    .option-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .option-field label{ display:block; font-size:11px; color:var(--ink-soft); margin-bottom:5px; font-weight:600; }
+    .option-field select{ width:100%; border:1px solid var(--line); background:#fff; padding:10px 10px; font-family:inherit; font-size:13px; border-radius:3px; }
+    .format-options{ display:flex; gap:10px; margin-top:14px; }
+    .check-item{ display:flex; align-items:center; gap:7px; padding:10px 14px; border-radius:3px; background:#fff; border:1px solid var(--line); color:var(--ink); font-size:12.5px; cursor:pointer; }
+    .check-item input{ accent-color:var(--clear); }
+    .exp-box{ margin-top:16px; border:1px solid var(--flag); background:var(--flag-soft); border-radius:4px; padding:14px 16px; }
+    .exp-head{ font-size:12.5px; color:var(--flag); font-weight:600; margin-bottom:8px; line-height:1.4; }
+    .exp-head .exp-tip{ display:block; margin-top:2px; font-size:10.5px; font-weight:500; color:var(--flag); opacity:.85; }
+    .exp-box textarea{ min-height:70px; }
+    .exp-hint{ margin:8px 0 0; font-size:10.5px; color:var(--flag); opacity:.85; line-height:1.5; }
+
+    textarea{ width:100%; border:1px solid var(--line); background:#fff; font-family:inherit; font-size:13px; padding:10px 11px; border-radius:3px; resize:vertical; outline:0; }
+
+    /* 프롬프트 (항상 펼침) */
+    .prompt-card{ border:1px solid var(--ink); border-radius:4px; overflow:hidden; }
+    .prompt-head{ background:var(--deep); color:var(--paper-2); padding:16px 20px; font-size:13px; }
+    .prompt-head .full-btn{ width:100%; margin-top:10px; border:1px solid var(--paper-2); background:transparent; color:var(--paper-2); font-size:12.5px; padding:10px; border-radius:3px; cursor:pointer; font-family:inherit; }
+    #draftPrompt{ background:var(--paper-2); border:none; border-radius:0; padding:20px; font-size:12.5px; color:var(--ink-soft); line-height:1.8; min-height:180px; max-height:260px; font-family:'IBM Plex Mono',monospace; resize:vertical; }
+
+    .action-row{ display:flex; gap:10px; margin-top:60px; }
+    .action-row button{ flex:1; border:1px solid var(--ink); background:transparent; padding:14px; font-size:13px; font-family:inherit; cursor:pointer; border-radius:3px; color:var(--ink); }
+    .action-row button.black{ background:var(--ink); color:var(--paper); }
+    .green{ background:var(--clear); color:#fff; border-color:var(--clear); }
+
+    .empty{ padding:18px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink); font-size:12.5px; line-height:1.7; } .empty strong{ display:block; margin-bottom:6px; font-size:14px; }
+    .mini-list{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .mini-list div{ display:flex; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-2); border-radius:4px; font-size:12px; }
+    .mini-list div span{ color:var(--ink-soft); }
+    .mini-list div b{ font-weight:600; }
   </style>
 </head>
 <body>
-  <div class="app">
+<div class="wrap">
 
-    <div class="hero">
-      <p class="eyebrow">검색량 많고 경쟁 적은 글감 발굴기</p>
-      <h1>글감레이더</h1>
-      <p class="desc">네이버 검색광고 API의 연관키워드에 네이버·구글 자동완성을 결합합니다. 검색광고 API가 못 주는 트렌드·신조어·미래 키워드까지 자동완성에서 끌어와 후보로 만들고, 검색의도·구글 유입 적합도로 정렬합니다.</p>
-    </div>
-
-    <div class="layout">
-      <div class="panel-left">
-
-        <div class="search-row">
-          <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
-          <button id="analyzeBtn">분석하기 →</button>
-        </div>
-        <div class="steps">
-          <div class="step active">STEP 1 · 검색량 수집</div>
-          <div class="step active">STEP 2 · 연관·신조어 발굴</div>
-          <div class="step active">STEP 3 · 경쟁 발행량 확인</div>
-          <div class="step active">STEP 4 · 블루오션 선별</div>
-          <div class="step active">STEP 5 · 허브·스포크·제목</div>
-        </div>
-
-        <div class="summary-grid">
-          <div class="metric"><p>API 후보</p><strong id="totalKeywords">0개</strong></div>
-          <div class="metric"><p>추천 글감</p><strong id="bestKeywordText">-</strong></div>
-          <div class="metric"><p>판단</p><strong id="intentShortText">-</strong></div>
-        </div>
-
-        <div class="decision">
-          <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">글감점수</div></div>
-          <div>
-            <h3 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h3>
-            <p id="judgementReason">검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.</p>
-          </div>
-          <div class="strategy-list" id="strategyList"></div>
-        </div>
-
-        <div class="section-title">
-          <h3>블루오션 글감 TOP 6</h3>
-          <span class="micro-hint">의도 명확 + 경쟁 적음 + AI 인용형 우선</span>
-        </div>
-        <p class="table-caption">검색 수요는 받쳐주면서 발행량이 적고, 검색의도가 뚜렷하며 AI 브리핑이 인용하기 쉬운 답변형 후보를 우선 추천합니다.</p>
-        <div class="table-wrap recommend-table">
-          <table>
-            <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>발행량</th><th>경쟁비율</th><th>의도근거</th><th>구글적합</th><th>AI인용</th><th>점수</th></tr></thead>
-            <tbody id="keywordTable"></tbody>
-          </table>
-        </div>
-
-        <details class="detail-fold">
-          <summary><span class="fold-title">상세 후보 검증표</span> <span class="micro-hint">추천 근거가 궁금할 때 펼쳐보세요</span></summary>
-          <p class="table-caption">각 키워드의 검색량·발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
-          <div class="table-wrap detail-table">
-            <table>
-              <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그</th><th>카페</th><th>발행량</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>AI인용</th><th>점수</th><th>추천 이유</th></tr></thead>
-              <tbody id="detailKeywordTable"></tbody>
-            </table>
-          </div>
-        </details>
-
-        <div class="section-title">
-          <h3>선택 키워드 기반 클러스터·제목</h3>
-          <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
-        </div>
-        <div class="builder-grid">
-          <div class="card"><h4>콘텐츠 클러스터 <span class="micro-hint">허브 1 + 스포크 5, 각 원고 프롬프트</span></h4><div id="clusterBox"></div></div>
-          <div class="card">
-            <h4>제목 조합기 <span class="micro-hint">메인 + 후킹 + 발행패턴 → 확정 제목</span></h4>
-            <div id="titleBuilder"></div>
-          </div>
-        </div>
-        <div class="card" style="margin-top:14px;">
-          <h4>발행 제목 참고 <span class="micro-hint">상위 블로그·뉴스가 제목에 쓴 후킹 (눈으로 참고해 편집칸에 활용)</span></h4>
-          <div class="title-list" id="titleList"></div>
-        </div>
-
-        <div class="action-row"><button id="copyKeywordsBtn">키워드 복사</button><button id="resetBtn" style="background:var(--ink); color:var(--panel);">초기화</button></div>
-      </div>
-
-      <div class="panel-right">
-        <div class="side-head">
-          <div><p class="side-label">SELECTED KEYWORD</p><h2 id="sideKeyword">-</h2></div>
-          <span class="badge" id="sideBadge">대기</span>
-        </div>
-
-        <section class="side-box dark">
-          <h3>키워드 선택 판단</h3>
-          <div class="opportunity"><div class="big-score" id="sideScore">0</div><p id="sideReason">키워드를 분석하면 추천 이유가 표시됩니다.</p></div>
-        </section>
-
-        <section class="side-box">
-          <h3>경쟁 데이터</h3>
-          <div class="mini-list" id="sideMetrics"></div>
-        </section>
-
-        <section class="side-box">
-          <h3>원고 생성 옵션</h3>
-          <div class="option-grid">
-            <div class="option-field"><label for="platformSelect">플랫폼</label><select id="platformSelect"><option>티스토리</option><option>네이버 블로그</option><option>워드프레스</option><option>블로그스팟</option><option>브런치</option><option>네이버 홈판용</option></select></div>
-            <div class="option-field"><label for="toneSelect">문체</label><select id="toneSelect"><option>정보형</option><option>애널리스트형</option><option>감성 에세이형</option><option>생활정보형</option><option>리뷰형</option></select></div>
-            <div class="option-field"><label for="lengthSelect">분량</label><select id="lengthSelect"><option>짧게 800자</option><option selected>일반 1500자</option><option>깊게 3000자</option><option>장문 5000자 이상</option></select><span style="display:none" id="lengthHint"></span></div>
-            <div class="option-field"><label for="outputSelect">출력</label><select id="outputSelect"><option>텍스트</option><option>HTML</option></select></div>
-          </div>
-          <div class="format-options"><label class="check-item"><input id="tableCheck" type="checkbox" checked /> 표 포함</label><label class="check-item"><input id="faqCheck" type="checkbox" checked /> FAQ 포함</label></div>
-          <div class="exp-box">
-            <div class="exp-head">✍️ 직접 겪은 경험·주의점 <span class="exp-tip">AI가 모르는 '나만 아는 빈틈' (비우면 안 넣음)</span></div>
-            <textarea id="expInput" rows="3" placeholder="직접 겪은 경험·주의점을 적으면 글에 녹입니다." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-            <p class="exp-hint" id="expHint">공식·광고·AI는 좋은 말만 합니다. 해본 사람만 아는 '안 되는 것·막히는 것·다른 것'이 검색 상위로 갑니다.</p>
-          </div>
-        </section>
-
-        <section class="side-box">
-          <h3>원고 작성 프롬프트</h3>
-          <textarea id="draftPrompt" readonly></textarea>
-          <button class="full-btn blue" id="copyPromptBtn">원고 프롬프트 복사</button>
-        </section>
-      </div>
-    </div>
+  <div class="topline">
+    <div class="brand"><b>글감레이더</b><span>키워드 하나로 쓸 글감과 제목까지</span></div>
   </div>
+
+  <div class="search-row">
+    <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
+    <button id="analyzeBtn">분석하기 →</button>
+  </div>
+  <div class="steps">
+    <div class="step active">STEP 1 · 검색량 수집</div>
+    <div class="step active">STEP 2 · 연관·신조어 발굴</div>
+    <div class="step active">STEP 3 · 경쟁 발행량 확인</div>
+    <div class="step active">STEP 4 · 블루오션 선별</div>
+    <div class="step active">STEP 5 · 허브·스포크·제목</div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="metric"><p>API 후보</p><strong id="totalKeywords">0개</strong></div>
+    <div class="metric"><p>추천 글감</p><strong id="bestKeywordText">-</strong></div>
+    <div class="metric"><p>판단</p><strong id="intentShortText">-</strong></div>
+  </div>
+
+  <div class="decision">
+    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">글감점수</div></div>
+    <div>
+      <h1 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h1>
+      <p id="judgementReason">검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.</p>
+    </div>
+    <div class="strategy-list" id="strategyList"></div>
+  </div>
+
+  <div class="section-title">
+    <h3>블루오션 글감 TOP 6</h3>
+    <span class="micro-hint">의도 명확 + 경쟁 적음 + AI 인용형 우선</span>
+  </div>
+  <p class="table-caption">검색 수요는 받쳐주면서 발행량이 적고, 검색의도가 뚜렷하며 AI 브리핑이 인용하기 쉬운 답변형 후보를 우선 추천합니다.</p>
+  <div class="table-wrap recommend-table">
+    <table>
+      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>발행량</th><th>경쟁비율</th><th>의도근거</th><th>구글적합</th><th>AI인용</th><th>점수</th></tr></thead>
+      <tbody id="keywordTable"></tbody>
+    </table>
+  </div>
+
+  <details style="margin-top:20px;">
+    <summary><span class="fold-title">상세 후보 검증표</span> <span class="micro-hint">추천 근거가 궁금할 때 펼쳐보세요</span></summary>
+    <p class="table-caption">각 키워드의 검색량·발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
+    <div class="table-wrap detail-table">
+      <table>
+        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그</th><th>카페</th><th>발행량</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>AI인용</th><th>점수</th><th>추천 이유</th></tr></thead>
+        <tbody id="detailKeywordTable"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="section-title" style="margin-top:64px;">
+    <h3 id="clusterTitleHeading">선택 키워드 기반 클러스터·제목</h3>
+    <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
+  </div>
+
+  <details>
+    <summary>콘텐츠 클러스터 <span class="micro-hint">허브 1 + 스포크 5, 각 원고 프롬프트</span></summary>
+    <div class="body"><div id="clusterBox"></div></div>
+  </details>
+
+  <details>
+    <summary>제목 조합기 <span class="micro-hint">메인 + 후킹 + 발행패턴 → 확정 제목</span></summary>
+    <div class="body"><div id="titleBuilder"></div></div>
+  </details>
+
+  <details>
+    <summary>발행 제목 참고 <span class="micro-hint">상위 블로그·뉴스가 제목에 쓴 후킹</span></summary>
+    <div class="body"><div class="title-list" id="titleList"></div></div>
+  </details>
+
+  <details>
+    <summary>원고 생성 옵션 · 경험 입력</summary>
+    <div class="body">
+      <div class="option-grid">
+        <div class="option-field"><label for="platformSelect">플랫폼</label><select id="platformSelect"><option>티스토리</option><option>네이버 블로그</option><option>워드프레스</option><option>블로그스팟</option><option>브런치</option><option>네이버 홈판용</option></select></div>
+        <div class="option-field"><label for="toneSelect">문체</label><select id="toneSelect"><option>정보형</option><option>애널리스트형</option><option>감성 에세이형</option><option>생활정보형</option><option>리뷰형</option></select></div>
+        <div class="option-field"><label for="lengthSelect">분량</label><select id="lengthSelect"><option>짧게 800자</option><option selected>일반 1500자</option><option>깊게 3000자</option><option>장문 5000자 이상</option></select><span style="display:none" id="lengthHint"></span></div>
+        <div class="option-field"><label for="outputSelect">출력</label><select id="outputSelect"><option>텍스트</option><option>HTML</option></select></div>
+      </div>
+      <div class="format-options"><label class="check-item"><input id="tableCheck" type="checkbox" checked /> 표 포함</label><label class="check-item"><input id="faqCheck" type="checkbox" checked /> FAQ 포함</label></div>
+      <div class="exp-box">
+        <div class="exp-head">✍️ 직접 겪은 경험·주의점 <span class="exp-tip">AI가 모르는 '나만 아는 빈틈' (비우면 안 넣음)</span></div>
+        <textarea id="expInput" rows="3" placeholder="직접 겪은 경험·주의점을 적으면 글에 녹입니다." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+        <p class="exp-hint" id="expHint">공식·광고·AI는 좋은 말만 합니다. 해본 사람만 아는 '안 되는 것·막히는 것·다른 것'이 검색 상위로 갑니다.</p>
+      </div>
+    </div>
+  </details>
+
+  <div class="section-title" style="margin-top:64px;">
+    <h3>선택 키워드 판단</h3>
+  </div>
+  <div class="table-wrap" style="max-height:none; border:1px solid var(--line); border-radius:4px; padding:18px 20px; background:#fff;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:12px;">
+      <div><p class="micro-hint" style="margin:0 0 4px;">SELECTED KEYWORD</p><h2 id="sideKeyword" style="margin:0; font-size:18px;">-</h2></div>
+      <span class="pill green" id="sideBadge" style="font-size:12px; padding:6px 12px;">대기</span>
+    </div>
+    <div style="display:grid; grid-template-columns:64px 1fr; gap:16px; align-items:center; margin-bottom:16px;">
+      <div class="big-score-mark" style="padding:10px 6px;"><div class="v num" id="sideScore" style="font-size:24px;">0</div></div>
+      <p id="sideReason" style="margin:0; color:var(--ink-soft); font-size:12.5px; line-height:1.6;">키워드를 분석하면 추천 이유가 표시됩니다.</p>
+    </div>
+    <div id="sideMetrics" class="mini-list"></div>
+  </div>
+
+  <div class="section-title"><h3>원고 작성 프롬프트</h3><span class="micro-hint">완성됨 — 복사해서 사용</span></div>
+  <div class="prompt-card">
+    <div class="prompt-head">
+      위 설정을 반영해 자동으로 만들어졌습니다. 그대로 복사해서 ChatGPT·Claude 등 AI에 붙여넣고 원고를 받으세요.
+      <button class="full-btn" id="copyPromptBtn">원고 프롬프트 복사</button>
+    </div>
+    <textarea id="draftPrompt" readonly></textarea>
+  </div>
+
+  <div class="action-row"><button class="green" id="copyKeywordsBtn">키워드 복사</button><button class="black" id="resetBtn">초기화</button></div>
+
+  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v22</p>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);

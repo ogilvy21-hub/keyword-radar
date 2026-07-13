@@ -1703,7 +1703,9 @@ async function analyze(){
       try {
         const p = await fetchSearchAdCached(d.kw);
         const sList = extractKeywordList(p);
-        const hit = findExactItem(sList, d.kw) || sList[0] || null;
+        // [v22.7] sList[0] 폴백 제거: 정확히 일치하는 키워드가 없으면 무관한 연관키워드의 검색량을
+        // 도용하지 않는다(허위 블루오션 신호 방지). 못 찾으면 monthly:0으로 안전 처리 → 아래 return으로 낙하.
+        const hit = findExactItem(sList, d.kw);
         if(hit){
           const r = rowFromSearchAdItem(hit, sourceLabel);
           r.kw = d.kw; // 표시는 자동완성 원문 유지

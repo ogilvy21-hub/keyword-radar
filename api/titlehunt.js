@@ -53,9 +53,6 @@ async function fetchNaverSearch(type, keyword, clientId, clientSecret) {
 
 // ===== 후킹 추출 =====
 
-// 1) 서술형 꼬리(TMI) 제거: 제목을 "글처럼" 끝맺는 동사/권유 표현을 떼어 명사구만 남긴다.
-// 예) "...찍힌 이유부터 풀어봅니다" -> "...찍힌 이유부터"
-//     "...도용되었으니 꼭 확인하세요" -> "...도용"
 const TAIL_PATTERNS = [
   /(정리|총정리)?\s*(했|해)?(습니다|봅니다|볼게요|드려요|드립니다|할게요)\s*[.!~]*$/,
   /(해|하)?(세요|보세요|봐요|십시오)\s*[.!~]*$/,
@@ -65,18 +62,15 @@ const TAIL_PATTERNS = [
 ];
 function stripNarrativeTail(title) {
   let t = String(title || '').trim();
-  // 괄호 보조설명은 보존하되, 끝의 서술 꼬리만 반복 제거
   for (let i = 0; i < 3; i++) {
     let before = t;
     for (const re of TAIL_PATTERNS) t = t.replace(re, '').trim();
-    // 끝에 남은 구두점/공백 정리
     t = t.replace(/[\s·,]+$/, '').trim();
     if (t === before) break;
   }
   return t;
 }
 
-// 2) 토큰화: 한글/영문/숫자 덩어리로 쪼갠다.
 function tokenize(text) {
   return String(text || '')
     .replace(/[^\uAC00-\uD7A3a-zA-Z0-9]+/g, ' ')
@@ -84,19 +78,30 @@ function tokenize(text) {
     .filter(w => w.length >= 2);
 }
 
-// 공용 불용어(어느 분야든 후킹 가치 없음). 분야별 보존어는 프론트(분야 판별 후)에서 가산.
 const COMMON_STOP = new Set([
   '정리','총정리','방법','완벽','한번에','이유','경우','관련','대해','대한','그리고',
   '하는법','하는','해서','했는데','입니다','합니다','네요','그것','우리','지금','오늘',
   '여기','진짜','정말','바로','모두','전부','각각','그냥','이번','당신','너무','매우',
 ]);
 
-// 메인키워드를 토큰으로 분해(후킹 후보에서 자기 자신 제거용)
+// [v22.10] 카테고리 블랙리스트(국가명·방송사명 등) 방식 폐기.
+// 이유: (1) "JTBC 아파트"처럼 동명이인 콘텐츠를 구분하는 정당한 채널명·지역명 검색까지 막아버림
+//      (2) 카테고리를 하나씩 추가하는 방식은 근본적으로 두더지잡기 — 내일은 다른 카테고리가 오염시킬 수 있음
+// 대신 구조적 신호로 감지: 종합/모음형 블로그 제목("이번주 이슈모음: A + B + C...")은
+// 무관한 소재를 한 제목에 욱여넣어 토큰 수가 비정상적으로 많다. 카테고리와 무관하게 이런 제목 자체를
+// 후킹 집계에서 제외하면, 어떤 종류의 오염 단어든 구조적으로 걸러진다.
+// [v22.10] 9는 실제 네이버 데이터로 검증한 값이 아니라, 소수의 예시 문장으로 잡은 임시값이다.
+// 온토픽 예시는 대개 4~7토큰, 의도적으로 만든 모음형 예시는 10토큰이어서 그 사이(9)로 잡았을 뿐이다.
+// 실서비스 데이터로 토큰 수 분포를 확인한 뒤 조정이 필요할 수 있다.
+const ROUNDUP_TOKEN_LIMIT = 9;
+function isLikelyRoundupTitle(tokens) {
+  return tokens.length > ROUNDUP_TOKEN_LIMIT;
+}
+
 function keywordTokens(keyword) {
   return new Set(tokenize(keyword.replace(/\s+/g, '')).concat(tokenize(keyword)));
 }
 
-// 표기만 다른 동의어 병합 (예: 챗지피티/챗GPT/chatgpt -> 하나로)
 const SYNONYM_MAP = [
   { canon: '챗GPT', alts: ['챗지피티', 'chatgpt', '지피티', '챗gpt'] },
   { canon: '핸드폰', alts: ['휴대폰', '휴대전화'] },
@@ -110,19 +115,11 @@ function canonicalize(word) {
   return word;
 }
 
-// [v20] 비명사 후킹 거르기 (보수적). 후킹은 '그 자체로 검색되는 명사'여야 하는데,
-// "여신룩 따라 입는 법" 같은 제목에서 '따라/입기/감탄' 같은 동사·부사 조각이 후킹으로 섞이는 걸 막는다.
-// 원칙: 의심스러우면 살린다(작성자가 최종 선택). 명백한 비명사만 제거.
-// 주의: '기$' 같은 거친 글자패턴은 안 쓴다 — '세탁기/건조기' 같은 멀쩡한 명사를 잘못 거른다(검증으로 확인됨).
 const NON_NOUN_HOOK = new Set([
-  // 단독 부사·접속·동사어간 (명사로 검색되지 않음)
   '따라','통해','위해','대해','함께','보다','부터','까지','마다','조차',
-  // 동사 명사화 ~기류 (개별 등록 — 패턴 대신 명시)
   '입기','하기','되기','보기','읽기','쓰기','먹기','따라잡기',
-  // 관형형·동사 활용 조각
   '감탄','부르는','나오는','입는','하는','되는','보는','만한','싶은','같은','오는','가는','드는',
 ]);
-// 서술형 어미로 끝나는 조각 (활용형 — 명사 아님). '기/서/게'는 명사 오인 위험 커서 제외.
 const NARRATIVE_FRAG = /(다는|는데|은데|았|었|아쉽|니다|어요|아요|네요)$/;
 function isNounHook(word) {
   if (NON_NOUN_HOOK.has(word)) return false;
@@ -130,21 +127,22 @@ function isNounHook(word) {
   return true;
 }
 
-// 제목 묶음 -> 후킹 후보(빈도순)
 function extractHooks(titles, mainKeyword) {
   const kwSet = keywordTokens(mainKeyword);
   const kwFlat = mainKeyword.replace(/\s+/g, '');
   const freq = new Map();
   for (const raw of titles) {
     const cleaned = stripNarrativeTail(raw);
-    const seenInTitle = new Set(); // 한 제목 안 중복은 1회만
-    for (let tok of tokenize(cleaned)) {
-      tok = canonicalize(tok);               // 동의어 통일
+    const tokens = tokenize(cleaned);
+    if (isLikelyRoundupTitle(tokens)) continue; // [v22.10] 모음형 제목 전체를 집계에서 제외
+    const seenInTitle = new Set();
+    for (let tok of tokens) {
+      tok = canonicalize(tok);
       if (COMMON_STOP.has(tok)) continue;
-      if (!isNounHook(tok)) continue;        // [v20] 비명사 조각(따라/입기/감탄 등) 제외
-      if (kwSet.has(tok)) continue;          // 메인키워드 구성어 제외
-      if (kwFlat.includes(tok)) continue;    // 메인키워드에 포함된 조각 제외
-      if (/^\d+$/.test(tok)) continue;       // 순수 숫자 제외
+      if (!isNounHook(tok)) continue;
+      if (kwSet.has(tok)) continue;
+      if (kwFlat.includes(tok)) continue;
+      if (/^\d+$/.test(tok)) continue;
       if (seenInTitle.has(tok)) continue;
       seenInTitle.add(tok);
       freq.set(tok, (freq.get(tok) || 0) + 1);
@@ -153,7 +151,7 @@ function extractHooks(titles, mainKeyword) {
   return [...freq.entries()]
     .map(([word, count]) => ({ word, count }))
     .sort((a, b) => b.count - a.count)
-    .filter(h => h.count >= 2) // 최소 2개 제목에서 반복돼야 '검증된 후킹'
+    .filter(h => h.count >= 2)
     .slice(0, 12);
 }
 
@@ -164,7 +162,6 @@ export default async function handler(req, res) {
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
 
-  // 키가 없으면 기능을 끄되 본체는 안 죽게 200+빈결과 + 안내
   if (!clientId || !clientSecret) {
     return res.status(200).json({
       keyword, hooks: [], titles: [], count: 0,
@@ -173,25 +170,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 블로그 + 뉴스 제목 동시 수집 (한쪽 실패해도 다른 쪽 살림)
     const [blogTitles, newsTitles] = await Promise.all([
       fetchNaverSearch('blog', keyword, clientId, clientSecret),
       fetchNaverSearch('news', keyword, clientId, clientSecret),
     ]);
-    // [v19] 후킹은 '블로그 제목'만으로 추출한다.
-    // 블로그는 도메인 권위가 약해 상위 노출을 위해 제목에 검색의도(키워드)를 의도적으로 박는다 = 검증된 후킹.
-    // 뉴스는 매체 신뢰도로 노출되어 기사체 문장이 많아 후킹 노이즈가 크다 → 후킹엔 쓰지 않고 '맥락 파악용'으로만 분리.
     const hooks = extractHooks(blogTitles, keyword);
 
-    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600'); // 6h 캐시
+    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600');
     return res.status(200).json({
       keyword,
       count: blogTitles.length + newsTitles.length,
       blogCount: blogTitles.length,
       newsCount: newsTitles.length,
-      hooks,                                   // [{word, count}] 블로그 제목 기반 후킹(검증된 키워드)
-      sampleTitles: blogTitles.slice(0, 15),   // 후킹 근거 + 벤치마킹용 블로그 제목 (상위5 + 나머지 펼침)
-      newsTitles: newsTitles.slice(0, 6),      // 맥락·최신성 파악용 뉴스 제목 (후킹엔 미사용)
+      hooks,
+      sampleTitles: blogTitles.slice(0, 15),
+      newsTitles: newsTitles.slice(0, 6),
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);

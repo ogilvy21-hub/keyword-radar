@@ -1176,6 +1176,18 @@ const TITLE_PATTERNS = {
   }
 };
 
+// [v22.9] 선택은 자유, 제목엔 검색량/빈도 상위 2개만 반영. 나머지는 본문 키워드로 분리 (TMI 방지)
+function splitTailsByPriority(chosenKeys, hooks, max=2){
+  const withMeta = chosenKeys.map(key => {
+    const h = hooks.find(h=>normalizeKey(h.tail)===key);
+    if(!h) return null;
+    const priority = h.kind==='blog' ? (h.count||0)*100 : (h.monthly||0);
+    return { tail:h.tail, priority };
+  }).filter(Boolean);
+  withMeta.sort((a,b)=>b.priority-a.priority);
+  return { title: withMeta.slice(0,max).map(x=>x.tail), body: withMeta.slice(max).map(x=>x.tail) };
+}
+  
 function pickUsefulTails(tails, removeWords = []){
   const banned = new Set(['총정리','완벽','꼭','한번에','핵심','정리']);
   const cleaned = (tails || [])
@@ -1259,9 +1271,10 @@ function drawTitleBuilder(){
   const blogHtml = blogHooks.length
     ? `<div class="tb-mini" style="margin-top:14px">블로그 제목 후킹 <span>· 상위 블로그가 제목에 쓴 단어(검증된 후킹)</span></div><div class="tb-chips">${blogHooks.map(blogChip).join('')}</div>`
     : '';
-  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
-  const patternKey = ts.pattern || detectTitlePattern(tails);
-  const preview = generateTitleByPattern(ts.main, tails, patternKey);
+  const { title: titleTails, body: bodyTails } = splitTailsByPriority(ts.chosen, ts.hooks, 2);
+  const patternKey = ts.pattern || detectTitlePattern(titleTails);
+  const preview = generateTitleByPattern(ts.main, titleTails, patternKey);
+  const bodyNote = bodyTails.length ? `<p class="tb-hint">본문에 녹일 나머지 키워드: ${escapeHTML(bodyTails.join(', '))}</p>` : '';
   const patternOptions = Object.entries(TITLE_PATTERNS).map(([key, p]) => `<option value="${key}" ${key===patternKey?'selected':''}>${p.label}</option>`).join('');
  const pins = ts.chosen.map(key=>{
     const h = ts.hooks.find(h=>normalizeKey(h.tail)===key);
@@ -1303,13 +1316,12 @@ function toggleTitleHook(key){
 }
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;
-  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
+  const { title: titleTails, body: bodyTails } = splitTailsByPriority(ts.chosen, ts.hooks, 2);
   const edited = normalizeSpace(ts.edited||'');
-  const pattern = ts.pattern || detectTitlePattern(tails);
-  const generated = generateTitleByPattern(ts.main, tails, pattern);
+  const pattern = ts.pattern || detectTitlePattern(titleTails);
+  const generated = generateTitleByPattern(ts.main, titleTails, pattern);
   const draft = edited || generated;
-  // [v22] 확정 제목을 state에 저장 → 플랫폼/문체 바꿔 프롬프트 재생성돼도 유지되게.
-  state.titleApplied = { main:ts.main, tails:[...tails], pattern, draft };
+  state.titleApplied = { main:ts.main, tails:[...titleTails], bodyTails:[...bodyTails], pattern, draft };
   // 옵션 변경으로 프롬프트가 재생성되며 제목 블록이 본문에 박히도록 renderSelected 호출
   renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1326,7 +1338,8 @@ function appliedTitleBlock(){
 
 - 재료 나열(참고용): ${ta.draft}
 - 메인키워드: ${ta.main}
-- 반드시 포함할 후킹어: ${ta.tails.join(', ') || '없음'}
+- 반드시 포함할 후킹어(제목용): ${ta.tails.join(', ') || '없음'}
+${ta.bodyTails && ta.bodyTails.length ? `- 본문에 녹일 키워드(제목엔 안 넣어도 됨, 관련 있는 소제목·본문 안에서만 자연스럽게 다뤄라): ${ta.bodyTails.join(', ')}` : ''}
 
 **제목을 다시 만들어라.** 위 "재료 나열"을 그대로 베끼지 말고, 아래 단어를 전부 살려서 자연스러운 한 문장의 제목으로 재구성하라: ${mustInclude.join(', ')}
 

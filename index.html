@@ -1185,9 +1185,21 @@ function toggleTitleHook(key){
 }
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;
-  // [v22.11] 우선순위 분리(splitTailsByPriority) 제거 — 클릭 순서 그대로, 전부 포함.
-  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
+  const chipTails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
   const edited = normalizeSpace(ts.edited||'');
+  // [v22.13] 편집창에 직접 타이핑한 단어도 "반드시 포함" 목록에 편입시킨다.
+  // 칩에 없어서 직접 입력한 단어(예: 건물·재산·근황)가 "재료 나열(참고용)"로만 취급돼
+  // 최종 제목에서 조용히 빠지는 문제를 막는다. 메인키워드·이미 고른 칩과 겹치는 단어,
+  // 빈 수식어(총정리 등)는 제외하고 나머지만 추가한다.
+  let tails = chipTails;
+  if(edited){
+    const mainKey = normalizeKey(ts.main);
+    const chipKeys = new Set(chipTails.map(normalizeKey));
+    const bannedWords = new Set(['총정리','완벽','꼭','한번에','핵심','정리']);
+    const typedWords = edited.split(/[\s,·]+/).map(normalizeSpace).filter(Boolean)
+      .filter(w => normalizeKey(w) !== mainKey && !chipKeys.has(normalizeKey(w)) && !bannedWords.has(w));
+    tails = [...chipTails, ...typedWords];
+  }
   const pattern = ts.pattern || detectTitlePattern(tails);
   const generated = generateTitleByPattern(ts.main, tails, pattern);
   const draft = edited || generated;

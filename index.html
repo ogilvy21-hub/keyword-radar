@@ -793,6 +793,24 @@ function experienceBlock(){
 - 이 경험을 관련 소제목 본문에 1인칭 경험담으로 구체적으로 녹여라(예: "실제로 신청해 보니 ~에서 막혔다").
 - **단, 위에 적힌 내용만 사용하라. 작성자가 말하지 않은 경험을 지어내지 마라.** 적힌 사실을 자연스럽게 풀어 쓰는 것이지, 없는 디테일을 창작하는 게 아니다.`;
 }
+  
+function newsFactBlock(newsSnippets){
+  const list = Array.isArray(newsSnippets) ? newsSnippets : [];
+  if(!list.length){
+    return `
+
+## 실제 뉴스 검색 스니펫 (사실 확인 근거)
+이 키워드로 관련 뉴스 스니펫을 찾지 못했다. 회차·공개일·출연진·수치 등 구체적 사실은 네 기억에 의존하지 말고, 전부 "공식 확인 필요"로 처리하라.`;
+  }
+  const items = list.slice(0,5).map((s,i)=>
+    `${i+1}. "${escapeHTML(s.description)}" — 출처: ${escapeHTML(s.source || '매체명 미상')}${s.pubDate ? ` (${escapeHTML(s.pubDate.slice(0,16))})` : ''}`
+  ).join('\n');
+  return `
+
+## 실제 뉴스 검색 스니펫 (사실 확인 근거 — 반드시 활용)
+아래는 이 키워드로 실제 뉴스 검색에서 나온 스니펫이다. **회차·공개일·출연진·수치 같은 구체적 사실은 네 기억이 아니라 이 스니펫에 있는 내용만 근거로 써라.** 스니펫에 없는 사실은 절대 지어내지 말고 "공식 확인 필요"로 처리하라. 이 스니펫 내용을 활용한 부분은 글 끝 자료 출처에 매체명을 남겨라.
+${items}`;
+}  
 // [v21] 드라마 일반명사 겹침 감지: 짧은 일반명사 키워드인데 연관어에 OTT·회차 단서가 붙으면
 // → "콘텐츠인데 일반명사와 겹치니 제목에 플랫폼·구분어를 넣어라"를 AI에 지시.
 // (사람들이 스스로 "드라마OOO 넷플릭스"로 구분어를 붙여 검색하는 이유와 같은 원리.)
@@ -1458,6 +1476,8 @@ function ensureHooksFor(keyword){
     state.hooksByKw[key] = Array.isArray(th.hooks) ? th.hooks : [];
     if(!state.hookSamplesByKw) state.hookSamplesByKw = {};
     state.hookSamplesByKw[key] = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
+    if(!state.newsSnippetsByKw) state.newsSnippetsByKw = {};
+    state.newsSnippetsByKw[key] = Array.isArray(th.newsSnippets) ? th.newsSnippets : [];
     state.hookPending[key] = false;
     // 지금 화면에 떠 있는 키워드와 같으면 다시 그림
     const rows = state.recommended.length ? state.recommended : state.rows;
@@ -1646,7 +1666,7 @@ ${hasRelated ? promptRelated + `
 - 확실하지 않은 수치·날짜·조건은 **지어내지 마라.** 모르면 "공식 페이지에서 확인 필요"로 처리하라. 추측을 사실처럼 단정하는 게 가장 큰 잘못이다.
 - "예산 소진 시 조기 종료" 같은 **클릭 유도용 미확인 정보**를 임의로 넣지 마라.
 - 출처는 **공식 발표·공식 홈페이지·정부/공공기관·주요 언론사**만. 본문 주제와 무관한 출처(환급 글에 연예 기사 등)는 검색에 섞여 와도 빼라.
-${factCheckByIntent(intent, row)}${experienceBlock()}${contentOverlapNote(row)}
+${factCheckByIntent(intent, row)}${experienceBlock()}${contentOverlapNote(row)}${newsFactBlock(state.newsSnippetsByKw && state.newsSnippetsByKw[normalizeSpace(row.kw)])}
 
 글 끝 '자료 출처'는 **실제 근거로 삼은 것만** \`매체명 — 제목 (날짜)\` 형식으로. 없으면 비우고 "발행 전 공식 페이지 확인 권장"만 남겨라. 개수 채우려 만들어내지 마라.
 

@@ -1,6 +1,7 @@
 // api/titlehunt.js
 // 네이버 검색 API(블로그+뉴스)로 "이미 발행된 제목"을 모아 후킹 키워드를 추출한다.
-// 사용자가 손으로 하던 "키워드 검색 → 상위 제목 보고 후킹 캐기"를 자동화.
+// [v22.10] 뉴스 검색의 description(요약 스니펫)도 함께 가져와, 원고 작성 AI가
+// 자기 기억이 아니라 실제 검색 스니펫을 근거로 사실을 쓸 수 있게 한다.
 // 키: 네이버 개발자센터 검색 API. Vercel 환경변수 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 필요.
 // 차단/실패에 강하게: 타임아웃, 개별 실패 격리, 전체 실패해도 200+빈결과(본체 보호).
 
@@ -16,7 +17,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = TIMEOUT_MS) {
   }
 }
 
-// HTML 태그/엔티티 제거 (네이버 검색 결과 title엔 <b> 강조태그가 섞여 옴)
 function stripTags(s) {
   return String(s || '')
     .replace(/<[^>]+>/g, '')
@@ -26,7 +26,6 @@ function stripTags(s) {
     .trim();
 }
 
-// 네이버 검색 API 한 종류(blog 또는 news) 호출
 async function fetchNaverSearch(type, keyword, clientId, clientSecret) {
   try {
     const url =
@@ -51,8 +50,41 @@ async function fetchNaverSearch(type, keyword, clientId, clientSecret) {
   }
 }
 
-// ===== 후킹 추출 =====
+// [v22.10] 뉴스 검색 결과의 title+description(요약 스니펫)+날짜+매체를 함께 가져온다.
+// 후킹 추출용(fetchNaverSearch)과 분리한 이유: 저건 title 문자열 배열만 필요하고,
+// 이건 "사실 확인 근거"로 쓸 거라 원문 구조(스니펫·출처·날짜)가 다 필요하다.
+async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
+  try {
+    const url =
+      `https://openapi.naver.com/v1/search/news.json?query=` +
+      encodeURIComponent(keyword) + '&display=5&sort=sim';
+    const res = await fetchWithTimeout(url, {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+      },
+    });
+    if (!res.ok) {
+      console.error('naver news snippets not ok:', res.status);
+      return [];
+    }
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    return items
+      .map(it => ({
+        title: stripTags(it.title),
+        description: stripTags(it.description),
+        source: (it.originallink || it.link || '').replace(/^https?:\/\//, '').split('/')[0] || '',
+        pubDate: it.pubDate || '',
+      }))
+      .filter(x => x.title && x.description);
+  } catch (e) {
+    console.error('naver news snippets error:', e.message);
+    return [];
+  }
+}
 
+// ===== 후킹 추출 ===== (기존과 동일, 변경 없음)
 const TAIL_PATTERNS = [
   /(정리|총정리)?\s*(했|해)?(습니다|봅니다|볼게요|드려요|드립니다|할게요)\s*[.!~]*$/,
   /(해|하)?(세요|보세요|봐요|십시오)\s*[.!~]*$/,
@@ -70,38 +102,24 @@ function stripNarrativeTail(title) {
   }
   return t;
 }
-
 function tokenize(text) {
   return String(text || '')
     .replace(/[^\uAC00-\uD7A3a-zA-Z0-9]+/g, ' ')
     .split(/\s+/)
     .filter(w => w.length >= 2);
 }
-
 const COMMON_STOP = new Set([
   '정리','총정리','방법','완벽','한번에','이유','경우','관련','대해','대한','그리고',
   '하는법','하는','해서','했는데','입니다','합니다','네요','그것','우리','지금','오늘',
   '여기','진짜','정말','바로','모두','전부','각각','그냥','이번','당신','너무','매우',
 ]);
-
-// [v22.10] 카테고리 블랙리스트(국가명·방송사명 등) 방식 폐기.
-// 이유: (1) "JTBC 아파트"처럼 동명이인 콘텐츠를 구분하는 정당한 채널명·지역명 검색까지 막아버림
-//      (2) 카테고리를 하나씩 추가하는 방식은 근본적으로 두더지잡기 — 내일은 다른 카테고리가 오염시킬 수 있음
-// 대신 구조적 신호로 감지: 종합/모음형 블로그 제목("이번주 이슈모음: A + B + C...")은
-// 무관한 소재를 한 제목에 욱여넣어 토큰 수가 비정상적으로 많다. 카테고리와 무관하게 이런 제목 자체를
-// 후킹 집계에서 제외하면, 어떤 종류의 오염 단어든 구조적으로 걸러진다.
-// [v22.10] 9는 실제 네이버 데이터로 검증한 값이 아니라, 소수의 예시 문장으로 잡은 임시값이다.
-// 온토픽 예시는 대개 4~7토큰, 의도적으로 만든 모음형 예시는 10토큰이어서 그 사이(9)로 잡았을 뿐이다.
-// 실서비스 데이터로 토큰 수 분포를 확인한 뒤 조정이 필요할 수 있다.
 const ROUNDUP_TOKEN_LIMIT = 9;
 function isLikelyRoundupTitle(tokens) {
   return tokens.length > ROUNDUP_TOKEN_LIMIT;
 }
-
 function keywordTokens(keyword) {
   return new Set(tokenize(keyword.replace(/\s+/g, '')).concat(tokenize(keyword)));
 }
-
 const SYNONYM_MAP = [
   { canon: '챗GPT', alts: ['챗지피티', 'chatgpt', '지피티', '챗gpt'] },
   { canon: '핸드폰', alts: ['휴대폰', '휴대전화'] },
@@ -114,7 +132,6 @@ function canonicalize(word) {
   }
   return word;
 }
-
 const NON_NOUN_HOOK = new Set([
   '따라','통해','위해','대해','함께','보다','부터','까지','마다','조차',
   '입기','하기','되기','보기','읽기','쓰기','먹기','따라잡기',
@@ -126,7 +143,6 @@ function isNounHook(word) {
   if (word.length >= 2 && NARRATIVE_FRAG.test(word)) return false;
   return true;
 }
-
 function extractHooks(titles, mainKeyword) {
   const kwSet = keywordTokens(mainKeyword);
   const kwFlat = mainKeyword.replace(/\s+/g, '');
@@ -134,7 +150,7 @@ function extractHooks(titles, mainKeyword) {
   for (const raw of titles) {
     const cleaned = stripNarrativeTail(raw);
     const tokens = tokenize(cleaned);
-    if (isLikelyRoundupTitle(tokens)) continue; // [v22.10] 모음형 제목 전체를 집계에서 제외
+    if (isLikelyRoundupTitle(tokens)) continue;
     const seenInTitle = new Set();
     for (let tok of tokens) {
       tok = canonicalize(tok);
@@ -164,19 +180,21 @@ export default async function handler(req, res) {
 
   if (!clientId || !clientSecret) {
     return res.status(200).json({
-      keyword, hooks: [], titles: [], count: 0,
+      keyword, hooks: [], titles: [], newsSnippets: [], count: 0,
       _error: 'NAVER_CLIENT_ID/SECRET 미설정 (네이버 개발자센터 검색 API 키 필요)',
     });
   }
 
   try {
-    const [blogTitles, newsTitles] = await Promise.all([
+    // [v22.10] 블로그 제목(후킹용) + 뉴스 제목(맥락용) + 뉴스 스니펫(사실확인 근거용) 병렬 수집
+    const [blogTitles, newsTitles, newsSnippets] = await Promise.all([
       fetchNaverSearch('blog', keyword, clientId, clientSecret),
       fetchNaverSearch('news', keyword, clientId, clientSecret),
+      fetchNaverNewsSnippets(keyword, clientId, clientSecret),
     ]);
     const hooks = extractHooks(blogTitles, keyword);
 
-    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600');
+    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600'); // 6h 캐시
     return res.status(200).json({
       keyword,
       count: blogTitles.length + newsTitles.length,
@@ -185,11 +203,12 @@ export default async function handler(req, res) {
       hooks,
       sampleTitles: blogTitles.slice(0, 15),
       newsTitles: newsTitles.slice(0, 6),
+      newsSnippets,             // [{title, description, source, pubDate}] — 사실확인 근거
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);
     return res.status(200).json({
-      keyword, hooks: [], sampleTitles: [], newsTitles: [], count: 0, _error: error.message,
+      keyword, hooks: [], sampleTitles: [], newsTitles: [], newsSnippets: [], count: 0, _error: error.message,
     });
   }
 }

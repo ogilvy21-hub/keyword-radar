@@ -594,20 +594,13 @@ function includesTerm(text, term){
   const compact = normalizeKey(raw);
   const termCompact = normalizeKey(term);
   if(!termCompact) return false;
-  // 1글자 단어는 부분매칭 시 오분류가 심함(예: '국'이 '장마기간/미역국/결국'에 걸림).
-  // 1글자는 띄어쓰기로 구분된 '단어 단위'로 정확히 일치할 때만 인정한다.
   if(termCompact.length <= 1){
     const words = raw.split(/\s+/).map(normalizeKey);
     return words.some(w => w === termCompact);
   }
-  // 2글자 이상은 부분매칭 허용 (한글은 붙여쓰기가 많아 복합어 안의 단어도 잡아야 함)
   if(raw.includes(term)) return true;
   return compact.includes(termCompact);
 }
-// [v20] 클러스터 의도축(INTENT_AXES) 전용 매칭. includesTerm과 분리한 이유:
-// 의도축은 '제주가볼만한곳'에서 '주가'가 잘못 걸리는 오분류를 막아야 한다(정밀도 우선).
-// includesTerm은 점수 분류(INTENTS)에서 '축제/여행'이 복합어 어디 있든 걸려야 해(재현율 우선) 그대로 둔다.
-// 차이: 2글자 term은 띄어쓰기 단어단위 일치 OR 붙은 텍스트의 맨앞/맨뒤(경계)에서만 인정 → 중간 끼임 배제.
 function includesAxisTerm(text, term){
   const raw = normalizeSpace(text);
   const compact = normalizeKey(raw);
@@ -632,7 +625,6 @@ function inferIntentFromEvidence(selectedKeyword, bundleRows){
     const selectedMatched = intent.terms.filter(term => includesTerm(selected, term));
     const bundleMatched = intent.terms.filter(term => includesTerm(bundleText, term));
     const matched = [...new Set([...selectedMatched, ...bundleMatched])];
-    // 선택 키워드 직접 매칭은 가중치 3배 (해당 키워드의 의도가 가장 중요)
     const score = selectedMatched.length * 3 + bundleMatched.length;
     return { ...intent, score, terms:matched };
   }).sort((a,b)=>b.score-a.score);
@@ -641,7 +633,6 @@ function inferIntentFromEvidence(selectedKeyword, bundleRows){
   return DEFAULT_INTENT;
 }
 function clarityScore(intent){
-  // v15: 검색의도 명확도를 경쟁비율과 거의 동급(최대 35)으로 강화
   const count = Number(intent?.terms?.length || 0);
   if(count>=4) return 35;
   if(count===3) return 29;
@@ -671,26 +662,21 @@ function sortCandidates(rows){
   return [...rows].sort((a,b)=>{
     if((gradeRank[b.grade]||0)!==(gradeRank[a.grade]||0)) return (gradeRank[b.grade]||0)-(gradeRank[a.grade]||0);
     if(Number(b.score||0)!==Number(a.score||0)) return Number(b.score||0)-Number(a.score||0);
-    // v15: 점수 동률이면 의도 명확한 순(구글 친화)
     if(Number(b.intentClarityScore||0)!==Number(a.intentClarityScore||0)) return Number(b.intentClarityScore||0)-Number(a.intentClarityScore||0);
-    // 그다음 경쟁비율 낮은(블루오션) 순
     if(Number(a.ratio||999999)!==Number(b.ratio||999999)) return Number(a.ratio||999999)-Number(b.ratio||999999);
     if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
     return 0;
   });
 }
-// [v20] 추천(블루오션) 적격 티어. 낮을수록 좋음, 0 = 추천 부적격(상세표엔 남김).
-// 사용자 기준: 명백한 블루오션만 추천. 검색<발행(레드오션)은 추천에서 빼되 상세표로 넘겨 직접 판단.
 function recoTier(row){
   if(row?.contentSkipped) return 0;
   const m=Number(row.monthly||0), r=ratioValue(row);
   if(m<300) return 0;
-  if(r<0.5) return 1;                  // 1순위: 확실한 블루오션(발행이 검색의 절반 미만)
-  if(r<1.0) return 2;                  // 2순위: 발행 < 검색
-  if(m>=30000 && r<2.0) return 3;      // 3순위: 검색 수요가 큰데 발행이 다소 많은 경우
-  return 0;                            // 그 외: 추천 부적격
+  if(r<0.5) return 1;
+  if(r<1.0) return 2;
+  if(m>=30000 && r<2.0) return 3;
+  return 0;
 }
-// [v20] 추천 순차 채우기: 1순위부터 want개 채우고, 부족하면 2→3순위로 보충.
 function fillRecommended(sorted, want=6){
   const out=[];
   for(const tier of [1,2,3]){
@@ -702,15 +688,11 @@ function fillRecommended(sorted, want=6){
   }
   return out;
 }
-// [v20] 발행 많음 힌트(자르지 않고 거들기만). 복지·자격증·연례행사 등 주기성 키워드는 연도/변형으로 돌파 가능.
 function publishHint(row){
   return Number(row.totalContent||0) >= 3000 ? '발행 많음 · 연도·변형 키워드로 차별화 추천' : '';
 }
 function getIntentForSelected(row){ return inferIntentFromEvidence(row?.kw || state.seed, state.rows); }
 
-// 플랫폼별 SEO 작성 방향. [v20] 기본 전략은 '구글 SEO 우선'.
-// 근거: 네이버도 구글식 SEO(검색의도 충족·구조화·완결성)를 점점 따라가는 추세라 구글형으로 쓰면 양쪽 노출에 유리하고,
-//       설령 네이버 노출이 덜해도 구글 유입을 1차 목표로 둔다. (그래서 키워드가 '네이버형'으로 분류돼도 작성은 구글 우선)
 function platformStrategy(platform){
   const naverType = ['네이버 블로그','네이버 홈판용'];
   if(naverType.includes(platform)){
@@ -718,7 +700,6 @@ function platformStrategy(platform){
   }
   return `이 글은 ${platform}에 발행한다. 구글 검색 노출(SEO)을 1차 목표로 맞춰라: 검색 의도에 대한 결론을 도입부에서 먼저 제시하고(피처드 스니펫 대응), 소제목을 검색 질문형으로 달아 구조를 명확히 하며, 한 주제를 깊고 완결성 있게 다뤄 정보성 권위를 확보해라. (이 키워드가 '네이버형'으로 분류됐더라도 구글 구조로 쓴다 — 네이버도 같은 구조를 점점 따라가므로 양쪽 노출에 유리하다.)`;
 }
-// 분량 라벨을 명확한 기준으로 변환. [v20] 분량은 '목표치'이며, 채우려고 늘리는 것보다 모자란 게 낫다는 점을 명시.
 function lengthSpec(label){
   const map = {
     '짧게 800자':'공백 제외 본문 순수 텍스트 약 800자',
@@ -729,18 +710,15 @@ function lengthSpec(label){
   const base = map[label] || label;
   return `${base}를 목표로 한다. 이는 채워야 할 최소치가 아니라 대략의 기준이다 — 내용이 충실하면 넘어도 좋고, 핵심을 다 담았다면 다소 모자라도 괜찮다. 분량을 채우려 같은 말을 반복하거나 빈 문단을 늘리지 마라. (글자 수에 제목·목차·표 안 텍스트·FAQ·출처·태그는 포함하지 않는다. 본문 문단만 센다.)`;
 }
-// 출력 형식 명세 — 텍스트/HTML 각각 포맷 규칙을 한 곳에 통합 (작성 조건과 2단계 중복 제거)
 function outputFormatSpec(output){
   if(String(output).toUpperCase()==='HTML'){
     return 'HTML로 출력. 소제목은 <h2>/<h3>, 표는 <table>, 목록은 <ul>/<ol> 태그 사용. 마크다운 기호(##, **)는 쓰지 마라.';
   }
   return '텍스트로 출력. 소제목은 마크다운 헤딩(##, ###), 표는 마크다운 표(| |) 사용. HTML 태그는 쓰지 마라.';
 }
-// [v20.1] 키워드 유형별 사실검증 확인 항목. 위험한 유형(정책/금융/신청)일수록 강하게.
 function factCheckByIntent(intent, row){
   const key = intent?.key || '';
   const lines = [];
-  // 과거 연도 키워드 섞임 감지. 현재 연도는 코드 실행 시점 기준으로 자동 계산한다.
   const relText = (state.relatedKeywords||[]).join(' ') + ' ' + (row?.kw||'');
   const currentYear = new Date().getFullYear();
   const years = (relText.match(/20\d{2}/g)||[]).map(Number).filter((v,i,a)=>a.indexOf(v)===i);
@@ -758,9 +736,6 @@ function factCheckByIntent(intent, row){
   return lines.join('\n');
 }
 
-// [v21] 실제 경험 입력칸 — 의도 key별 placeholder.
-// 근거: 네이버 'AI 시대 콘텐츠 가이드'(2026.6) = "직접 경험한 사람만 아는 정보가 상위에 온다."
-// 공식/광고/AI는 좋은 말만 하는데, 해본 사람은 '안 되는 것·막히는 것·다른 것'을 안다 → 그 빈틈을 입력.
 const EXP_PLACEHOLDER = {
   policy:  '신청하다 막히는 지점 (예: 복지로 신청 버튼이 공지란으로 감, 인증에서 막힘)',
   finance: '실제 신청·조회 시 막히거나 헷갈린 점 (예: 부결 사유, 서류 반려)',
@@ -781,7 +756,6 @@ const EXP_PLACEHOLDER_DEFAULT = '직접 겪은 경험·주의점 (공식·광고
 function expPlaceholderFor(intentKey){
   return EXP_PLACEHOLDER[intentKey] || EXP_PLACEHOLDER_DEFAULT;
 }
-// 입력된 경험을 프롬프트 블록으로. 비면 '' 반환 → 블록 자체를 안 넣음(없는 경험 환각 방지 = 핵심 안전장치).
 function experienceBlock(){
   const exp = normalizeSpace(els.expInput ? els.expInput.value : '');
   if(!exp) return '';
@@ -793,7 +767,7 @@ function experienceBlock(){
 - 이 경험을 관련 소제목 본문에 1인칭 경험담으로 구체적으로 녹여라(예: "실제로 신청해 보니 ~에서 막혔다").
 - **단, 위에 적힌 내용만 사용하라. 작성자가 말하지 않은 경험을 지어내지 마라.** 적힌 사실을 자연스럽게 풀어 쓰는 것이지, 없는 디테일을 창작하는 게 아니다.`;
 }
-  
+
 function newsFactBlock(newsSnippets){
   const list = Array.isArray(newsSnippets) ? newsSnippets : [];
   if(!list.length){
@@ -810,19 +784,16 @@ function newsFactBlock(newsSnippets){
 ## 실제 뉴스 검색 스니펫 (사실 확인 근거 — 반드시 활용)
 아래는 이 키워드로 실제 뉴스 검색에서 나온 스니펫이다. **회차·공개일·출연진·수치 같은 구체적 사실은 네 기억이 아니라 이 스니펫에 있는 내용만 근거로 써라.** 스니펫에 없는 사실은 절대 지어내지 말고 "공식 확인 필요"로 처리하라. 이 스니펫 내용을 활용한 부분은 글 끝 자료 출처에 매체명을 남겨라.
 ${items}`;
-}  
-// [v21] 드라마 일반명사 겹침 감지: 짧은 일반명사 키워드인데 연관어에 OTT·회차 단서가 붙으면
-// → "콘텐츠인데 일반명사와 겹치니 제목에 플랫폼·구분어를 넣어라"를 AI에 지시.
-// (사람들이 스스로 "드라마OOO 넷플릭스"로 구분어를 붙여 검색하는 이유와 같은 원리.)
+}
+
 const CONTENT_OVERLAP_SIGNALS = ['넷플릭스','티빙','웨이브','디즈니','쿠팡플레이','OTT','출연진','등장인물','몇부작','재방송','다시보기','회차','결말','줄거리','시청률','방영','공개일','드라마','웹툰','시즌'];
 function contentOverlapNote(row){
   const kw = normalizeSpace(row?.kw || '');
   const compact = normalizeKey(kw);
-  // 짧은 일반명사(공백 없는 4글자 이하)일 때만 — 이미 구체적인 긴 키워드는 겹침 위험 적음
   if(!kw || kw.includes(' ') || compact.length > 4) return '';
   const relText = (state.relatedKeywords||[]).join(' ');
   const hits = CONTENT_OVERLAP_SIGNALS.filter(s => includesTerm(relText, s));
-  if(hits.length < 2) return '';  // OTT/회차 단서가 2개 이상 붙어야 콘텐츠로 판단
+  if(hits.length < 2) return '';
   return `
 
 ## 일반명사 겹침 주의 (제목 구분어 필수)
@@ -830,9 +801,6 @@ function contentOverlapNote(row){
 - 제목에 반드시 플랫폼·구분어(예: 넷플릭스, 드라마, 출연진 등)를 넣어 일반명사와 구분되게 하라. 메인 키워드 단독 제목은 다른 검색 결과에 묻힌다.`;
 }
 
-// 블루오션/경쟁 상황에 따른 전략 지시. [v20.1] 경쟁비율 구간별 문구 (화면 등급과 일치, 블루오션 고정 제거)
-// [v21] 내부링크 블록 — 같은 클러스터의 스포크를 '함께 보면 좋은 글'로 제안.
-// 근거: 내부링크는 체류시간·페이지뷰·광고클릭을 올리는 핵심 수익 장치(추가 API 없이 이미 계산된 클러스터 재활용).
 function internalLinkBlock(){
   const cl = state.currentCluster;
   if(!cl || !cl.spokes || !cl.spokes.length) return '';
@@ -853,36 +821,6 @@ function competitionStrategy(row){
   return `이 키워드는 경쟁비율 ${ratioText(row)}로 이미 글이 매우 많다. 단독 키워드로는 상위 노출이 어려우니, 연관키워드에서 검색 수요가 있으면서 경쟁이 덜한 세부 주제로 쪼개 그쪽을 메인으로 잡는 편이 낫다. 그대로 쓸 경우 남들이 안 다룬 틈새 질문이나 최신 변경점을 파고들어라.`;
 }
 
-function needsForIntent(intent){
-  const map = {
-    content:['어디서 볼 수 있는지 알고 싶다','몇부작·공개 일정·회차 정보를 확인하고 싶다','출연진과 등장인물 관계를 정리하고 싶다','원작·웹툰·줄거리 차이를 알고 싶다'],
-    policy:['내가 대상자인지 확인하고 싶다','신청 방법과 필요한 서류를 알고 싶다','언제 지급되거나 환급되는지 알고 싶다','사용처·제외 조건·주의사항을 보고 싶다'],
-    finance:['신청 조건과 한도를 알고 싶다','금리와 상환 방식을 비교하고 싶다','필요 서류와 부결 사유를 확인하고 싶다','신청 전 주의할 점을 알고 싶다'],
-    place:['위치와 영업시간을 알고 싶다','주차와 예약 가능 여부를 확인하고 싶다','메뉴·가격·후기를 보고 싶다','방문 전 주의할 점을 알고 싶다'],
-    recipe:['재료와 비율을 알고 싶다','조리 순서를 쉽게 따라 하고 싶다','맛을 살리는 포인트를 알고 싶다','보관법과 응용법을 보고 싶다'],
-    career:['준비해야 할 것과 체크리스트를 알고 싶다','면접·자소서·입사 절차를 확인하고 싶다','후기와 실수하기 쉬운 부분을 보고 싶다','연봉·교육·회사생활 정보를 알고 싶다'],
-    shopping:['가격과 브랜드 차이를 비교하고 싶다','후기와 추천 대상을 알고 싶다','구매 전 주의할 점을 확인하고 싶다','비슷한 선택지를 비교하고 싶다'],
-    issue:['무슨 일이 있었는지 빠르게 알고 싶다','원인과 쟁점을 정리해서 보고 싶다','타임라인과 반응을 확인하고 싶다','앞으로 확인할 부분을 알고 싶다'],
-    howto:['어떻게 하는지 순서대로 알고 싶다','오류나 문제의 원인을 찾고 싶다','먼저 확인할 설정을 알고 싶다','안 될 때 대안을 확인하고 싶다'],
-    sports:['경기 일정과 시간을 알고 싶다','어디서 중계를 보는지 확인하고 싶다','출전 선수·명단을 정리하고 싶다','상대·순위·관전 포인트를 알고 싶다'],
-    health:['증상과 원인을 알고 싶다','어떻게 치료·관리하는지 알고 싶다','예방법과 주의사항을 확인하고 싶다','병원·약·검사 정보를 알고 싶다'],
-    education:['어떻게 공부하는지 방법을 알고 싶다','자료·문제집·인강을 추천받고 싶다','시험·전형 일정과 기준을 알고 싶다','자주 틀리는 부분을 정리하고 싶다'],
-    tech:['사용법과 설정 방법을 알고 싶다','오류·문제를 해결하고 싶다','기능과 요금제를 비교하고 싶다','연동·계정 관리법을 알고 싶다'],
-    season:['언제 시작하고 끝나는지 알고 싶다','어떻게 대비·준비하는지 알고 싶다','지역별 차이를 확인하고 싶다','주의사항과 팁을 보고 싶다'],
-    law:['내 상황이 어떻게 되는지 알고 싶다','절차와 필요 서류를 확인하고 싶다','비용·기간·처벌 수위를 알고 싶다','주의할 점과 대응법을 알고 싶다'],
-    auto:['가격과 옵션을 비교하고 싶다','연비·유지비를 확인하고 싶다','구매·정비 시 주의점을 알고 싶다','실사용 후기를 보고 싶다'],
-    parenting:['시기별로 무엇을 해야 하는지 알고 싶다','준비물과 방법을 확인하고 싶다','발달·건강 관련 정보를 알고 싶다','실수하기 쉬운 점을 미리 보고 싶다'],
-    general:['핵심 의미와 기본정보를 알고 싶다','관련 정보를 한 번에 정리하고 싶다','비교할 기준을 확인하고 싶다','주의할 점을 미리 보고 싶다']
-  };
-  return map[intent.key] || map.general;
-}
-// [v18] 후킹 기반 제목 생성: 메인키워드 + 검색에서 검증된 후킹 키워드, 명사형 마감(서술 꼬리 없음).
-// hooks: [{word,count}] (titlehunt API 결과). 없으면 빈 배열 반환 -> 호출부에서 템플릿으로 폴백.
-// [v19] 허브-스포크 클러스터: 연관키워드를 의도축으로 가르고, 검색량으로 키워드형(독립스포크)/의도형(흡수) 구분.
-// 의도축 = 후킹이 '의도'로 쓰일 때 붙는 라벨. 실제 사용 데이터(드라마·금융·시험·복지·의료)에서 추출.
-// ===== [v21] 카테고리 기반 스포크 분류 (1년치 실측 검증 완료) =====
-// 카테고리마다 쪼갬/묶음이 다르다는 발견에 기반. 정책=지역·대상 스포크+속성 소제목+딴주제 제외,
-// 콘텐츠/뷰티=축별 쪼갬, 건강=암종류만 독립, 인물=단독글, 축제=장소 스포크, 시험=자격증별 독립.
 const CATEGORIES = [
   { key:'beauty', label:'뷰티·화장품', mode:'split',
     terms:['나스','NARS','롬앤','립스틱','틴트','쿠션','파운데이션','섀도우','아이섀도우','팔레트','블러쉬','블러셔','립글로스','컬렉션','파데','발색','매트','글로우','립밤','마스카라','네일'] },
@@ -931,8 +869,6 @@ function detectCategory(mainKw, relatedRows){
     }
     if(score > bestScore){ bestScore = score; best = cat; }
   }
-  // [v22.3] 기준점 1→2로 상향: 연관어 34개 중 1개만 우연히 걸려도 카테고리가 확정되던 문제(나이/발급 등) 방지.
-  // 메인키워드 자체 매칭(3점)이나, 연관어 2개 이상 매칭이어야 그 카테고리로 확정.
   return best && bestScore >= 2 ? best : { key:'general', label:'일반', mode:'merge', terms:[] };
 }
 
@@ -945,8 +881,6 @@ function hasTargetModifier(kw, mainKw){ return TARGET_MODIFIERS.find(m => kw.inc
 function hasAttribute(kw, mainKw){ const rest = normalizeKey(kw).replace(normalizeKey(mainKw), ''); return ATTRIBUTE_TERMS.find(a => rest.includes(normalizeKey(a)) || kw.includes(a)) || null; }
 function hasLongtail(kw){ return LONGTAIL_TERMS.find(l => kw.includes(l)) || null; }
 
-// ===== [v22] 범용 축 분류기 =====
-// 카테고리를 먼저 맞히기보다, 키워드가 묻는 축(언제/어디서/누가/얼마/문제/비교 등)을 먼저 감지한다.
 const UNIVERSAL_AXES = {
   basic: { label:'기본정보축', terms:['기본정보','정보','뜻','의미','개요','정리','총정리','나무위키'] },
   action: { label:'행동축', terms:['신청','신청방법','조회','발급','등록','예매','예약','다운로드','설치','가입','해지','갱신','재발급','접수','사용법','하는법'] },
@@ -1018,7 +952,6 @@ function sharesCoreFestival(kw, mainKw){
   if(core.length < 2) return false;
   return normalizeKey(kw).includes(core);
 }
-// 연관어 한 개를 4갈래(spoke/section/longtail/drop)로 분류
 function classifyRelated(mainKw, row, category){
   const kw = normalizeSpace(row.kw);
   const monthly = Number(row.monthly||0);
@@ -1064,15 +997,12 @@ function classifyRelated(mainKw, row, category){
   return monthly >= 400 ? { tag:'spoke', axis:'세부', reason:'쪼개는 형 — 축별 독립' } : { tag:'section', reason:'검색량 낮음 → 흡수' };
 }
 
-// [v22.2] 하이브리드 분류기: policy·festival·exam·health(1년치 실측검증 + 지역축·대상축·drop)는 구버전 classifyRelated,
-// 나머지(general 포함)는 범용축 classifyRelatedV22. 검증된 로직은 유지하고, 약했던 general만 범용축으로 보강.
 const HYBRID_LEGACY_MODES = ['policy','festival','exam','single'];
 function classifyRelatedHybrid(mainKw, row, category){
   const useLegacy = HYBRID_LEGACY_MODES.includes(category.mode) || category.key === 'health';
   return useLegacy ? classifyRelated(mainKw, row, category) : classifyRelatedV22(mainKw, row, category);
 }
 
-// [v21] 카테고리 기반 클러스터 빌드. 기존 반환형({hub, spokes, absorbed}) 유지 + category/longtail/sections 추가.
 function buildCluster(hubKw, rows){
   const hubKey = normalizeKey(hubKw);
   const others = (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey);
@@ -1085,21 +1015,16 @@ function buildCluster(hubKw, rows){
     else if(c.tag==='drop') { /* 클러스터에서 제외 — 아무 버킷에도 안 넣음 */ }
     else { sections.push(r.kw); absorbed.push(r.kw); }
   }
-  // 스포크는 검색량 높은 순 상위 5개. also에 흡수 키워드 일부 참고용.
   spokesRaw.sort((a,b)=>b.monthly-a.monthly);
   const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly, also:[] }));
   return { hub:hubKw, spokes, absorbed, category, sections, longtail };
 }
 
-
-// ===== [v20] 제목 조합기 =====
-// 메인 = 선택 키워드(고정). 후킹 = 연관어(state.rows)를 경쟁비율 좋은 순 정렬, 메인 꼬리 추출.
-// 발행량 3000+ 후킹은 흐리게(초보 보수기준). 칩 클릭→미리보기 조합→편집→프롬프트 주입.
 function titleRatio(row){ const m=Number(row.monthly||0); if(m<=0) return Infinity; return Number(row.totalContent||0)/m; }
 function titleHookTail(relKw, mainKw){
   const rel=normalizeKey(relKw), main=normalizeKey(mainKw);
   let i=0; while(i<rel.length && i<main.length && rel[i]===main[i]) i++;
-  if(i<2) return normalizeSpace(relKw);   // 공통 접두 2글자 미만 → 연관어 통째
+  if(i<2) return normalizeSpace(relKw);
   const tail=rel.slice(i);
   return tail || normalizeSpace(relKw);
 }
@@ -1117,95 +1042,6 @@ function buildTitleMaterial(seedKw, relatedRows){
   return { main, hooks };
 }
 
-// ===== [v22] 패턴 기반 제목 생성기 =====
-// 핵심: 후킹어를 그냥 이어 붙이지 않고, 검색자가 실제로 묻는 문장 패턴으로 변환한다.
-const TITLE_PATTERNS = {
-  when: {
-    label: '언제형',
-    terms: ['언제','지급일','환급일','기간','일정','날짜','공개일','방영일','시험일정','신청기간','마감일','중복','말복','개막','폐막'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['언제']);
-      return useful.length ? `${main}, ${useful.join('·')}은 언제?` : `${main}은 언제?`;
-    }
-  },
-  apply: {
-    label: '신청형',
-    terms: ['신청','신청방법','접수','발급','등록','가입','조회','확인','예매','예약'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['신청','신청방법']);
-      return `${main} 신청방법${useful.length ? `, ${useful.join('·')} 기준` : ''}`;
-    }
-  },
-  target: {
-    label: '대상형',
-    terms: ['대상','대상자','조건','자격','기준','신청자격'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['대상','대상자']);
-      return `${main} 대상자 기준${useful.length ? `, ${useful.join('·')} 확인` : ''}`;
-    }
-  },
-  money: {
-    label: '금액형',
-    terms: ['금액','환급금','지원금','한도','이자','금리','혜택','가격','비용','할인','할인율'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['금액','가격','비용','얼마']);
-      return `${main} 얼마?${useful.length ? ` ${useful.join('·')} 기준` : ''}`;
-    }
-  },
-  watch: {
-    label: '보기형',
-    terms: ['OTT','ott','재방송','다시보기','편성표','보러가기','공개일','방송시간','중계'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['OTT','ott']);
-      return `${main} 어디서 볼 수 있나?${useful.length ? ` ${useful.join('·')} 정리` : ''}`;
-    }
-  },
-  people: {
-    label: '인물형',
-    terms: ['출연진','등장인물','인물관계도','참가자','심사위원','라인업','명단','프로필','나이'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['출연진']);
-      return `${main} ${useful.length ? useful.join('·') : '인물정보'}, 관계부터 정리`;
-    }
-  },
-  howto: {
-    label: '방법형',
-    terms: ['방법','사용법','레시피','만드는법','끓이는법','오류','해결','준비물','계산','따지는법'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['방법']);
-      return `${main} 방법${useful.length ? `, ${useful.join('·')} 순서` : ''}`;
-    }
-  },
-  compare: {
-    label: '비교형',
-    terms: ['차이','비교','vs','VS','장단점','추천','순위','대신'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['차이','비교']);
-      return `${main} ${useful.length ? useful.join('·') : '비교'}, 선택 전 볼 기준`;
-    }
-  },
-  info: {
-    label: '정보형',
-    terms: ['뜻','기본정보','정보','정리','총정리','핵심'],
-    make: ({ main, tails }) => {
-      const useful = pickUsefulTails(tails, ['기본정보','정보','정리','총정리']);
-      return `${main}${useful.length ? `, ${useful.join('·')}` : ''}`;
-    }
-  }
-};
-
-// [v22.9] 선택은 자유, 제목엔 검색량/빈도 상위 2개만 반영. 나머지는 본문 키워드로 분리 (TMI 방지)
-function splitTailsByPriority(chosenKeys, hooks, max=2){
-  const withMeta = chosenKeys.map(key => {
-    const h = hooks.find(h=>normalizeKey(h.tail)===key);
-    if(!h) return null;
-    const priority = h.kind==='blog' ? (h.count||0)*100 : (h.monthly||0);
-    return { tail:h.tail, priority };
-  }).filter(Boolean);
-  withMeta.sort((a,b)=>b.priority-a.priority);
-  return { title: withMeta.slice(0,max).map(x=>x.tail), body: withMeta.slice(max).map(x=>x.tail) };
-}
-  
 function pickUsefulTails(tails, removeWords = []){
   const banned = new Set(['총정리','완벽','꼭','한번에','핵심','정리']);
   const cleaned = (tails || [])
@@ -1214,6 +1050,25 @@ function pickUsefulTails(tails, removeWords = []){
     .filter(t => !banned.has(t));
   return cleaned.length ? cleaned : (tails || []).map(normalizeSpace).filter(Boolean);
 }
+
+// ===== [v22.11] 패턴별 접미어를 전부 없애고 통일. 접미어("기준"/"관계부터 정리"/"언제?" 등)가
+// 패턴마다 하드코딩돼 있어서 발견할 때마다 고쳐야 했던 문제를 근본적으로 없앤다.
+// 패턴 라벨(언제형/신청형 등)은 UI 표시·자동 감지용으로만 남기고, 실제 조합 로직은 전부 동일하다.
+function uniformTitleMake({ main, tails }){
+  const useful = pickUsefulTails(tails);
+  return `${main}${useful.length ? `, ${useful.join('·')}` : ''}`;
+}
+const TITLE_PATTERNS = {
+  when:    { label:'언제형', terms:['언제','지급일','환급일','기간','일정','날짜','공개일','방영일','시험일정','신청기간','마감일','중복','말복','개막','폐막'], make: uniformTitleMake },
+  apply:   { label:'신청형', terms:['신청','신청방법','접수','발급','등록','가입','조회','확인','예매','예약'], make: uniformTitleMake },
+  target:  { label:'대상형', terms:['대상','대상자','조건','자격','기준','신청자격'], make: uniformTitleMake },
+  money:   { label:'금액형', terms:['금액','환급금','지원금','한도','이자','금리','혜택','가격','비용','할인','할인율'], make: uniformTitleMake },
+  watch:   { label:'보기형', terms:['OTT','ott','재방송','다시보기','편성표','보러가기','공개일','방송시간','중계'], make: uniformTitleMake },
+  people:  { label:'인물형', terms:['출연진','등장인물','인물관계도','참가자','심사위원','라인업','명단','프로필','나이'], make: uniformTitleMake },
+  howto:   { label:'방법형', terms:['방법','사용법','레시피','만드는법','끓이는법','오류','해결','준비물','계산','따지는법'], make: uniformTitleMake },
+  compare: { label:'비교형', terms:['차이','비교','vs','VS','장단점','추천','순위','대신'], make: uniformTitleMake },
+  info:    { label:'정보형', terms:['뜻','기본정보','정보','정리','총정리','핵심'], make: uniformTitleMake }
+};
 
 function detectTitlePattern(tails){
   const text = (tails || []).join(' ');
@@ -1226,21 +1081,19 @@ function detectTitlePattern(tails){
   return bestKey;
 }
 
+// [v22.11] 44자 초과 시 후킹어를 1개로 몰래 자르던 로직 삭제.
+// "고른 단어는 하나도 안 빼고 다 넣는다"는 원칙과 정면으로 충돌했다(단어를 많이 고르면 길이가 늘어나는 게 당연한데
+// 그걸 다시 강제로 줄이면 방금 만든 원칙이 무력화된다). 길이는 이제 제한하지 않는다.
 function generateTitleByPattern(main, tails, patternKey){
   const key = patternKey || detectTitlePattern(tails);
   const pattern = TITLE_PATTERNS[key] || TITLE_PATTERNS.info;
   let title = pattern.make({ main: normalizeSpace(main), tails: tails || [] });
   title = title.replace(/\s+/g,' ').replace(/\s+,/g, ',').replace(/·+/g, '·').trim();
-  if(title.length > 44 && (tails||[]).length > 1){
-    title = pattern.make({ main: normalizeSpace(main), tails: (tails||[]).slice(0,1) }).replace(/\s+/g,' ').trim();
-  }
   return title;
 }
 function renderTitleBuilder(seedKw, blogHooks){
   if(!els.titleBuilder) return;
   const mat = buildTitleMaterial(seedKw, state.rows);
-  // [v20] 연관 검색어 후킹(수치 있음) + 블로그 제목 후킹(빈도만)을 한 배열로 합치되 kind로 구분.
-  //  방식2(C): 블로그 후킹은 추가 API 호출 없이 titlehunt가 이미 가져온 것 재활용.
   const relHooks = mat.hooks.map(h=>({ ...h, kind:'rel' }));
   const mainKey = normalizeKey(mat.main);
   const relTailKeys = new Set(relHooks.map(h=>normalizeKey(h.tail)));
@@ -1249,7 +1102,7 @@ function renderTitleBuilder(seedKw, blogHooks){
   for(const b of blogList){
     const w = normalizeSpace(b.word||'');
     const wk = normalizeKey(w);
-    if(!w || wk===mainKey || relTailKeys.has(wk)) continue;  // 메인·연관어 중복 제거
+    if(!w || wk===mainKey || relTailKeys.has(wk)) continue;
     if(blogConv.some(x=>normalizeKey(x.tail)===wk)) continue;
     blogConv.push({ tail:w, full:w, count:Number(b.count||0), kind:'blog' });
   }
@@ -1257,8 +1110,7 @@ function renderTitleBuilder(seedKw, blogHooks){
   if(!state.titleState || state.titleState.main !== mat.main){
     state.titleState = { main:mat.main, hooks, chosen:[] };
   } else {
-    state.titleState.hooks = hooks; // 데이터 갱신, 선택은 유지
-    // 선택 인덱스가 새 배열 길이를 넘으면 정리
+    state.titleState.hooks = hooks;
     state.titleState.chosen = state.titleState.chosen.filter(key=>hooks.some(h=>normalizeKey(h.tail)===key));
   }
   drawTitleBuilder();
@@ -1289,12 +1141,12 @@ function drawTitleBuilder(){
   const blogHtml = blogHooks.length
     ? `<div class="tb-mini" style="margin-top:14px">블로그 제목 후킹 <span>· 상위 블로그가 제목에 쓴 단어(검증된 후킹)</span></div><div class="tb-chips">${blogHooks.map(blogChip).join('')}</div>`
     : '';
-  const { title: titleTails, body: bodyTails } = splitTailsByPriority(ts.chosen, ts.hooks, 2);
-  const patternKey = ts.pattern || detectTitlePattern(titleTails);
-  const preview = generateTitleByPattern(ts.main, titleTails, patternKey);
-  const bodyNote = bodyTails.length ? `<p class="tb-hint">본문에 녹일 나머지 키워드: ${escapeHTML(bodyTails.join(', '))}</p>` : '';
+  // [v22.11] 우선순위 재정렬(splitTailsByPriority) 제거 — 클릭한 순서를 그대로 유지한다.
+  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
+  const patternKey = ts.pattern || detectTitlePattern(tails);
+  const preview = generateTitleByPattern(ts.main, tails, patternKey);
   const patternOptions = Object.entries(TITLE_PATTERNS).map(([key, p]) => `<option value="${key}" ${key===patternKey?'selected':''}>${p.label}</option>`).join('');
- const pins = ts.chosen.map(key=>{
+  const pins = ts.chosen.map(key=>{
     const h = ts.hooks.find(h=>normalizeKey(h.tail)===key);
     return h ? `<span class="tb-pin">${escapeHTML(h.tail)} <b data-tk="${escapeHTML(key)}">×</b></span>` : '';
   }).join('');
@@ -1310,14 +1162,12 @@ function drawTitleBuilder(){
     <div class="tb-preview">
       <div class="tb-pline" id="tbPreview">${escapeHTML(preview)}</div>
       <input class="tb-edit" id="tbEdit" placeholder="직접 편집하려면 입력 (참고 후킹도 여기서 추가)" value="${escapeHTML(ts.edited||'')}"/>
-      ${bodyNote}
     </div>
     <div class="tb-actions">
       <button class="tb-clear" id="tbClear">초기화</button>
       <button class="tb-apply" id="tbApply">이 제목 적용 → 프롬프트</button>
     </div>
-    <p class="tb-hint">미리보기는 재료 나열(참고용)입니다. 프롬프트로 넘어가면 AI가 고른 단어를 전부 살려 자연스러운 한 문장 제목으로 다시 만듭니다.</p>`;
-  // 이벤트 바인딩
+    <p class="tb-hint">미리보기는 재료 나열(참고용), 클릭한 순서 그대로입니다. 프롬프트로 넘어가면 AI가 고른 단어를 전부 살려 자연스러운 한 문장 제목으로 다시 만듭니다.</p>`;
   els.titleBuilder.querySelectorAll('.tb-chip[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   els.titleBuilder.querySelectorAll('.tb-pin b[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   const patternEl = $('tbPattern');
@@ -1335,18 +1185,19 @@ function toggleTitleHook(key){
 }
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;
-  const { title: titleTails, body: bodyTails } = splitTailsByPriority(ts.chosen, ts.hooks, 2);
+  // [v22.11] 우선순위 분리(splitTailsByPriority) 제거 — 클릭 순서 그대로, 전부 포함.
+  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
   const edited = normalizeSpace(ts.edited||'');
-  const pattern = ts.pattern || detectTitlePattern(titleTails);
-  const generated = generateTitleByPattern(ts.main, titleTails, pattern);
+  const pattern = ts.pattern || detectTitlePattern(tails);
+  const generated = generateTitleByPattern(ts.main, tails, pattern);
   const draft = edited || generated;
-  state.titleApplied = { main:ts.main, tails:[...titleTails], bodyTails:[...bodyTails], pattern, draft };
-  // 옵션 변경으로 프롬프트가 재생성되며 제목 블록이 본문에 박히도록 renderSelected 호출
+  state.titleApplied = { main:ts.main, tails:[...tails], pattern, draft };
   renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
   const applyEl=$('tbApply'); if(applyEl){ applyEl.textContent='프롬프트에 반영됨 ✓'; setTimeout(()=>{ applyEl.textContent='이 제목 적용 → 프롬프트'; },1400); }
 }
-// [v21] 확정 제목 블록 생성 (작성자가 고른 키워드는 전부 살리고 표현만 다듬게 규칙 명시)
+// [v22.11] 규칙 두 줄 추가: (1) 길이 제한보다 "다 포함"이 우선이라는 걸 명시,
+// (2) "나이는"처럼 조사로 끝나며 미완결처럼 보이는 제목 방지 (민경욱프로필 사례에서 발견).
 function appliedTitleBlock(){
   const ta = state.titleApplied;
   if(!ta) return '';
@@ -1358,7 +1209,6 @@ function appliedTitleBlock(){
 - 재료 나열(참고용): ${ta.draft}
 - 메인키워드: ${ta.main}
 - 반드시 포함할 후킹어(제목용): ${ta.tails.join(', ') || '없음'}
-${ta.bodyTails && ta.bodyTails.length ? `- 본문에 녹일 키워드(제목엔 안 넣어도 됨, 관련 있는 소제목·본문 안에서만 자연스럽게 다뤄라): ${ta.bodyTails.join(', ')}` : ''}
 
 **제목을 다시 만들어라.** 위 "재료 나열"을 그대로 베끼지 말고, 아래 단어를 전부 살려서 자연스러운 한 문장의 제목으로 재구성하라: ${mustInclude.join(', ')}
 
@@ -1367,7 +1217,9 @@ ${ta.bodyTails && ta.bodyTails.length ? `- 본문에 녹일 키워드(제목엔 
 - 단어 그대로가 아니어도 된다 — 조사·어순·연결어를 자유롭게 써서 읽히는 문장으로 만들어라. (예: "최초·200억엔 기준" 같은 나열식 대신 "국내 최초 200억엔 발행 성공"처럼 자연스럽게)
 - 메인키워드는 삭제하거나 다른 말로 바꾸지 마라. 후킹어도 동의어로 슬쩍 바꾸지 말고 원래 단어를 살려라.
 - "총정리·완벽·꼭·한번에" 같은 빈 수식어는 추가하지 마라.
-- 제목은 명사로 끝맺어라. "~하세요/합니다" 같은 서술형 꼬리는 금지.`;
+- 제목은 명사로 끝맺어라. "~하세요/합니다" 같은 서술형 꼬리는 금지.
+- 제목이 "~는/~은/~가/~이" 같은 조사로 끝나며 뒤에 내용이 더 이어질 것처럼 보이면 안 된다. 완결된 명사구로 마무리하라.
+- 고른 단어가 많아 제목이 길어져도 괜찮다. 길이보다 "고른 단어를 하나도 빼지 않는 것"이 우선이다. 다만 읽기 불편할 정도로 늘어지지 않게, 자연스러운 문장 안에서 간결하게 표현하라.`;
 }
 
 function titlesFromHooks(keyword, hooks){
@@ -1376,12 +1228,9 @@ function titlesFromHooks(keyword, hooks){
   const words = hooks.map(h=>h.word).filter(w => w && !kw.includes(w));
   if(words.length===0) return [];
   const out = [];
-  // 1) 메인키워드 + 후킹 1~2개 (가장 빈도 높은 것)
   if(words[0]) out.push(`${kw} ${words[0]}`);
   if(words[1]) out.push(`${kw} ${words[0]} ${words[1]}`);
-  // 2) 후킹 2개를 자연스럽게 (상위 후킹이 곧 다른 검색어인 경우)
   if(words[1] && words[2]) out.push(`${kw} ${words[1]} ${words[2]}`);
-  // 중복 제거 + 너무 긴 것 컷(네이버 제목 가독: 대략 35자 내)
   return [...new Set(out)].map(t=>t.trim()).filter(t=>t.length<=40).slice(0,3);
 }
 function titlesFor(keyword, intent){
@@ -1463,30 +1312,27 @@ function renderDetailTable(){
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
   els.detailKeywordTable.innerHTML = rows.map(row=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell">${escapeHTML(row.reason)}</td></tr>`).join('');
 }
-// [v18.1] 선택된 키워드의 후킹을 키워드별 캐시로 관리. 없으면 비동기로 가져와 채우고 다시 렌더.
 function ensureHooksFor(keyword){
   const key = normalizeSpace(keyword);
   if(!state.hooksByKw) state.hooksByKw = {};
   if(!state.hookPending) state.hookPending = {};
-  if(state.hooksByKw[key] !== undefined) return;      // 이미 있음
-  if(state.hookPending[key]) return;                   // 이미 요청 중
+  if(state.hooksByKw[key] !== undefined) return;
+  if(state.hookPending[key]) return;
   state.hookPending[key] = true;
   const seedAtRequest = state.seed;
   fetchTitleHuntCached(keyword).then(th => {
-    if(state.seed !== seedAtRequest) return;           // 그새 다른 분석 시작 → 버림
+    if(state.seed !== seedAtRequest) return;
     state.hooksByKw[key] = Array.isArray(th.hooks) ? th.hooks : [];
     if(!state.hookSamplesByKw) state.hookSamplesByKw = {};
     state.hookSamplesByKw[key] = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
     if(!state.newsSnippetsByKw) state.newsSnippetsByKw = {};
     state.newsSnippetsByKw[key] = Array.isArray(th.newsSnippets) ? th.newsSnippets : [];
     state.hookPending[key] = false;
-    // 지금 화면에 떠 있는 키워드와 같으면 다시 그림
     const rows = state.recommended.length ? state.recommended : state.rows;
     const cur = rows[state.selectedIndex] || rows[0];
     if(cur && normalizeSpace(cur.kw) === key) renderSelected();
   }).catch(()=>{ state.hookPending[key] = false; });
 }
-// [v19] 콘텐츠 클러스터 렌더: 허브1 + 스포크5. 각 스포크에 '원고 프롬프트' 버튼.
 function renderCluster(hubRow){
   if(!els.clusterBox) return;
   const cluster = buildCluster(hubRow.kw, state.rows);
@@ -1504,7 +1350,6 @@ function renderCluster(hubRow){
   } else {
     spokeHtml = `<div class="cluster-node single"><div class="cl-line" style="opacity:.7">독립 글감이 충분치 않습니다. 이 키워드는 <b>단독 원고</b>로 작성하세요. (속성·세부 정보는 허브 한 글에 모으는 게 유리합니다.)</div></div>`;
   }
-  // [v21] 수익형 롱테일 키워드 안내 (다운로드·전화번호·드라이버 류 — 거르지 않고 별도 글감으로 살림)
   let longtailHtml = '';
   if(cluster.longtail && cluster.longtail.length){
     longtailHtml = `<div class="cluster-node" style="background:#fffdf5;border-color:#fde68a;">
@@ -1518,14 +1363,12 @@ function renderCluster(hubRow){
   }));
 }
 
-// 스포크/허브 버튼 클릭 → 그 키워드로 자동완성 재조회 → 풍부하면 클러스터형, 빈약하면 단독형 프롬프트
 async function generateClusterPrompt(kind, idx){
   const cluster = state.currentCluster;
   if(!cluster) return;
   const targetKw = kind==='hub' ? cluster.hub : (cluster.spokes[idx]?.kw);
   if(!targetKw) return;
   els.draftPrompt.value = `"${targetKw}" 관련 검색어와 발행 제목을 조사해 원고 프롬프트를 만드는 중...`;
-  // 스포크 키워드로 자동완성(섹션 재료) + 발행 블로그 제목(후킹)을 병렬 조회
   let subKeywords = [], spokeHooks = [];
   try {
     const [sug, th] = await Promise.all([
@@ -1535,10 +1378,8 @@ async function generateClusterPrompt(kind, idx){
     subKeywords = (sug.suggestions || []).filter(k => normalizeKey(k)!==normalizeKey(targetKw)).slice(0, 12);
     spokeHooks = (th.hooks || []).slice(0, 5);
   } catch(e){ subKeywords = []; spokeHooks = []; }
-  // 같은 클러스터의 흡수 키워드도 섹션 재료로 포함
   if(kind==='spoke'){ subKeywords = [...new Set([...(cluster.spokes[idx].also||[]), ...subKeywords])]; }
-  const isSingle = subKeywords.length < 3; // 연관어 빈약 → 단독 원고 모드
-  // 다른 스포크들 = 내부링크 후보
+  const isSingle = subKeywords.length < 3;
   const siblings = cluster.spokes.filter((_,i)=> kind==='hub' || i!==idx).map(s=>s.kw);
   const linkTargets = [kind==='spoke' ? cluster.hub : null, ...siblings].filter(Boolean);
   els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub:cluster.hub, kind });
@@ -1596,11 +1437,9 @@ function renderSelected(){
   const rows = state.recommended.length ? state.recommended : state.rows;
   const row = rows[state.selectedIndex] || rows[0];
   if(!row){ renderIdle(); return; }
-  // [v18.1] 선택된 키워드 기준으로 후킹을 가져온다(추천1위 고정 → 선택 연동).
   ensureHooksFor(row.kw);
   const curHooks = (state.hooksByKw && state.hooksByKw[normalizeSpace(row.kw)]) || [];
   const intent = getIntentForSelected(row);
-  // [v22.1] 경험 입력칸 placeholder/hint를 의도 유형과 AI 인용 필요도에 맞게 갱신 (값은 보존)
   if(els.expInput) els.expInput.placeholder = expPlaceholderFor(intent.key);
   if(els.expHint){
     els.expHint.textContent = needsExperience(row, intent)
@@ -1611,11 +1450,8 @@ function renderSelected(){
   els.judgementTitle.textContent = `${row.kw}, ${row.grade}로 추천합니다`;
   els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 발행량이 적은 순으로 정렬했습니다.`;
   els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','도입부와 각 소제목 첫 문단은 질문에 바로 답해야 AI 인용에 유리합니다.','표·체크리스트·실제 경험을 넣어 사람이 믿고 AI가 가져가기 쉬운 글로 만드세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
-  // [v19] 콘텐츠 클러스터 렌더 (허브1 + 스포크5)
   renderCluster(row);
-  // [v20] 제목 조합기: 선택 키워드를 메인으로, 연관어(state.rows)를 후킹 후보로
   renderTitleBuilder(row.kw, curHooks);
-  // [v20] 발행 제목 참고: 블로그 제목 후킹 칩 + 제목 목록 (상위5 펼침 + 나머지 접기, 짤림 없음)
   const top3 = curHooks.slice(0,3);
   const hookChips = top3.map(h=>`<span class="chip hot">${escapeHTML(h.word)} <b style="opacity:.55">${h.count}</b></span>`).join('');
   const samples = (state.hookSamplesByKw && state.hookSamplesByKw[normalizeSpace(row.kw)]) || [];
@@ -1634,8 +1470,8 @@ function renderSelected(){
     : `<div class="tb-empty">아직 수집된 발행 제목이 없습니다. (네이버 검색 API 연결 시 표시됩니다)</div>`;
   els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['AI 인용 적합도',row.aiCitationLabel||'구조 보강 필요'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
   const promptRelated = state.relatedKeywords.join(', ');
-  const hasRelated = state.relatedKeywords.length > 0; // [v20] 연관어 유무로 설계 보조지시 분기
-  const fewRelated = state.relatedKeywords.length > 0 && state.relatedKeywords.length < 3; // [v20] 연관어 적음(1~2개): 무리하게 섹션 늘리지 말 것
+  const hasRelated = state.relatedKeywords.length > 0;
+  const fewRelated = state.relatedKeywords.length > 0 && state.relatedKeywords.length < 3;
   els.draftPrompt.value = `# 블로그 원고 작성 의뢰
 
 ## 메인 키워드
@@ -1742,38 +1578,31 @@ async function analyze(){
   const seed=normalizeSpace(els.keywordInput.value);
   if(!seed){ renderIdle(); return; }
   els.analyzeBtn.disabled=true; els.analyzeBtn.textContent='분석 중...';
-  if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } // [v22.6] 키워드 바뀌면 경험 메모 초기화(오염 방지)
+  if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
   state.seed = seed;
   try{
-    // STEP 1: 검색광고 API 연관키워드
     const adPayload = await fetchSearchAd(seed);
     const list = extractKeywordList(adPayload);
     const exact = findExactItem(list, seed);
     const exactRow = exact ? rowFromSearchAdItem(exact, '원 키워드') : { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback', raw:null };
     const relatedRows = uniqueByKeyword(list.map(item=>rowFromSearchAdItem(item, 'API 연관키워드')).filter(row=>normalizeKey(row.kw)!==normalizeKey(seed)));
 
-    // STEP 2: 네이버+구글 자동완성 결합 (검색광고 API가 못 주는 트렌드/신조어 보강)
     const suggestData = await fetchSuggestCached(seed);
     const adKeys = new Set([exactRow, ...relatedRows].map(r=>normalizeKey(r.kw)));
-    // 자동완성 키워드 중 검색광고에 이미 있는 건 제외, 신규만 추림 (상위 15개로 호출 제한)
     const newSuggestKws = (suggestData.detailed || (suggestData.suggestions||[]).map(s=>({keyword:s,source:'suggest'})))
       .map(d => ({ kw:normalizeSpace(d.keyword), src:d.source }))
       .filter(d => d.kw && !adKeys.has(normalizeKey(d.kw)))
       .slice(0, 15);
 
-    // 자동완성 신규 키워드는 검색량을 검색광고 API로 재조회해 row로 만든다
-    // [v18.1] 동시성 2→1: 자동완성 신규 키워드가 많은 키워드(예: 나이스정보통신)에서 searchad 429가 재발 → 직렬에 가깝게.
     const suggestRows = await mapLimit(newSuggestKws, 1, async d => {
       const sourceLabel = d.src === 'google' ? '구글 자동완성' : (d.src === 'naver' ? '네이버 자동완성' : '자동완성');
       try {
         const p = await fetchSearchAdCached(d.kw);
         const sList = extractKeywordList(p);
-        // [v22.7] sList[0] 폴백 제거: 정확히 일치하는 키워드가 없으면 무관한 연관키워드의 검색량을
-        // 도용하지 않는다(허위 블루오션 신호 방지). 못 찾으면 monthly:0으로 안전 처리 → 아래 return으로 낙하.
         const hit = findExactItem(sList, d.kw);
         if(hit){
           const r = rowFromSearchAdItem(hit, sourceLabel);
-          r.kw = d.kw; // 표시는 자동완성 원문 유지
+          r.kw = d.kw;
           return r;
         }
       } catch(e){ /* 검색량 못 받아도 키워드는 살림 */ }
@@ -1783,15 +1612,10 @@ async function analyze(){
     let baseRows = uniqueByKeyword([exactRow, ...relatedRows, ...suggestRows]).slice(0, 70);
     if(!baseRows.length) baseRows = [{ kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback' }];
 
-    // STEP 3: 발행량 결합
-    // [v17.1] 발행량 조회 호출량 절감: baseRows 전체(최대 70)에 다 조회하면 검색광고/콘텐츠 API에 429가 난다.
-    // 추천 후보 선별 기준은 '월간 검색수(monthly)'인데 이 값은 발행량 조회 전에 이미 알고 있으므로,
-    // monthly가 큰 상위 키워드에만 발행량을 조회한다. 나머지는 발행량 0으로 둔다(어차피 추천 후보로 안 올라옴).
-    const CONTENT_LOOKUP_LIMIT = 24; // 추천은 상위 6개만 쓰므로 여유롭게 24개까지만 조회
+    const CONTENT_LOOKUP_LIMIT = 24;
     const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
     const lookupSet = new Set(byDemand.slice(0, CONTENT_LOOKUP_LIMIT).map(r=>normalizeKey(r.kw)));
     const hydrated = await mapLimit(baseRows, 2, async row => {
-      // 조회 대상이 아니면 API 호출 없이 발행량 0으로 통과
       if(!lookupSet.has(normalizeKey(row.kw))){
         return { ...row, blog:0, cafe:0, totalContent:0, contentSkipped:true };
       }
@@ -1802,22 +1626,18 @@ async function analyze(){
     });
     const enrichedRaw = uniqueByKeyword(hydrated).map(row=>enrichScore(row, hydrated));
     const sorted = sortCandidates(enrichedRaw);
-    // [v20] 추천 = 명백한 블루오션만 티어 순(1→2→3)으로 채운다. 적격 없으면 비워두고 상세표로 유도.
     let recommended = fillRecommended(sorted, 6);
-    state._noBlueOcean = recommended.length === 0;  // 추천 0개 = 블루오션 없음 신호
+    state._noBlueOcean = recommended.length === 0;
     if(!recommended.length){
-      // 블루오션은 없지만 시드 자체로 글감 설계는 할 수 있게, 점수 계산이 끝난 enriched row를 사용한다.
       const seedEnriched = sorted.find(r => normalizeKey(r.kw) === normalizeKey(seed));
       if(seedEnriched) recommended = [seedEnriched];
     }
     if(!recommended.length) recommended = [{ ...exactRow, sourceType:'원키워드 fallback', grade:'API 수치 부족', score:20, reason:'API 후보가 부족해 원키워드 기준으로 글감 설계를 만듭니다.', intentEvidence:'일반정보' }];
 
-    // 연관키워드 묶음: 검색광고 + 자동완성 신규 합쳐 표시
     const relatedKeywords = uniqueByKeyword([...relatedRows, ...suggestRows]).map(r=>r.kw);
     state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooksByKw:{}, hookPending:{}, titleApplied:null };
     els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
-    // 후킹은 renderSelected -> ensureHooksFor(선택 키워드)가 비동기로 가져온다.
   } catch(err){
     console.error(err);
     els.judgementTitle.textContent='분석 중 오류가 발생했습니다.';
@@ -1832,10 +1652,8 @@ els.copyPromptBtn.addEventListener('click',()=>copyText(els.draftPrompt.value, e
 els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${row.score}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });
 [els.platformSelect,els.toneSelect,els.lengthSelect,els.outputSelect,els.tableCheck,els.faqCheck].forEach(el=>el.addEventListener('change', renderSelected));
-// [v21] 경험 입력 시 프롬프트 실시간 갱신 (입력값은 renderSelected가 placeholder만 바꾸고 value는 건드리지 않음)
 if(els.expInput) els.expInput.addEventListener('input', renderSelected);
 renderIdle();
-// [v21] 새로고침 시 브라우저가 textarea 값을 자동복원하는 것을 방지 — 로드 완료 후 한 번 더 비운다.
 window.addEventListener('load', ()=>{ if(els.expInput) els.expInput.value=''; });
 </script>
 </body>

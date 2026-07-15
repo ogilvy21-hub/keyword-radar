@@ -2,6 +2,9 @@
 // 네이버 검색 API(블로그+뉴스)로 "이미 발행된 제목"을 모아 후킹 키워드를 추출한다.
 // [v22.10] 뉴스 검색의 description(요약 스니펫)도 함께 가져와, 원고 작성 AI가
 // 자기 기억이 아니라 실제 검색 스니펫을 근거로 사실을 쓸 수 있게 한다.
+// [v22.12] 관련도순(sim)만 쓰면 "민경욱프로필"처럼 오래된 프로필 기사가 최신 속보(2026년 사건)를
+// 밀어내는 문제가 있었다. 최신순(date) 검색도 같이 가져와 합치고, 최종은 실제 pubDate 기준으로
+// 재정렬해서 최신 기사가 항상 위로 오게 한다.
 // 키: 네이버 개발자센터 검색 API. Vercel 환경변수 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 필요.
 // 차단/실패에 강하게: 타임아웃, 개별 실패 격리, 전체 실패해도 200+빈결과(본체 보호).
 
@@ -26,11 +29,11 @@ function stripTags(s) {
     .trim();
 }
 
-async function fetchNaverSearch(type, keyword, clientId, clientSecret) {
+async function fetchNaverSearch(type, keyword, clientId, clientSecret, sort='sim') {
   try {
     const url =
       `https://openapi.naver.com/v1/search/${type}.json?query=` +
-      encodeURIComponent(keyword) + '&display=30&sort=sim';
+      encodeURIComponent(keyword) + `&display=30&sort=${sort}`;
     const res = await fetchWithTimeout(url, {
       headers: {
         'X-Naver-Client-Id': clientId,
@@ -50,14 +53,14 @@ async function fetchNaverSearch(type, keyword, clientId, clientSecret) {
   }
 }
 
-// [v22.10] 뉴스 검색 결과의 title+description(요약 스니펫)+날짜+매체를 함께 가져온다.
-// 후킹 추출용(fetchNaverSearch)과 분리한 이유: 저건 title 문자열 배열만 필요하고,
-// 이건 "사실 확인 근거"로 쓸 거라 원문 구조(스니펫·출처·날짜)가 다 필요하다.
-async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
+// [v22.10, v22.12] 뉴스 검색 결과의 title+description(요약 스니펫)+날짜+매체를 함께 가져온다.
+// 관련도순(sim)과 최신순(date)을 둘 다 가져와 합치고, 중복 제거 후 실제 pubDate 기준으로
+// 재정렬한다. "관련도순만 쓰면 오래된 기사가 최신 속보를 밀어내는" 문제를 이렇게 해결한다.
+async function fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, sort) {
   try {
     const url =
       `https://openapi.naver.com/v1/search/news.json?query=` +
-      encodeURIComponent(keyword) + '&display=5&sort=sim';
+      encodeURIComponent(keyword) + `&display=5&sort=${sort}`;
     const res = await fetchWithTimeout(url, {
       headers: {
         'X-Naver-Client-Id': clientId,
@@ -65,7 +68,7 @@ async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
       },
     });
     if (!res.ok) {
-      console.error('naver news snippets not ok:', res.status);
+      console.error(`naver news snippets(${sort}) not ok:`, res.status);
       return [];
     }
     const data = await res.json();
@@ -74,14 +77,33 @@ async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
       .map(it => ({
         title: stripTags(it.title),
         description: stripTags(it.description),
+        link: it.originallink || it.link || '',
         source: (it.originallink || it.link || '').replace(/^https?:\/\//, '').split('/')[0] || '',
         pubDate: it.pubDate || '',
       }))
       .filter(x => x.title && x.description);
   } catch (e) {
-    console.error('naver news snippets error:', e.message);
+    console.error(`naver news snippets(${sort}) error:`, e.message);
     return [];
   }
+}
+async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
+  const [simItems, dateItems] = await Promise.all([
+    fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, 'sim'),
+    fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, 'date'),
+  ]);
+  // date(최신순) 결과를 먼저 넣어 최신 기사를 우선 확보하고, 링크 기준 중복 제거
+  const seen = new Set();
+  const merged = [];
+  for (const it of [...dateItems, ...simItems]) {
+    const key = (it.link || it.title || '').trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(it);
+  }
+  // 실제 pubDate 기준 최신순 정렬 — 관련도순으로 섞여 들어왔어도 최종은 날짜순
+  merged.sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0));
+  return merged.slice(0, 5).map(({ link, ...rest }) => rest); // link는 내부 중복제거용, 응답엔 불필요
 }
 
 // ===== 후킹 추출 ===== (기존과 동일, 변경 없음)
@@ -186,7 +208,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // [v22.10] 블로그 제목(후킹용) + 뉴스 제목(맥락용) + 뉴스 스니펫(사실확인 근거용) 병렬 수집
+    // 블로그 제목(후킹용) + 뉴스 제목(맥락용) + 뉴스 스니펫(사실확인 근거용, 관련도+최신 합침) 병렬 수집
     const [blogTitles, newsTitles, newsSnippets] = await Promise.all([
       fetchNaverSearch('blog', keyword, clientId, clientSecret),
       fetchNaverSearch('news', keyword, clientId, clientSecret),
@@ -203,7 +225,7 @@ export default async function handler(req, res) {
       hooks,
       sampleTitles: blogTitles.slice(0, 15),
       newsTitles: newsTitles.slice(0, 6),
-      newsSnippets,             // [{title, description, source, pubDate}] — 사실확인 근거
+      newsSnippets,             // [{title, description, source, pubDate}] — 최신순 재정렬된 사실확인 근거
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);

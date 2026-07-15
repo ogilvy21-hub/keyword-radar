@@ -1171,21 +1171,17 @@ const TITLE_PATTERNS = {
     terms: ['뜻','기본정보','정보','정리','총정리','핵심'],
     make: ({ main, tails }) => {
       const useful = pickUsefulTails(tails, ['기본정보','정보','정리','총정리']);
-      return `${main}${useful.length ? `, ${useful.join('·')} 기준` : ', 핵심만 정리'}`;
+      return `${main}${useful.length ? `, ${useful.join('·')}` : ''}`;
     }
   }
 };
 
 function pickUsefulTails(tails, removeWords = []){
-  const removeSet = new Set(removeWords.map(normalizeKey));
   const banned = new Set(['총정리','완벽','꼭','한번에','핵심','정리']);
   const cleaned = (tails || [])
     .map(normalizeSpace)
     .filter(Boolean)
-    .filter(t => !removeSet.has(normalizeKey(t)))
     .filter(t => !banned.has(t));
-  // [v22.8] 개수 제한 제거: 작성자가 고른 후킹어는 다 살린다. 문장으로 자연스럽게 엮는 건
-  // 이 프리뷰(재료 나열용)가 아니라 원고 작성 AI가 appliedTitleBlock 지침에서 담당한다.
   return cleaned.length ? cleaned : (tails || []).map(normalizeSpace).filter(Boolean);
 }
 
@@ -1233,7 +1229,7 @@ function renderTitleBuilder(seedKw, blogHooks){
   } else {
     state.titleState.hooks = hooks; // 데이터 갱신, 선택은 유지
     // 선택 인덱스가 새 배열 길이를 넘으면 정리
-    state.titleState.chosen = state.titleState.chosen.filter(i=>i < hooks.length);
+    state.titleState.chosen = state.titleState.chosen.filter(key=>hooks.some(h=>normalizeKey(h.tail)===key));
   }
   drawTitleBuilder();
 }
@@ -1242,15 +1238,17 @@ function drawTitleBuilder(){
   const relHooks = ts.hooks.map((h,i)=>({h,i})).filter(x=>x.h.kind!=='blog');
   const blogHooks = ts.hooks.map((h,i)=>({h,i})).filter(x=>x.h.kind==='blog');
   const relChip = ({h,i})=>{
-    const used = ts.chosen.includes(i);
-    return `<button class="tb-chip ${h.dim?'dim':''} ${used?'used':''}" data-ti="${i}">
+    const key = normalizeKey(h.tail);
+    const used = ts.chosen.includes(key);
+    return `<button class="tb-chip ${h.dim?'dim':''} ${used?'used':''}" data-tk="${escapeHTML(key)}">
       <span class="tb-ct">${escapeHTML(h.tail)}</span>
       <span class="tb-cm">검색 ${format(h.monthly)} · 발행 ${format(h.totalContent)}${h.dim?' · 발행多':''}</span>
     </button>`;
   };
   const blogChip = ({h,i})=>{
-    const used = ts.chosen.includes(i);
-    return `<button class="tb-chip tb-chip-blog ${used?'used':''}" data-ti="${i}">
+    const key = normalizeKey(h.tail);
+    const used = ts.chosen.includes(key);
+    return `<button class="tb-chip tb-chip-blog ${used?'used':''}" data-tk="${escapeHTML(key)}">
       <span class="tb-ct">${escapeHTML(h.tail)}</span>
       <span class="tb-cm">블로그 제목 ${format(h.count)}회</span>
     </button>`;
@@ -1261,11 +1259,14 @@ function drawTitleBuilder(){
   const blogHtml = blogHooks.length
     ? `<div class="tb-mini" style="margin-top:14px">블로그 제목 후킹 <span>· 상위 블로그가 제목에 쓴 단어(검증된 후킹)</span></div><div class="tb-chips">${blogHooks.map(blogChip).join('')}</div>`
     : '';
-  const tails = ts.chosen.map(i=>ts.hooks[i].tail);
+  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
   const patternKey = ts.pattern || detectTitlePattern(tails);
   const preview = generateTitleByPattern(ts.main, tails, patternKey);
   const patternOptions = Object.entries(TITLE_PATTERNS).map(([key, p]) => `<option value="${key}" ${key===patternKey?'selected':''}>${p.label}</option>`).join('');
-  const pins = ts.chosen.map(i=>`<span class="tb-pin">${escapeHTML(ts.hooks[i].tail)} <b data-ti="${i}">×</b></span>`).join('');
+ const pins = ts.chosen.map(key=>{
+    const h = ts.hooks.find(h=>normalizeKey(h.tail)===key);
+    return h ? `<span class="tb-pin">${escapeHTML(h.tail)} <b data-tk="${escapeHTML(key)}">×</b></span>` : '';
+  }).join('');
   els.titleBuilder.innerHTML = `
     <div class="tb-mini">메인키워드 <span>· 고정</span></div>
     <span class="tb-main">${escapeHTML(ts.main)} <span class="tb-tag">고정</span></span>
@@ -1285,8 +1286,8 @@ function drawTitleBuilder(){
     </div>
     <p class="tb-hint">미리보기는 재료 나열(참고용)입니다. 프롬프트로 넘어가면 AI가 고른 단어를 전부 살려 자연스러운 한 문장 제목으로 다시 만듭니다.</p>`;
   // 이벤트 바인딩
-  els.titleBuilder.querySelectorAll('.tb-chip[data-ti]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(Number(b.dataset.ti))));
-  els.titleBuilder.querySelectorAll('.tb-pin b[data-ti]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(Number(b.dataset.ti))));
+  els.titleBuilder.querySelectorAll('.tb-chip[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
+  els.titleBuilder.querySelectorAll('.tb-pin b[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   const patternEl = $('tbPattern');
   if(patternEl) patternEl.addEventListener('change', e=>{ state.titleState.pattern = e.target.value; drawTitleBuilder(); });
   const editEl = $('tbEdit');
@@ -1294,15 +1295,15 @@ function drawTitleBuilder(){
   const clearEl = $('tbClear'); if(clearEl) clearEl.addEventListener('click', ()=>{ ts.chosen=[]; ts.edited=''; state.titleApplied=null; drawTitleBuilder(); renderSelected(); });
   const applyEl = $('tbApply'); if(applyEl) applyEl.addEventListener('click', applyTitleToPrompt);
 }
-function toggleTitleHook(i){
+function toggleTitleHook(key){
   const ts=state.titleState; if(!ts) return;
-  const pos=ts.chosen.indexOf(i);
-  if(pos>=0) ts.chosen.splice(pos,1); else ts.chosen.push(i);
+  const pos=ts.chosen.indexOf(key);
+  if(pos>=0) ts.chosen.splice(pos,1); else ts.chosen.push(key);
   drawTitleBuilder();
 }
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;
-  const tails = ts.chosen.map(i=>ts.hooks[i].tail);
+  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
   const edited = normalizeSpace(ts.edited||'');
   const pattern = ts.pattern || detectTitlePattern(tails);
   const generated = generateTitleByPattern(ts.main, tails, pattern);

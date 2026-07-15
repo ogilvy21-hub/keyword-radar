@@ -1310,6 +1310,7 @@ function drawTitleBuilder(){
     <div class="tb-preview">
       <div class="tb-pline" id="tbPreview">${escapeHTML(preview)}</div>
       <input class="tb-edit" id="tbEdit" placeholder="직접 편집하려면 입력 (참고 후킹도 여기서 추가)" value="${escapeHTML(ts.edited||'')}"/>
+      ${bodyNote}
     </div>
     <div class="tb-actions">
       <button class="tb-clear" id="tbClear">초기화</button>

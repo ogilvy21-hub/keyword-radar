@@ -135,7 +135,7 @@ const COMMON_STOP = new Set([
   '하는법','하는','해서','했는데','입니다','합니다','네요','그것','우리','지금','오늘',
   '여기','진짜','정말','바로','모두','전부','각각','그냥','이번','당신','너무','매우',
 ]);
-const ROUNDUP_TOKEN_LIMIT = 9;
+const ROUNDUP_TOKEN_LIMIT = 8;
 function isLikelyRoundupTitle(tokens) {
   return tokens.length > ROUNDUP_TOKEN_LIMIT;
 }

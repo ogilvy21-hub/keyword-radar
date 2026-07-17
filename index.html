@@ -1349,13 +1349,14 @@ function renderCluster(hubRow){
   if(!els.clusterBox) return;
   const cluster = buildCluster(hubRow.kw, state.rows);
   state.currentCluster = cluster;
+  state.selectedSpokeIdx = new Set(); // [v22.14] 이 허브에서 새로 클러스터를 그릴 때마다 체크 상태 초기화
   const catLabel = cluster.category ? cluster.category.label : '일반';
   const hubHtml = `<div class="cluster-node hub"><div class="cl-line"><b>허브</b> <span>${escapeHTML(cluster.hub)}</span> <span class="pill gray" style="font-size:10px">${escapeHTML(catLabel)}</span></div>
     <button class="pick-btn cl-btn" data-cluster="hub">이 허브 원고 프롬프트</button></div>`;
   let spokeHtml = '';
   if(cluster.spokes.length){
-    spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
-      <div class="cl-line"><b>스포크 ${i+1}</b> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
+   spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
+      <div class="cl-line"><label style="cursor:pointer;"><input type="checkbox" class="spoke-check" data-idx="${i}" style="margin-right:6px;"><b>스포크 ${i+1}</b></label> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
       ${s.also.length?`<div style="font-size:11px;opacity:.5;margin:2px 0 4px">+ ${s.also.map(escapeHTML).join(', ')}</div>`:''}
       <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
     </div>`).join('');
@@ -1374,6 +1375,10 @@ function renderCluster(hubRow){
     generateClusterPrompt(btn.dataset.cluster, Number(btn.dataset.idx||0));
   }));
 }
+  els.clusterBox.querySelectorAll('.spoke-check').forEach(cb=>cb.addEventListener('change', ()=>{
+    const idx = Number(cb.dataset.idx);
+    if(cb.checked) state.selectedSpokeIdx.add(idx); else state.selectedSpokeIdx.delete(idx);
+  }));
 
 async function generateClusterPrompt(kind, idx){
   const cluster = state.currentCluster;
@@ -1392,7 +1397,10 @@ async function generateClusterPrompt(kind, idx){
   } catch(e){ subKeywords = []; spokeHooks = []; }
   if(kind==='spoke'){ subKeywords = [...new Set([...(cluster.spokes[idx].also||[]), ...subKeywords])]; }
   const isSingle = subKeywords.length < 3;
-  const siblings = cluster.spokes.filter((_,i)=> kind==='hub' || i!==idx).map(s=>s.kw);
+  // [v22.14] 허브는 "체크된 스포크"만 중복방지 대상으로, 스포크는 기존대로 형제글 전체를 내부링크 후보로
+  const siblings = kind==='hub'
+    ? cluster.spokes.filter((_,i)=> state.selectedSpokeIdx && state.selectedSpokeIdx.has(i)).map(s=>s.kw)
+    : cluster.spokes.filter((_,i)=> i!==idx).map(s=>s.kw);
   const linkTargets = [kind==='spoke' ? cluster.hub : null, ...siblings].filter(Boolean);
   els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub:cluster.hub, kind });
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1407,6 +1415,11 @@ function buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTar
     : `네이버에서 이 키워드로 검색해 상위 블로그 제목에 반복되는 후킹 키워드를 찾아 활용하라.`;
   const linkBlock = linkTargets.length
     ? `\n## 내부링크 (원고 하단 또는 본문 자연스러운 위치)\n아래 키워드를 다루는 다른 글로 내부링크를 걸어라(앵커텍스트=키워드). 이들은 같은 주제 묶음의 형제 글이다:\n${linkTargets.map(k=>`- ${k}`).join('\n')}\n`
+    : '';
+  // [v22.14] 허브 + 체크된 스포크가 있을 때만: "그건 스포크가 따로 다룰 거니 여긴 개요만" 안내.
+  // 하나도 체크 안 하면(=스포크 없이 한 방에 다 담을 계획) 이 안내 자체가 안 붙어서 평소처럼 완결된 글을 쓰게 됨.
+  const dedupBlock = (kind==='hub' && linkTargets.length)
+    ? `\n## 콘텐츠 범위 안내\n아래 항목은 별도 스포크 글로 따로 쓸 예정이다. 이 허브 글에서는 1~2문장으로 개요만 짚고, 자세한 설명은 스포크 글로 넘겨라(내부링크로 유도):\n${linkTargets.map(k=>`- ${k}`).join('\n')}`
     : '';
   const modeNote = isSingle
     ? `이 키워드는 연관 검색어가 적다(최신 이슈성일 가능성). 무리하게 섹션을 늘리지 말고, 검색자가 진짜 궁금한 핵심만 깊게 다뤄라.`
@@ -1427,7 +1440,7 @@ ${modeNote}
   - 규칙 2: 후킹은 '그 자체로 검색되는 명사'여야 한다(단순 수식어 금지).
   - 규칙 3: 제목은 명사로 끝맺어라. "~하세요/~합니다" 서술형 꼬리와 "총정리·꼭·완벽" 같은 빈 수식어(TMI)는 빼라.
 - **[가장 중요] 목차: 위 섹션 재료를 검색 질문형 소제목으로 바꿔 짠 뒤, 도입부 바로 다음에 '## 목차' 형태로 본문에 반드시 직접 넣어라.** (목차 항목은 본문 소제목과 글자까지 정확히 일치시켜라.)
-${linkBlock}
+${linkBlock}${dedupBlock}
 ## AI 브리핑 대응 구조
 - 도입부 첫 문단은 2~3문장으로 작성하고, 첫 문장에 메인 키워드 질문의 답을 바로 쓴다.
 - 각 소제목의 첫 문단도 질문에 대한 직접 답으로 시작한다.

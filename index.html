@@ -1380,7 +1380,6 @@ function renderCluster(hubRow){
 }
 
 async function generateClusterPrompt(kind, idx){
-async function generateClusterPrompt(kind, idx){
   const cluster = state.currentCluster;
   if(!cluster) return;
   const targetKw = kind==='hub' ? cluster.hub : (cluster.spokes[idx]?.kw);

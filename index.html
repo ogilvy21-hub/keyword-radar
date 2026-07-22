@@ -1370,6 +1370,7 @@ function renderCluster(hubRow){
       <div style="font-size:12px;color:#b45309;line-height:1.6;">${cluster.longtail.map(escapeHTML).join(' · ')}</div>
     </div>`;
   }
+   els.clusterBox.innerHTML = hubHtml + spokeHtml + longtailHtml;
  els.clusterBox.querySelectorAll('.cl-btn').forEach(btn=>btn.addEventListener('click',()=>{
     generateClusterPrompt(btn.dataset.cluster, Number(btn.dataset.idx||0));
   }));

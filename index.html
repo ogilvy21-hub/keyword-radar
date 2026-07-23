@@ -729,8 +729,6 @@ function factCheckByIntent(intent, row){
   const years = (relText.match(/20\d{2}/g)||[]).map(Number).filter((v,i,a)=>a.indexOf(v)===i);
   const pastYears = years.filter(y => y < currentYear);
 
-  lines.push(`- 연관검색어나 후킹어 중 이 키워드와 확실히 무관한 것(동명이인의 다른 직업, 전혀 다른 분야 등)이 섞여 있어도, "확인 안 됨"이라며 그것들을 본문에서 하나하나 짚어줄 필요는 없다. 독자가 실제로 헷갈릴 만큼 화제성이 크거나 흔한 경우가 아니면 그냥 다루지 말고 넘어가라. 무관한 검색어들을 나열한 표나 여러 문단짜리 해명은 만들지 마라 — 이건 TMI다. 부득이하게 헷갈림을 짚어야 한다면 한 문장으로 짧게 언급하고 끝내라.`);
-
   if(pastYears.length){
     lines.push(`- 연관어에 과거 연도(${pastYears.join(', ')})가 섞여 있다. 그 정보를 현재 기준으로 단정하지 말고, 발행 시점(${currentYear}년) 기준 공식 안내를 확인해 최신 연도로 갱신해 써라.`);
   }

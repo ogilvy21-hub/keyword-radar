@@ -61,8 +61,10 @@
     .recommend-table td:first-child,.detail-table td:first-child{ font-weight:500; white-space:normal; min-width:180px; }
     tr.selected td{ background:var(--clear-soft); }
     .pick-btn{ border:1px solid var(--ink); border-radius:6px; padding:6px 10px; background:transparent; color:var(--ink); font-size:11px; font-weight:600; cursor:pointer; }
-    .reason-cell{ max-width:280px; white-space:normal; color:var(--ink-soft); }
-    .detail-table table{ min-width:1200px; }
+    .reason-cell{ max-width:280px; white-space:normal; color:var(--ink-soft); vertical-align:top; }
+    .reason-text{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; line-height:1.5; cursor:help; }
+    .detail-table table{ min-width:1200px; table-layout:fixed; }
+    .detail-table table th:last-child,.detail-table table td:last-child{ width:280px; }
 
     .pill{ display:inline-flex; align-items:center; padding:4px 9px; border-radius:8px; background:var(--paper-2); color:var(--ink-soft); font-size:10.5px; font-weight:600; white-space:nowrap; }
     .pill.green{ background:var(--clear-soft); color:var(--clear); } .pill.yellow{ background:#F3E7C8; color:#8A6A16; } .pill.red{ background:var(--flag-soft); color:var(--flag); } .pill.gray{ background:var(--paper-2); color:var(--ink-soft); }
@@ -1028,7 +1030,7 @@ function buildCluster(hubKw, rows){
     else { sections.push(r.kw); absorbed.push(r.kw); }
   }
   spokesRaw.sort((a,b)=>b.monthly-a.monthly);
-  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly, also:[] }));
+  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly }));
   return { hub:hubKw, spokes, absorbed, category, sections, longtail };
 }
 
@@ -1248,66 +1250,6 @@ function appliedTitleBlock(){
 - 초복날짜2026, 중복·말복은 언제?
 - 컬러들의 쇼핑 시즌2 등장인물, 디즈니플러스 공개 정보`;
 }
-function titlesFromHooks(keyword, hooks){
-  const kw = normalizeSpace(keyword);
-  if(!Array.isArray(hooks) || hooks.length===0) return [];
-  const words = hooks.map(h=>h.word).filter(w => w && !kw.includes(w));
-  if(words.length===0) return [];
-  const out = [];
-  if(words[0]) out.push(`${kw} ${words[0]}`);
-  if(words[1]) out.push(`${kw} ${words[0]} ${words[1]}`);
-  if(words[1] && words[2]) out.push(`${kw} ${words[1]} ${words[2]}`);
-  return [...new Set(out)].map(t=>t.trim()).filter(t=>t.length<=40).slice(0,3);
-}
-function titlesFor(keyword, intent){
-  const kw=normalizeSpace(keyword);
-  const map = {
-    content:[`${kw}, 어디서 볼 수 있고 몇부작인지 정리`,`${kw} 출연진과 줄거리 보기 전 확인할 내용`,`${kw} 원작·OTT·재방송 정보 한 번에 정리`],
-    policy:[`${kw}, 대상과 신청 기준 정리`,`${kw} 언제 받고 어떻게 신청하는지 정리`,`${kw} 사용처와 주의사항까지 확인하세요`],
-    finance:[`${kw}, 한도·금리·서류 기준 정리`,`${kw} 신청 전 부결 사유부터 확인하세요`,`${kw} 조건 비교와 주의사항 정리`],
-    place:[`${kw} 주차·예약·영업시간 정리`,`${kw} 방문 전 확인할 메뉴와 후기`,`${kw} 위치와 가격대 한 번에 정리`],
-    recipe:[`${kw} 재료 비율과 순서 정리`,`${kw} 실패 줄이는 조리 포인트`,`${kw} 맛을 살리는 핵심만 정리`],
-    career:[`${kw} 준비 전 꼭 볼 체크리스트`,`${kw} 입사·면접 전 확인할 내용`,`${kw} 처음 겪는 사람을 위한 정리`],
-    shopping:[`${kw} 가격·후기·선택 기준 정리`,`${kw} 구매 전 비교할 포인트`,`${kw} 추천 대상과 주의사항`],
-    issue:[`${kw} 사건 개요와 쟁점 정리`,`${kw} 타임라인과 반응 확인`,`${kw} 앞으로 봐야 할 부분`],
-    howto:[`${kw} 원인과 해결 순서`,`${kw} 먼저 확인할 설정`,`${kw} 안 될 때 대안 정리`],
-    sports:[`${kw} 일정과 중계 채널 정리`,`${kw} 출전 명단과 관전 포인트`,`${kw} 순위와 경기 전망 정리`],
-    health:[`${kw} 증상과 원인 정리`,`${kw} 치료·관리법과 예방법`,`${kw} 병원 가기 전 확인할 점`],
-    education:[`${kw} 공부법과 자료 정리`,`${kw} 시험 일정과 기준 확인`,`${kw} 자주 틀리는 부분 정리`],
-    tech:[`${kw} 사용법과 설정 정리`,`${kw} 오류 해결과 주의점`,`${kw} 기능·요금 비교`],
-    season:[`${kw} 시작·종료 시기 정리`,`${kw} 대비·준비 방법`,`${kw} 지역별 차이와 팁`],
-    law:[`${kw} 절차와 필요 서류 정리`,`${kw} 비용·기간·처벌 수위`,`${kw} 대응법과 주의할 점`],
-    auto:[`${kw} 가격·옵션 비교`,`${kw} 연비·유지비 정리`,`${kw} 구매·정비 전 확인할 점`],
-    parenting:[`${kw} 시기별 체크리스트`,`${kw} 준비물과 방법 정리`,`${kw} 처음 겪는 부모를 위한 정리`],
-    general:[`${kw}, 핵심만 쉽게 정리`,`${kw} 기준과 주의할 점`,`${kw} 처음 보는 사람을 위한 정리`]
-  };
-  return map[intent.key] || map.general;
-}
-function outlinesFor(keyword, intent){
-  const kw=normalizeSpace(keyword);
-  const map = {
-    content:[`${kw} 기본정보`,'공개 일정과 회차 구성','출연진과 주요 인물','줄거리와 관전 포인트','OTT·재방송·다시보기','자주 묻는 질문'],
-    policy:[`${kw} 대상자 확인`,'신청 조건과 제외 대상','지급·환급 금액과 일정','신청 방법과 필요 서류','사용처와 주의사항','자주 묻는 질문'],
-    finance:[`${kw} 기본 조건`,'한도와 금리 비교','신청 대상과 필요 서류','승인 기간과 부결 사유','상환 방식과 주의사항','자주 묻는 질문'],
-    place:[`${kw} 기본정보`,'위치와 영업시간','주차와 예약 방법','메뉴와 가격대','방문 전 체크할 점','자주 묻는 질문'],
-    recipe:[`${kw} 재료 준비`,'양념과 비율','만드는 순서','맛을 살리는 포인트','보관법과 응용법','자주 묻는 질문'],
-    career:[`${kw} 기본정보`,'대상과 상황','준비해야 할 것','실제 절차','주의사항','자주 묻는 질문'],
-    shopping:[`${kw} 선택 기준`,'가격과 브랜드 비교','사이즈와 사용 후기','추천 대상과 피해야 할 경우','구매 전 체크리스트','자주 묻는 질문'],
-    issue:[`${kw} 사건 개요`,'타임라인 정리','핵심 쟁점','관련 반응','앞으로 확인할 부분','자주 묻는 질문'],
-    howto:[`${kw} 원인 확인`,'먼저 확인할 설정','해결 순서','안 될 때 대안','추가 조치와 주의사항','자주 묻는 질문'],
-    sports:[`${kw} 기본정보`,'경기 일정과 시간','중계·시청 방법','출전 명단과 주요 선수','순위와 관전 포인트','자주 묻는 질문'],
-    health:[`${kw} 개요`,'주요 증상','원인과 위험 요인','치료와 관리법','예방법과 생활 습관','자주 묻는 질문'],
-    education:[`${kw} 개요`,'공부 방법과 전략','추천 자료와 강의','시험·전형 일정과 기준','자주 틀리는 부분','자주 묻는 질문'],
-    tech:[`${kw} 기본정보`,'사용법과 설정','주요 기능','오류·문제 해결','요금·대안 비교','자주 묻는 질문'],
-    season:[`${kw} 개요`,'시작·종료 시기','대비·준비 방법','지역별 차이','주의사항과 팁','자주 묻는 질문'],
-    law:[`${kw} 개요`,'해당되는 상황','절차와 필요 서류','비용·기간·처벌 수위','주의할 점과 대응법','자주 묻는 질문'],
-    auto:[`${kw} 기본정보`,'가격과 옵션','연비와 유지비','구매·정비 시 체크','실사용 후기','자주 묻는 질문'],
-    parenting:[`${kw} 개요`,'시기별 준비사항','구체적 방법','발달·건강 체크','실수하기 쉬운 점','자주 묻는 질문'],
-    general:[`${kw} 기본정보`,'핵심 내용 정리','관련 정보 한눈에','비교할 기준','주의할 점','자주 묻는 질문']
-  };
-  return map[intent.key] || map.general;
-}
-
 function pillClass(value){ if(['즉시 글감','우선 후보'].includes(value)) return 'pill green'; if(['차순위 글감','관찰키워드'].includes(value)) return 'pill yellow'; if(['API 수치 부족'].includes(value)) return 'pill red'; return 'pill gray'; }
 function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'score low'; }
 function renderIdle(){
@@ -1336,7 +1278,7 @@ function renderRecommendTable(){
 function renderDetailTable(){
   const rows=state.rows;
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map(row=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell">${escapeHTML(row.reason)}</td></tr>`).join('');
+  els.detailKeywordTable.innerHTML = rows.map(row=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><span class="reason-text" title="${escapeHTML(row.reason)}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
 }
 function ensureHooksFor(keyword){
   const key = normalizeSpace(keyword);
@@ -1362,16 +1304,22 @@ function ensureHooksFor(keyword){
 function renderCluster(hubRow){
   if(!els.clusterBox) return;
   const cluster = buildCluster(hubRow.kw, state.rows);
+  // [FIX] 옵션(문체·분량 등)이 바뀔 때마다 renderSelected -> renderCluster가 재호출되면서
+  // 체크된 스포크가 매번 초기화되던 버그 수정. 같은 허브 키워드로 다시 그릴 때는
+  // 기존 selectedSpokeIdx를 유지하고, 허브 자체가 바뀔 때만 초기화한다.
+  const hubKey = normalizeKey(hubRow.kw);
+  if(state._clusterHubKey !== hubKey || !state.selectedSpokeIdx){
+    state.selectedSpokeIdx = new Set();
+    state._clusterHubKey = hubKey;
+  }
   state.currentCluster = cluster;
-  state.selectedSpokeIdx = new Set(); // [v22.14] 이 허브에서 새로 클러스터를 그릴 때마다 체크 상태 초기화
   const catLabel = cluster.category ? cluster.category.label : '일반';
   const hubHtml = `<div class="cluster-node hub"><div class="cl-line"><b>허브</b> <span>${escapeHTML(cluster.hub)}</span> <span class="pill gray" style="font-size:10px">${escapeHTML(catLabel)}</span></div>
     <button class="pick-btn cl-btn" data-cluster="hub">이 허브 원고 프롬프트</button></div>`;
   let spokeHtml = '';
   if(cluster.spokes.length){
    spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
-      <div class="cl-line"><label style="cursor:pointer;"><input type="checkbox" class="spoke-check" data-idx="${i}" style="margin-right:6px;"><b>스포크 ${i+1}</b></label> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
-      ${s.also.length?`<div style="font-size:11px;opacity:.5;margin:2px 0 4px">+ ${s.also.map(escapeHTML).join(', ')}</div>`:''}
+      <div class="cl-line"><label style="cursor:pointer;"><input type="checkbox" class="spoke-check" data-idx="${i}" ${state.selectedSpokeIdx.has(i)?'checked':''} style="margin-right:6px;"><b>스포크 ${i+1}</b></label> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
       <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
     </div>`).join('');
   } else {
@@ -1409,7 +1357,6 @@ async function generateClusterPrompt(kind, idx){
     subKeywords = (sug.suggestions || []).filter(k => normalizeKey(k)!==normalizeKey(targetKw)).slice(0, 12);
     spokeHooks = (th.hooks || []).slice(0, 5);
   } catch(e){ subKeywords = []; spokeHooks = []; }
-  if(kind==='spoke'){ subKeywords = [...new Set([...(cluster.spokes[idx].also||[]), ...subKeywords])]; }
   const isSingle = subKeywords.length < 3;
   // [v22.14] 허브는 "체크된 스포크"만 중복방지 대상으로, 스포크는 기존대로 형제글 전체를 내부링크 후보로
   const siblings = kind==='hub'

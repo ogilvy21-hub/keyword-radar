@@ -62,7 +62,9 @@
     tr.selected td{ background:var(--clear-soft); }
     .pick-btn{ border:1px solid var(--ink); border-radius:6px; padding:6px 10px; background:transparent; color:var(--ink); font-size:11px; font-weight:600; cursor:pointer; }
     .reason-cell{ max-width:280px; white-space:normal; color:var(--ink-soft); vertical-align:top; }
-    .reason-text{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; line-height:1.5; cursor:help; }
+    .reason-text{ display:none; line-height:1.5; margin-top:6px; }
+    .reason-text.expanded{ display:block; }
+    .reason-toggle{ display:block; font-size:11px; font-weight:600; color:var(--shallow); cursor:pointer; background:none; border:none; padding:0; font-family:inherit; }
     .detail-table table{ min-width:1200px; table-layout:fixed; }
     .detail-table table th:last-child,.detail-table table td:last-child{ width:280px; }
 
@@ -1271,14 +1273,32 @@ function renderRecommendTable(){
   els.keywordTable.innerHTML = notice + rows.map((row,i)=>{
     const hint = publishHint(row);
     const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
-    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
+    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
   }).join('');
   els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } renderRecommendTable(); renderSelected(); }));
+}
+function shortSourceLabel(sourceType){
+  const map = {
+    '원 키워드':'원키워드',
+    '원키워드 fallback':'원키워드',
+    'API 연관키워드':'API연관',
+    '네이버 자동완성':'네이버AC',
+    '구글 자동완성':'구글AC',
+    '자동완성':'자동완성',
+  };
+  return map[sourceType] || sourceType;
 }
 function renderDetailTable(){
   const rows=state.rows;
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map(row=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray">${escapeHTML(row.sourceType)}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><span class="reason-text" title="${escapeHTML(row.reason)}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  els.detailKeywordTable.querySelectorAll('.reason-toggle').forEach(btn=>btn.addEventListener('click',()=>{
+    const idx = btn.dataset.ridx;
+    const textEl = els.detailKeywordTable.querySelector(`.reason-text[data-ridx="${idx}"]`);
+    if(!textEl) return;
+    const isExpanded = textEl.classList.toggle('expanded');
+    btn.textContent = isExpanded ? '접기' : '더보기';
+  }));
 }
 function ensureHooksFor(keyword){
   const key = normalizeSpace(keyword);

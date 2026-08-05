@@ -1642,8 +1642,10 @@ async function analyze(){
     // "출연진" 같은 접미어를 제안하지 못하는 경우가 있다. 이 경우 후보 자체가 애초에
     // baseRows에 안 들어가서 상세표에도 안 뜨는 문제가 생긴다. 자동완성 결과와 무관하게
     // 항상 쓰이는 핵심 접미어를 검색광고 API로 직접 정확 조회해서, 실제 데이터가 있으면
-    // (=API가 그 조합을 인식하면) 강제로 후보에 편입시킨다. 데이터가 없는 조합(예: 정책
-    // 키워드 + "출연진")은 API가 빈 결과를 주니 자동으로 걸러진다.
+    // (=API가 그 조합을 인식하면) 강제로 후보에 편입시킨다.
+    // [FIX 2026-08-06] "인식만 하고 검색량은 0"인 조합(예: 정치인 이름 + "결말")까지
+    // 그대로 통과되던 버그 수정. API가 그 조합을 '등록'만 해뒀을 뿐 실수요(monthly>0)가
+    // 없으면 무관한 카테고리로 보고 편입하지 않는다.
     const CORE_SUFFIX_PROBES = ['출연진','등장인물','몇부작','결말','원작','리메이크','재방송','다시보기','시즌2','방영일'];
     const existingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
     const probeKws = CORE_SUFFIX_PROBES.map(suf => `${seed}${suf}`).filter(kw => !existingKeys.has(normalizeKey(kw)));
@@ -1655,7 +1657,7 @@ async function analyze(){
         if(hit){
           const r = rowFromSearchAdItem(hit, '핵심접미어 보강');
           r.kw = kw;
-          return r;
+          if(r.monthly > 0) return r;   // 실수요 없으면 무관한 카테고리로 보고 스킵
         }
       } catch(e){ /* API가 인식 못 하는 조합이면 조용히 스킵 */ }
       return null;
@@ -1663,12 +1665,8 @@ async function analyze(){
     baseRows = uniqueByKeyword([...baseRows, ...probeRows.filter(Boolean)]);
 
     // [FIX] 배우 이름처럼 키워드마다 달라지는 고유명사는 고정 리스트로 만들 수 없다.
-    // 예: "인턴"은 자동완성이 직업 의미만 보여주고, 영화(드니로 원작/최민식 리메이크) 관련
-    // 신호는 전혀 안 준다. 대신 titlehunt.js가 이미 하는 일 — 이 키워드로 실제 발행된
-    // 블로그 제목에서 자주 등장하는 명사를 추출하는 기능 — 을 분석 단계로 앞당겨 재사용한다.
-    // 그렇게 뽑힌 단어(배우 이름·리메이크 여부 등 실제 블로거들이 이미 쓰고 있는 단어)를
-    // 접미어 후보로 검색광고 API에 직접 확인한다. 사람이 유지보수할 고정 리스트가 없어도
-    // 키워드마다 자동으로 달라지는 방식이다.
+    // titlehunt.js가 뽑아준 발행 제목 상위 명사를 접미어 후보로 검색광고 API에 확인한다.
+    // [FIX 2026-08-06] 위와 동일하게 monthly>0 조건 추가 — '등록만 된' 0검색량 조합 배제.
     let seedHooks = [], seedSampleTitles = [], seedNewsSnippets = [];
     try {
       const th = await fetchTitleHuntCached(seed);
@@ -1687,7 +1685,7 @@ async function analyze(){
         if(hit){
           const r = rowFromSearchAdItem(hit, '발행제목 기반 보강');
           r.kw = kw;
-          return r;
+          if(r.monthly > 0) return r;   // 실수요 없으면 무관한 카테고리로 보고 스킵
         }
       } catch(e){ /* 조용히 스킵 */ }
       return null;
@@ -1770,8 +1768,15 @@ async function addComboKeyword(){
     state.rows = sortCandidates(uniqueByKeyword([...state.rows, enriched]));
     state.recommended = fillRecommended(state.rows, 6);
     if(!state.recommended.length) state.recommended = state.rows.slice(0, 6);
+    // [FIX 2026-08-06] 수동으로 "붙여서 확인"한 키워드는 경쟁비율 등 추천 기준(top6 티어)에
+    // 못 들어도, 사용자가 명시적으로 지목한 대상이므로 항상 추천표에 노출하고 즉시 선택 전환한다.
+    // 이전에는 top6에 못 들면 선택이 그대로 이전 키워드에 머물러 있어서, 제목 조합기·후킹·
+    // 뉴스 스니펫이 전부 옛 키워드 기준으로만 계속 보이는 문제가 있었다.
+    if(!state.recommended.some(r=>normalizeKey(r.kw)===combinedKey)){
+      state.recommended = [enriched, ...state.recommended].slice(0, 6);
+    }
     const newIdx = state.recommended.findIndex(r=>normalizeKey(r.kw)===combinedKey);
-    if(newIdx>=0) state.selectedIndex = newIdx;
+    state.selectedIndex = newIdx >= 0 ? newIdx : state.selectedIndex;
     renderRecommendTable(); renderDetailTable(); renderSelected();
     els.comboInput.value='';
     if(newIdx>=0){

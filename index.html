@@ -573,8 +573,12 @@ function makeReason(row, score, intent){
   const gFit = googleFitLabel(intent?.key, row.kw);
   const gtext = gFit.cls==='green' ? ' 정보성 의도가 뚜렷해 구글 유입이 잘 터지는 유형입니다.' : (gFit.cls==='yellow' ? ' 구글 유입 가능성이 있는 정보성 키워드입니다.' : '');
   const evidence = intent?.terms?.length ? ` 의도근거는 ${intent.terms.join(', ')}입니다.` : ' 의도근거가 약해 원키워드 설계로만 참고합니다.';
-  if(row.monthly>0) return `월간 검색수 ${format(row.monthly)}회 대비 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 글이 ${ratioValue(row)<0.5?'매우 적어 블루오션으로':(ratioValue(row)<1.0?'적은 편으로':'다소 많은 편으로')} 보고 ${row.grade || '후보'}에 배치했습니다.${cpc}${gtext}${evidence}`;
-  return `${row.sourceType}에는 포함됐지만 검색량 수치가 부족합니다. 추천 후보가 부족할 때 연관검색어 묶음으로 참고합니다.`;
+  // [FIX 2026-08-06] 원키워드와 글자가 전혀 안 겹치는 후보(자동완성이 이름 비슷한 다른
+  // 대상으로 '교정 제안'했을 가능성)는 이유 문장 끝에 경고를 붙인다. 필터링은 하지 않고
+  // 판단은 사용자에게 맡긴다.
+  const homonymWarn = (Number(row.relevance||0) === 0) ? ' ⚠ 이 키워드는 원키워드와 겹치는 글자가 전혀 없습니다 — 동명이인이거나 완전히 다른 주제일 수 있으니, 정말 같은 대상이 맞는지 먼저 확인하세요.' : '';
+  if(row.monthly>0) return `월간 검색수 ${format(row.monthly)}회 대비 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 글이 ${ratioValue(row)<0.5?'매우 적어 블루오션으로':(ratioValue(row)<1.0?'적은 편으로':'다소 많은 편으로')} 보고 ${row.grade || '후보'}에 배치했습니다.${cpc}${gtext}${evidence}${homonymWarn}`;
+  return `${row.sourceType}에는 포함됐지만 검색량 수치가 부족합니다. 추천 후보가 부족할 때 연관검색어 묶음으로 참고합니다.${homonymWarn}`;
 }
 
 const INTENTS = [
@@ -657,11 +661,15 @@ function enrichScore(row, bundleRows){
   const aiScore = aiCitationScore(row, intent);
   const aiFit = aiCitationLabel(aiScore);
   const contentScore = row?.contentSkipped ? 0 : scoreContent(row.totalContent);
+  // [FIX 2026-08-06] 원키워드와 글자가 하나도 안 겹치는 후보(동명이인/다른 주제일 가능성)를
+  // 걸러내기 위해 relevanceScore를 따로 저장해둔다. 접미어·조합 보강은 항상 seed를 포함하므로
+  // 0이 될 수 없고, 자동완성이 "교정 제안"한 완전히 다른 이름/키워드만 0이 된다.
+  const relScore = relevanceScore(row, state.seed);
   const score = Math.max(1, Math.min(100, Math.round(
-    scoreMonthly(row.monthly) + contentScore + scoreRatio(row) + intentScore + relevanceScore(row, state.seed) + cpcBonus + gBonus + Math.round(aiScore * 0.08)
+    scoreMonthly(row.monthly) + contentScore + scoreRatio(row) + intentScore + relScore + cpcBonus + gBonus + Math.round(aiScore * 0.08)
   )));
   const gFit = googleFitLabel(intent.key, row.kw);
-  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, score };
+  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, relevance:relScore, score };
   enriched.grade = classify(enriched);
   enriched.reason = makeReason(enriched, score, intent);
   return enriched;
@@ -1279,7 +1287,8 @@ function renderRecommendTable(){
   els.keywordTable.innerHTML = notice + rows.map((row,i)=>{
     const hint = publishHint(row);
     const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
-    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
+    const homonymBadge = Number(row.relevance||0)===0 ? ` <span class="pill red" title="원키워드와 겹치는 글자가 없습니다">동명이인 의심</span>` : '';
+    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}${homonymBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
   }).join('');
   els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } renderRecommendTable(); renderSelected(); }));
 }
@@ -1300,7 +1309,7 @@ function shortSourceLabel(sourceType){
 function renderDetailTable(){
   const rows=state.rows;
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill red" title="원키워드와 겹치는 글자가 없습니다">동명이인 의심</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
   els.detailKeywordTable.querySelectorAll('.reason-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const idx = btn.dataset.ridx;
     const textEl = els.detailKeywordTable.querySelector(`.reason-text[data-ridx="${idx}"]`);

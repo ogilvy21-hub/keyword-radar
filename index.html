@@ -1285,6 +1285,7 @@ function shortSourceLabel(sourceType){
     '네이버 자동완성':'네이버AC',
     '구글 자동완성':'구글AC',
     '자동완성':'자동완성',
+    '핵심접미어 보강':'접미어보강',
   };
   return map[sourceType] || sourceType;
 }
@@ -1628,6 +1629,30 @@ async function analyze(){
 
     let baseRows = uniqueByKeyword([exactRow, ...relatedRows, ...suggestRows]).slice(0, 70);
     if(!baseRows.length) baseRows = [{ kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback' }];
+
+    // [FIX] 자동완성은 "이런엿같은사랑"처럼 붙여 쓴 복합어(드라마·콘텐츠 제목 등)에서
+    // "출연진" 같은 접미어를 제안하지 못하는 경우가 있다. 이 경우 후보 자체가 애초에
+    // baseRows에 안 들어가서 상세표에도 안 뜨는 문제가 생긴다. 자동완성 결과와 무관하게
+    // 항상 쓰이는 핵심 접미어를 검색광고 API로 직접 정확 조회해서, 실제 데이터가 있으면
+    // (=API가 그 조합을 인식하면) 강제로 후보에 편입시킨다. 데이터가 없는 조합(예: 정책
+    // 키워드 + "출연진")은 API가 빈 결과를 주니 자동으로 걸러진다.
+    const CORE_SUFFIX_PROBES = ['출연진','등장인물','몇부작','결말','원작','재방송','다시보기','시즌2','방영일'];
+    const existingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
+    const probeKws = CORE_SUFFIX_PROBES.map(suf => `${seed}${suf}`).filter(kw => !existingKeys.has(normalizeKey(kw)));
+    const probeRows = await mapLimit(probeKws, 2, async kw => {
+      try {
+        const p = await fetchSearchAdCached(kw);
+        const sList = extractKeywordList(p);
+        const hit = findExactItem(sList, kw);
+        if(hit){
+          const r = rowFromSearchAdItem(hit, '핵심접미어 보강');
+          r.kw = kw;
+          return r;
+        }
+      } catch(e){ /* API가 인식 못 하는 조합이면 조용히 스킵 */ }
+      return null;
+    });
+    baseRows = uniqueByKeyword([...baseRows, ...probeRows.filter(Boolean)]);
 
     const CONTENT_LOOKUP_LIMIT = 24;
     const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));

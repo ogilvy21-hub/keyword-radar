@@ -189,6 +189,11 @@
     <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
     <button id="analyzeBtn">분석하기 →</button>
   </div>
+  <div class="search-row" id="comboRow" style="display:none;">
+    <input id="comboInput" placeholder="현재 키워드에 붙여서 확인할 단어 (예: 최민식)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="조합 키워드" />
+    <button id="comboBtn">붙여서 확인</button>
+  </div>
+  <p class="micro-hint" id="comboHint" style="display:none; margin:-6px 0 14px;">자동 보강이 놓친 조합(배우 이름 등)을 직접 붙여서 실제 검색량이 있는지 바로 확인합니다.</p>
   <div class="steps">
     <div class="step active">STEP 1 · 검색량 수집</div>
     <div class="step active">STEP 2 · 연관·신조어 발굴</div>
@@ -305,7 +310,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const els = {
-  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint')
+  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -1263,6 +1268,7 @@ function renderIdle(){
   els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
   els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','AI 인용 적합도','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value='';
   if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
+  if(els.comboRow){ els.comboRow.style.display='none'; } if(els.comboHint){ els.comboHint.style.display='none'; } if(els.comboInput){ els.comboInput.value=''; }
 }
 function renderRecommendTable(){
   const rows=state.recommended;
@@ -1286,6 +1292,8 @@ function shortSourceLabel(sourceType){
     '구글 자동완성':'구글AC',
     '자동완성':'자동완성',
     '핵심접미어 보강':'접미어보강',
+    '발행제목 기반 보강':'제목기반보강',
+    '수동 조합 추가':'수동추가',
   };
   return map[sourceType] || sourceType;
 }
@@ -1636,7 +1644,7 @@ async function analyze(){
     // 항상 쓰이는 핵심 접미어를 검색광고 API로 직접 정확 조회해서, 실제 데이터가 있으면
     // (=API가 그 조합을 인식하면) 강제로 후보에 편입시킨다. 데이터가 없는 조합(예: 정책
     // 키워드 + "출연진")은 API가 빈 결과를 주니 자동으로 걸러진다.
-    const CORE_SUFFIX_PROBES = ['출연진','등장인물','몇부작','결말','원작','재방송','다시보기','시즌2','방영일'];
+    const CORE_SUFFIX_PROBES = ['출연진','등장인물','몇부작','결말','원작','리메이크','재방송','다시보기','시즌2','방영일'];
     const existingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
     const probeKws = CORE_SUFFIX_PROBES.map(suf => `${seed}${suf}`).filter(kw => !existingKeys.has(normalizeKey(kw)));
     const probeRows = await mapLimit(probeKws, 2, async kw => {
@@ -1653,6 +1661,38 @@ async function analyze(){
       return null;
     });
     baseRows = uniqueByKeyword([...baseRows, ...probeRows.filter(Boolean)]);
+
+    // [FIX] 배우 이름처럼 키워드마다 달라지는 고유명사는 고정 리스트로 만들 수 없다.
+    // 예: "인턴"은 자동완성이 직업 의미만 보여주고, 영화(드니로 원작/최민식 리메이크) 관련
+    // 신호는 전혀 안 준다. 대신 titlehunt.js가 이미 하는 일 — 이 키워드로 실제 발행된
+    // 블로그 제목에서 자주 등장하는 명사를 추출하는 기능 — 을 분석 단계로 앞당겨 재사용한다.
+    // 그렇게 뽑힌 단어(배우 이름·리메이크 여부 등 실제 블로거들이 이미 쓰고 있는 단어)를
+    // 접미어 후보로 검색광고 API에 직접 확인한다. 사람이 유지보수할 고정 리스트가 없어도
+    // 키워드마다 자동으로 달라지는 방식이다.
+    let seedHooks = [], seedSampleTitles = [], seedNewsSnippets = [];
+    try {
+      const th = await fetchTitleHuntCached(seed);
+      seedHooks = Array.isArray(th.hooks) ? th.hooks : [];
+      seedSampleTitles = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
+      seedNewsSnippets = Array.isArray(th.newsSnippets) ? th.newsSnippets : [];
+    } catch(e){ /* 실패해도 본체 보호 */ }
+    const hookExistingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
+    const hookProbeKws = seedHooks.slice(0, 6).map(h=>h.word).filter(Boolean)
+      .map(w => `${seed}${w}`).filter(kw => !hookExistingKeys.has(normalizeKey(kw)));
+    const hookProbeRows = await mapLimit(hookProbeKws, 2, async kw => {
+      try {
+        const p = await fetchSearchAdCached(kw);
+        const sList = extractKeywordList(p);
+        const hit = findExactItem(sList, kw);
+        if(hit){
+          const r = rowFromSearchAdItem(hit, '발행제목 기반 보강');
+          r.kw = kw;
+          return r;
+        }
+      } catch(e){ /* 조용히 스킵 */ }
+      return null;
+    });
+    baseRows = uniqueByKeyword([...baseRows, ...hookProbeRows.filter(Boolean)]);
 
     const CONTENT_LOOKUP_LIMIT = 24;
     const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
@@ -1677,9 +1717,14 @@ async function analyze(){
     if(!recommended.length) recommended = [{ ...exactRow, sourceType:'원키워드 fallback', grade:'API 수치 부족', score:20, reason:'API 후보가 부족해 원키워드 기준으로 글감 설계를 만듭니다.', intentEvidence:'일반정보' }];
 
     const relatedKeywords = uniqueByKeyword([...relatedRows, ...suggestRows]).map(r=>r.kw);
-    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0, hooksByKw:{}, hookPending:{}, titleApplied:null };
+    state = { seed, rows:sorted, recommended, relatedKeywords, selectedIndex:0,
+      hooksByKw:{ [normalizeSpace(seed)]: seedHooks },
+      hookSamplesByKw:{ [normalizeSpace(seed)]: seedSampleTitles },
+      newsSnippetsByKw:{ [normalizeSpace(seed)]: seedNewsSnippets },
+      hookPending:{}, titleApplied:null };
     els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
+    if(els.comboRow){ els.comboRow.style.display='flex'; } if(els.comboHint){ els.comboHint.style.display='block'; }
   } catch(err){
     console.error(err);
     els.judgementTitle.textContent='분석 중 오류가 발생했습니다.';
@@ -1688,8 +1733,67 @@ async function analyze(){
 }
 function copyText(text, btn, label){ navigator.clipboard.writeText(text || '').then(()=>{ btn.textContent='복사 완료'; setTimeout(()=>btn.textContent=label,1200); }).catch(()=>{ btn.textContent='복사 실패'; setTimeout(()=>btn.textContent=label,1200); }); }
 
+// [FEAT] 자동 보강(고정 접미어 + 발행제목 기반)이 놓친 조합을 사용자가 직접 입력해서
+// 즉시 확인하는 기능. 예: "인턴" 분석 후 "최민식"을 입력하면 "인턴 최민식"의 실제 검색량을
+// 검색광고 API로 바로 조회해 상세표·추천표에 편입시킨다.
+async function addComboKeyword(){
+  if(!state.seed) return;
+  const extra = normalizeSpace(els.comboInput.value);
+  if(!extra) return;
+  const combined = normalizeSpace(`${state.seed} ${extra}`);
+  const combinedKey = normalizeKey(combined);
+  const already = (state.rows||[]).find(r=>normalizeKey(r.kw)===combinedKey);
+  if(already){
+    const idx = (state.recommended||[]).findIndex(r=>normalizeKey(r.kw)===combinedKey);
+    if(idx>=0){ state.selectedIndex = idx; renderRecommendTable(); renderSelected(); }
+    els.comboHint.textContent = '이미 후보에 있는 조합입니다 — 상세 후보 검증표에서 확인하세요.';
+    setTimeout(()=>{ els.comboHint.textContent='자동 보강이 놓친 조합(배우 이름 등)을 직접 붙여서 실제 검색량이 있는지 바로 확인합니다.'; }, 2500);
+    return;
+  }
+  els.comboBtn.disabled = true; els.comboBtn.textContent='확인 중...';
+  try{
+    const p = await fetchSearchAdCached(combined);
+    const sList = extractKeywordList(p);
+    const hit = findExactItem(sList, combined);
+    let newRow;
+    if(hit){
+      newRow = rowFromSearchAdItem(hit, '수동 조합 추가');
+      newRow.kw = combined;
+    } else {
+      newRow = { kw:combined, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'수동 조합 추가', raw:null };
+    }
+    const content = await fetchContentCached(combined);
+    newRow.blog = parseNumber(content.blogTotal ?? content.blog ?? 0);
+    newRow.cafe = parseNumber(content.cafeTotal ?? content.cafe ?? 0);
+    newRow.totalContent = newRow.blog + newRow.cafe;
+    const enriched = enrichScore(newRow, state.rows);
+    state.rows = sortCandidates(uniqueByKeyword([...state.rows, enriched]));
+    state.recommended = fillRecommended(state.rows, 6);
+    if(!state.recommended.length) state.recommended = state.rows.slice(0, 6);
+    const newIdx = state.recommended.findIndex(r=>normalizeKey(r.kw)===combinedKey);
+    if(newIdx>=0) state.selectedIndex = newIdx;
+    renderRecommendTable(); renderDetailTable(); renderSelected();
+    els.comboInput.value='';
+    if(newIdx>=0){
+      els.comboHint.textContent = `"${combined}" 추천 글감에 추가됐습니다 (검색 ${format(newRow.monthly)}회).`;
+    } else if(newRow.monthly > 0){
+      els.comboHint.textContent = `"${combined}" 상세 후보 검증표에 추가됐습니다 (검색 ${format(newRow.monthly)}회, 추천 기준엔 못 미침).`;
+    } else {
+      els.comboHint.textContent = `"${combined}"은 검색광고 API에 실질 검색량이 없는 조합입니다.`;
+    }
+    setTimeout(()=>{ els.comboHint.textContent='자동 보강이 놓친 조합(배우 이름 등)을 직접 붙여서 실제 검색량이 있는지 바로 확인합니다.'; }, 3500);
+  } catch(e){
+    console.error(e);
+    els.comboHint.textContent = '조회 중 오류가 발생했습니다. 다시 시도해주세요.';
+  } finally {
+    els.comboBtn.disabled = false; els.comboBtn.textContent='붙여서 확인';
+  }
+}
+
 els.analyzeBtn.addEventListener('click', analyze);
 els.keywordInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); analyze(); } });
+if(els.comboBtn) els.comboBtn.addEventListener('click', addComboKeyword);
+if(els.comboInput) els.comboInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addComboKeyword(); } });
 els.copyPromptBtn.addEventListener('click',()=>copyText(els.draftPrompt.value, els.copyPromptBtn, '원고 프롬프트 복사'));
 els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${row.score}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });

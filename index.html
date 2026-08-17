@@ -1324,17 +1324,80 @@ function drawTitleBuilder(){
   els.titleBuilder.querySelectorAll('.tb-chip[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   els.titleBuilder.querySelectorAll('.tb-pin b[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   const patternEl = $('tbPattern');
-  if(patternEl) patternEl.addEventListener('change', e=>{ state.titleState.pattern = e.target.value; drawTitleBuilder(); });
+  if(patternEl) patternEl.addEventListener('change', e=>{ state.titleState.pattern = e.target.value; updateManuscriptPreview(); });
   const editEl = $('tbEdit');
   if(editEl) editEl.addEventListener('input', e=>{ state.titleState.edited = e.target.value; });
   const clearEl = $('tbClear'); if(clearEl) clearEl.addEventListener('click', ()=>{ ts.chosen=[]; ts.edited=''; state.titleApplied=null; drawTitleBuilder(); renderSelected(); });
   const applyEl = $('tbApply'); if(applyEl) applyEl.addEventListener('click', applyTitleToPrompt);
 }
+// [FIX 2026-08-17] 칩을 클릭할 때마다 drawTitleBuilder()가 패널 전체(칩·드롭다운·핀·원고지 격자)를
+// innerHTML로 통째로 부수고 새로 그려서, 테두리 있는 원고지 칸(최대 60개)이 매번 재생성되며
+// 눈에 띄게 깜빡이는 문제가 있었다. 칩 버튼 자체는 그대로 두고 used 클래스만 토글하고,
+// 원고지 격자도 새로 안 만들고 기존 칸의 글자만 바꿔치기하도록 분리.
 function toggleTitleHook(key){
   const ts=state.titleState; if(!ts) return;
   const pos=ts.chosen.indexOf(key);
   if(pos>=0) ts.chosen.splice(pos,1); else ts.chosen.push(key);
-  drawTitleBuilder();
+  updateTitleChipsAndPreview();
+}
+function updateTitleChipsAndPreview(){
+  const ts = state.titleState; if(!ts || !els.titleBuilder) return;
+  els.titleBuilder.querySelectorAll('.tb-chip[data-tk]').forEach(btn=>{
+    btn.classList.toggle('used', ts.chosen.includes(btn.dataset.tk));
+  });
+  const pinsEl = els.titleBuilder.querySelector('.tb-chosen');
+  if(pinsEl){
+    pinsEl.innerHTML = ts.chosen.map(key=>{
+      const h = ts.hooks.find(h=>normalizeKey(h.tail)===key);
+      return h ? `<span class="tb-pin">${escapeHTML(h.tail)} <b data-tk="${escapeHTML(key)}">×</b></span>` : '';
+    }).join('');
+    pinsEl.querySelectorAll('b[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
+  }
+  updateManuscriptPreview();
+}
+// 원고지 격자 DOM 노드는 재사용하고, 칸 글자(textContent)만 바꿔서 리플로우를 최소화한다.
+// 줄 수가 부족하면 그만큼 행을 추가, 넘치면 제거 — 셀 자체를 없애고 새로 만들지 않는다.
+function updateManuscriptPreview(){
+  const ts = state.titleState; if(!ts) return;
+  const gridEl = document.getElementById('tbPreview');
+  if(!gridEl) return;
+  const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
+  const patternKey = ts.pattern || detectTitlePattern(tails);
+  const preview = generateTitleByPattern(ts.main, tails, patternKey);
+  const chars = Array.from(preview);
+  const cols = 20;
+  const rows = Math.max(1, Math.ceil(chars.length / cols));
+  let rowEls = Array.from(gridEl.children);
+  while(rowEls.length < rows){
+    const r = rowEls.length;
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'ms-title-row';
+    let html = `<div class="ms-title-rowno">${r+1}</div>`;
+    for(let c=0; c<cols; c++){
+      const groupEnd = (c+1) % 5 === 0 && c !== cols-1;
+      html += `<div class="ms-title-cell ${groupEnd?'group-end':''} empty"></div>`;
+    }
+    rowDiv.innerHTML = html;
+    gridEl.appendChild(rowDiv);
+    rowEls.push(rowDiv);
+  }
+  while(rowEls.length > rows){
+    gridEl.removeChild(rowEls.pop());
+  }
+  for(let r=0; r<rows; r++){
+    const cellEls = rowEls[r].querySelectorAll('.ms-title-cell');
+    for(let c=0; c<cols; c++){
+      const idx = r*cols + c;
+      const ch = chars[idx] || '';
+      const cell = cellEls[c];
+      if(cell.textContent !== ch) cell.textContent = ch;
+      cell.classList.toggle('empty', ch==='');
+    }
+  }
+  const patternSelect = $('tbPattern');
+  if(patternSelect && patternSelect.value !== patternKey) patternSelect.value = patternKey;
+  const countEl = els.titleBuilder ? els.titleBuilder.querySelector('.ms-title-count b') : null;
+  if(countEl) countEl.textContent = chars.length;
 }
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;

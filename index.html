@@ -370,6 +370,25 @@ function findExactItem(list, keyword){
   const seedKey = normalizeKey(keyword);
   return list.find(item => normalizeKey(getKeywordFromApiItem(item)) === seedKey) || null;
 }
+// [FIX 2026-08-17] searchad.js는 이미 잘리지 않은 전체 keywordList에서 exact match를 찾아
+// payload 최상위(relKeyword/monthlyPc/monthlyMobile/monthlyTotal/competition)에 담아 돌려준다.
+// 그런데 클라이언트는 그동안 payload.related(20개로 잘린 배열)에서 findExactItem으로 다시
+// 탐색해왔다 — 원키워드/조합키워드가 네이버 원본 keywordList에서 상위 20위 밖이면, 서버가
+// 이미 구해준 정답을 버리고 monthly=0인 fallback으로 잘못 빠지는 버그였다.
+// (analyze()의 exactRow, probeSeedSuffix(), addComboKeyword() 3곳 모두 이 함수로 교체)
+function rowFromExactPayload(payload, seedKw, sourceType){
+  if (!payload || !payload.relKeyword) return null;
+  return {
+    kw: normalizeSpace(seedKw),
+    pc: parseNumber(payload.monthlyPc),
+    mo: parseNumber(payload.monthlyMobile),
+    monthly: parseNumber(payload.monthlyTotal),
+    blog:0, cafe:0, totalContent:0,
+    ad: payload.competition || '-',
+    sourceType,
+    raw: payload
+  };
+}
 
 async function fetchJSON(url, _retry){
   const attempt = _retry || 0;
@@ -1630,18 +1649,16 @@ ${internalLinkBlock()}
 // 물어봤는데, 네이버가 길게 붙어있는 문자열을 못 알아듣고 빈 결과를 주는 경우가 있었다
 // (예: "그래이혼하자등장인물"은 인식 못 해도 "그래 이혼하자 등장인물"은 실제 검색량이 존재).
 // 붙여쓰기·띄어쓰기 두 형태를 순서대로 시도해서, 어느 한쪽이라도 API가 인식하면 채택한다.
+// [FIX 2026-08-17] 20개로 잘린 related 배열에서 재탐색하는 대신, 서버가 payload 최상위에
+// 이미 구해준 exact match(rowFromExactPayload)를 직접 쓴다. 이렇게 하면 접미어 조합
+// 키워드가 네이버 원본 keywordList에서 20위 밖이라도 놓치지 않는다.
 async function probeSeedSuffix(seed, suffix, sourceLabel){
   const variants = [`${seed}${suffix}`, `${seed} ${suffix}`];
   for(const kw of variants){
     try {
       const p = await fetchSearchAdCached(kw);
-      const sList = extractKeywordList(p);
-      const hit = findExactItem(sList, kw);
-      if(hit){
-        const r = rowFromSearchAdItem(hit, sourceLabel);
-        r.kw = kw;
-        if(r.monthly > 0) return r;
-      }
+      const r = rowFromExactPayload(p, kw, sourceLabel);
+      if(r && r.monthly > 0) return r;
     } catch(e){ /* 이 변형은 실패, 다음 변형 시도 */ }
   }
   return null;
@@ -1656,8 +1673,12 @@ async function analyze(){
   try{
     const adPayload = await fetchSearchAd(seed);
     const list = extractKeywordList(adPayload);
-    const exact = findExactItem(list, seed);
-    const exactRow = exact ? rowFromSearchAdItem(exact, '원 키워드') : { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback', raw:null };
+    // [FIX 2026-08-17] searchad.js는 이미 잘리지 않은 전체 keywordList에서 exact match를 찾아
+    // payload 최상위(relKeyword/monthlyTotal/competition)에 담아 돌려준다. 예전엔 여기서
+    // list(=payload.related, 20개로 잘림)를 findExactItem으로 다시 뒤졌는데, 원키워드가
+    // 네이버 원본 keywordList에서 상위 20위 밖이면 서버가 이미 구해준 정답을 버리고
+    // monthly=0인 fallback으로 잘못 빠지는 버그였다. 이제 payload 최상위 필드를 직접 쓴다.
+    const exactRow = rowFromExactPayload(adPayload, seed, '원 키워드') || { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback', raw:null };
     const relatedRows = uniqueByKeyword(list.map(item=>rowFromSearchAdItem(item, 'API 연관키워드')).filter(row=>normalizeKey(row.kw)!==normalizeKey(seed)));
 
     const suggestData = await fetchSuggestCached(seed);
@@ -1774,15 +1795,11 @@ async function addComboKeyword(){
   els.comboBtn.disabled = true; els.comboBtn.textContent='확인 중...';
   try{
     const p = await fetchSearchAdCached(combined);
-    const sList = extractKeywordList(p);
-    const hit = findExactItem(sList, combined);
-    let newRow;
-    if(hit){
-      newRow = rowFromSearchAdItem(hit, '수동 조합 추가');
-      newRow.kw = combined;
-    } else {
-      newRow = { kw:combined, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'수동 조합 추가', raw:null };
-    }
+    // [FIX 2026-08-17] related(20개 슬라이스) 재탐색 대신 서버가 payload 최상위에 이미
+    // 구해준 exact match를 직접 쓴다. 이렇게 하면 조합키워드가 네이버 원본 keywordList에서
+    // 20위 밖이라도 정확한 검색량을 놓치지 않는다.
+    const newRowExact = rowFromExactPayload(p, combined, '수동 조합 추가');
+    const newRow = newRowExact || { kw:combined, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'수동 조합 추가', raw:null };
     const content = await fetchContentCached(combined);
     newRow.blog = parseNumber(content.blogTotal ?? content.blog ?? 0);
     newRow.cafe = parseNumber(content.cafeTotal ?? content.cafe ?? 0);

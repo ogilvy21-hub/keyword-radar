@@ -1688,17 +1688,17 @@ async function analyze(){
       .filter(d => d.kw && !adKeys.has(normalizeKey(d.kw)))
       .slice(0, 15);
 
+    // [FIX 2026-08-17] 자동완성 후보(suggestRows)도 exactRow/probeSeedSuffix/addComboKeyword와
+    // 똑같은 버그가 있었다 — extractKeywordList(20개로 잘린 related)에서 findExactItem으로
+    // 재탐색하다 보니, 자동완성 키워드(예: 쉼표 포함 공식 제목 "그래, 이혼하자")가 검색광고 API의
+    // keywordList에서 20위 밖이면 실제 검색량이 있어도 monthly:0으로 떨어졌다. 다른 3곳과
+    // 동일하게 payload 최상위(rowFromExactPayload)를 우선 사용하도록 교체.
     const suggestRows = await mapLimit(newSuggestKws, 1, async d => {
       const sourceLabel = d.src === 'google' ? '구글 자동완성' : (d.src === 'naver' ? '네이버 자동완성' : '자동완성');
       try {
         const p = await fetchSearchAdCached(d.kw);
-        const sList = extractKeywordList(p);
-        const hit = findExactItem(sList, d.kw);
-        if(hit){
-          const r = rowFromSearchAdItem(hit, sourceLabel);
-          r.kw = d.kw;
-          return r;
-        }
+        const r = rowFromExactPayload(p, d.kw, sourceLabel);
+        if(r) return r;
       } catch(e){ /* 검색량 못 받아도 키워드는 살림 */ }
       return { kw:d.kw, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:sourceLabel, raw:null };
     });

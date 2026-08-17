@@ -17,7 +17,7 @@
       --deep:#123642; --shallow:#4F8FA6; --clear:#1F8F73; --clear-soft:#E4F0EA;
       --flag:#B8431F; --flag-soft:#F6E3DB; --sand:#8A7F63; --line:#D8CFB8;
       /* [원고지 UX] 헤더·프롬프트박스·제목조합기·메인검색창에 쓰는 가이드선 색 */
-      --guide:#B8431F; --guide-soft:rgba(184,67,31,.22); --guide-faint:rgba(184,67,31,.09);
+      --guide:#B8431F; --guide-soft:rgba(184,67,31,.22); --guide-faint:rgba(184,67,31,.09); --guide-mid:rgba(184,67,31,.4);
     }
     body { margin:0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",sans-serif; background:var(--paper); color:var(--ink); line-height:1.5; }
     button,input,select,textarea { font:inherit; }
@@ -36,13 +36,20 @@
     .ms-count b{ color:var(--guide); font-size:13px; }
 
     .search-row{display:flex; gap:10px; margin-bottom:10px;}
-    .search-row input{flex:1; border:1px solid var(--ink); background:var(--paper-2); padding:16px 18px; font-size:16px; font-family:inherit; color:var(--ink); border-radius:3px; outline:0;}
+    /* [원고지 UX] 검색창 — 참고 이미지(위아래 이중선 + 세로 칸선) 그대로, 색만 은은하게(guide-faint) */
+    .search-row input{
+      flex:1; border:1px solid var(--ink); border-radius:3px; outline:0;
+      border-top:3px double var(--guide-faint); border-bottom:3px double var(--guide-faint);
+      background-color:var(--paper-2);
+      background-image: repeating-linear-gradient(90deg, var(--guide-faint) 0 1px, transparent 1px 24px);
+      padding:16px 18px; font-size:16px; font-family:inherit; color:var(--ink);
+    }
     .search-row button{border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:0 26px; font-size:14px; font-weight:500; cursor:pointer; border-radius:3px; font-family:inherit; min-width:128px; text-align:center;}
-    /* [원고지 UX] 메인 검색창만 톤 맞춤(왼쪽 붉은 가이드선 + 포커스 강조). 콤보창(#comboRow)은 미변경. */
+    /* 메인 검색창만 톤을 한 단계 더 맞춤(왼쪽 붉은 가이드선 + 포커스 강조). 콤보창(#comboRow)은 격자 배경만 추가, 색상은 미변경. */
     .search-row-main{ position:relative; }
     .search-row-main::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--guide); border-radius:2px 0 0 2px; z-index:1; }
-    .search-row-main input{ border-left:none; border-radius:0 3px 3px 0; padding-left:21px; transition:border-color .15s, background .15s; }
-    .search-row-main input:focus{ border-color:var(--guide); background:#fff; }
+    .search-row-main input{ border-left:none; border-radius:0 3px 3px 0; padding-left:21px; transition:border-color .15s, background-color .15s; }
+    .search-row-main input:focus{ border-color:var(--guide); background-color:#fff; }
     .search-row-main button{ border-color:var(--guide); background:var(--guide); }
     .steps{display:flex; gap:8px; margin:14px 0 56px; flex-wrap:wrap;}
     .step{flex:1; min-width:130px; padding:10px 12px; border:1px solid var(--line); background:var(--paper-2); font-size:11px; color:var(--ink-soft); text-align:center; border-radius:3px; font-weight:600;}
@@ -144,12 +151,17 @@
     .tb-pin b{ cursor:pointer; color:var(--clear); font-size:13px; }
     .tb-preview{ margin-top:16px; border:1px dashed var(--line); border-radius:4px; padding:14px 16px; background:var(--paper); overflow-x:auto; }
     /* [원고지 UX] 제목 조합기 미리보기 — 20자마다 자동 개행되는 원고지 격자 */
-    .ms-title-strip{ display:inline-block; border-top:1.5px solid var(--guide); border-left:1.5px solid var(--guide); background:#fff; }
-    .ms-title-row{ display:flex; }
-    .ms-title-cell{ width:26px; height:32px; flex-shrink:0; border-right:1px solid var(--guide-soft); border-bottom:1.5px solid var(--guide); display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:13.5px; font-weight:600; color:var(--ink); }
-    .ms-title-cell.group-end{ border-right:1px solid var(--guide); }
-    .ms-title-cell.empty{ color:transparent; }
-    .ms-title-rowno{ width:20px; height:32px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sand); border-right:1px solid var(--guide); border-bottom:1.5px solid var(--guide-soft); }
+    /* [원고지 UX] 제목 조합기 미리보기 — 프롬프트 박스와 동일한 방식: 은은한 격자 배경 위에 일반 텍스트 한 줄. 칸 단위 DOM 없이 textContent만 갱신하므로 깜빡임이 없다. */
+    .ms-title-strip{
+      border:1.5px solid var(--guide);
+      background-color:#fff;
+      background-image:
+        repeating-linear-gradient(0deg, var(--guide-mid) 0 1.5px, transparent 1.5px 34px),
+        repeating-linear-gradient(90deg, var(--guide-mid) 0 1.5px, transparent 1.5px 24px);
+      background-position:-1px -1px;
+      padding:0; min-height:70px;
+    }
+    .ms-title-line{ display:block; font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:var(--ink); line-height:34px; padding:0 8px; white-space:pre-wrap; word-break:break-all; overflow-wrap:anywhere; }
     .ms-title-count{ margin-top:9px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); }
     .ms-title-count b{ color:var(--flag); }
     .tb-edit{ width:100%; margin-top:8px; border:1px solid var(--line); border-radius:3px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }
@@ -222,7 +234,7 @@
 
   <div class="topline">
     <div class="ms-vert">글 감 레 이 더 원 고 지</div>
-    <div class="ms-seal">감</div>
+    <div class="ms-seal">글</div>
     <div class="brand">
       <span class="eyebrow">200자 원고지 · KEYWORD MANUSCRIPT</span>
       <b>글감레이더</b>
@@ -395,25 +407,6 @@ function updatePromptMeta(){
   els.pfTone.textContent = els.toneSelect ? els.toneSelect.value : '-';
   els.pfLength.textContent = els.lengthSelect ? els.lengthSelect.value : '-';
   els.pfCount.textContent = text.replace(/\s/g,'').length.toLocaleString('ko-KR');
-}
-
-/* ===== [원고지 UX] 제목 조합기 미리보기 — 20자마다 자동 개행되는 원고지 격자 HTML 생성 =====
-   글자수가 20자를 넘으면(실제로 더 흔함) 자연스럽게 다음 줄로 넘어간다. 줄번호도 함께 표시. */
-function buildManuscriptGridHTML(text, cols){
-  const chars = Array.from(text || '');
-  const rows = Math.max(1, Math.ceil(chars.length / cols));
-  let html = '';
-  for(let r=0; r<rows; r++){
-    html += `<div class="ms-title-row"><div class="ms-title-rowno">${r+1}</div>`;
-    for(let c=0; c<cols; c++){
-      const idx = r*cols + c;
-      const ch = chars[idx] || '';
-      const groupEnd = (c+1) % 5 === 0 && c !== cols-1;
-      html += `<div class="ms-title-cell ${groupEnd?'group-end':''} ${ch===''?'empty':''}">${escapeHTML(ch)}</div>`;
-    }
-    html += `</div>`;
-  }
-  return html;
 }
 function parseNumber(v){
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
@@ -1312,8 +1305,8 @@ function drawTitleBuilder(){
     <div class="tb-mini">조합한 제목</div>
     <div class="tb-chosen">${pins}</div>
     <div class="tb-preview">
-      <div class="ms-title-strip" id="tbPreview">${buildManuscriptGridHTML(preview, 20)}</div>
-      <div class="ms-title-count">글자수 <b>${Array.from(preview).length}</b>자 · 20자마다 자동 개행</div>
+      <div class="ms-title-strip"><div class="ms-title-line" id="tbPreview">${escapeHTML(preview)}</div></div>
+      <div class="ms-title-count">글자수 <b>${Array.from(preview).length}</b>자</div>
       <input class="tb-edit" id="tbEdit" placeholder="직접 편집하려면 입력 (참고 후킹도 여기서 추가)" value="${escapeHTML(ts.edited||'')}"/>
     </div>
     <div class="tb-actions">
@@ -1355,49 +1348,19 @@ function updateTitleChipsAndPreview(){
   }
   updateManuscriptPreview();
 }
-// 원고지 격자 DOM 노드는 재사용하고, 칸 글자(textContent)만 바꿔서 리플로우를 최소화한다.
-// 줄 수가 부족하면 그만큼 행을 추가, 넘치면 제거 — 셀 자체를 없애고 새로 만들지 않는다.
+// 원고지 느낌은 배경 격자 무늬로만 내고, 실제 텍스트는 일반 textContent 교체라 DOM이 안 흔들린다.
 function updateManuscriptPreview(){
   const ts = state.titleState; if(!ts) return;
-  const gridEl = document.getElementById('tbPreview');
-  if(!gridEl) return;
+  const previewEl = document.getElementById('tbPreview');
+  if(!previewEl) return;
   const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
   const patternKey = ts.pattern || detectTitlePattern(tails);
   const preview = generateTitleByPattern(ts.main, tails, patternKey);
-  const chars = Array.from(preview);
-  const cols = 20;
-  const rows = Math.max(1, Math.ceil(chars.length / cols));
-  let rowEls = Array.from(gridEl.children);
-  while(rowEls.length < rows){
-    const r = rowEls.length;
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'ms-title-row';
-    let html = `<div class="ms-title-rowno">${r+1}</div>`;
-    for(let c=0; c<cols; c++){
-      const groupEnd = (c+1) % 5 === 0 && c !== cols-1;
-      html += `<div class="ms-title-cell ${groupEnd?'group-end':''} empty"></div>`;
-    }
-    rowDiv.innerHTML = html;
-    gridEl.appendChild(rowDiv);
-    rowEls.push(rowDiv);
-  }
-  while(rowEls.length > rows){
-    gridEl.removeChild(rowEls.pop());
-  }
-  for(let r=0; r<rows; r++){
-    const cellEls = rowEls[r].querySelectorAll('.ms-title-cell');
-    for(let c=0; c<cols; c++){
-      const idx = r*cols + c;
-      const ch = chars[idx] || '';
-      const cell = cellEls[c];
-      if(cell.textContent !== ch) cell.textContent = ch;
-      cell.classList.toggle('empty', ch==='');
-    }
-  }
+  previewEl.textContent = preview;
   const patternSelect = $('tbPattern');
   if(patternSelect && patternSelect.value !== patternKey) patternSelect.value = patternKey;
   const countEl = els.titleBuilder ? els.titleBuilder.querySelector('.ms-title-count b') : null;
-  if(countEl) countEl.textContent = chars.length;
+  if(countEl) countEl.textContent = Array.from(preview).length;
 }
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;

@@ -41,7 +41,7 @@
       flex:1; border:1px solid var(--ink); border-radius:3px; outline:0;
       border-top:3px double var(--guide-faint); border-bottom:3px double var(--guide-faint);
       background-color:var(--paper-2);
-      background-image: repeating-linear-gradient(90deg, var(--guide-faint) 0 1px, transparent 1px 24px);
+      background-image: repeating-linear-gradient(90deg, var(--guide-faint) 0 1px, transparent 1px 48px);
       padding:16px 18px; font-size:16px; font-family:inherit; color:var(--ink);
     }
     .search-row button{border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:0 26px; font-size:14px; font-weight:500; cursor:pointer; border-radius:3px; font-family:inherit; min-width:128px; text-align:center;}
@@ -155,13 +155,10 @@
     .ms-title-strip{
       border:1.5px solid var(--guide);
       background-color:#fff;
-      background-image:
-        repeating-linear-gradient(0deg, var(--guide-mid) 0 1.5px, transparent 1.5px 34px),
-        repeating-linear-gradient(90deg, var(--guide-mid) 0 1.5px, transparent 1.5px 24px);
-      background-position:-1px -1px;
-      padding:0; min-height:70px;
+      background-image: repeating-linear-gradient(90deg, var(--guide-faint) 0 1px, transparent 1px 48px);
+      padding:10px 14px; min-height:52px;
     }
-    .ms-title-line{ display:block; font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:var(--ink); line-height:34px; padding:0 8px; white-space:pre-wrap; word-break:break-all; overflow-wrap:anywhere; }
+    .ms-title-line{ display:block; font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; color:var(--ink); line-height:26px; white-space:pre-wrap; word-break:break-all; overflow-wrap:anywhere; }
     .ms-title-count{ margin-top:9px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); }
     .ms-title-count b{ color:var(--flag); }
     .tb-edit{ width:100%; margin-top:8px; border:1px solid var(--line); border-radius:3px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }

@@ -16,20 +16,34 @@
       --paper:#EDE6D6; --paper-2:#F5F0E4; --ink:#1B2A2E; --ink-soft:#3E4E52;
       --deep:#123642; --shallow:#4F8FA6; --clear:#1F8F73; --clear-soft:#E4F0EA;
       --flag:#B8431F; --flag-soft:#F6E3DB; --sand:#8A7F63; --line:#D8CFB8;
+      /* [원고지 UX] 헤더·프롬프트박스·제목조합기·메인검색창에 쓰는 가이드선 색 */
+      --guide:#B8431F; --guide-soft:rgba(184,67,31,.22); --guide-faint:rgba(184,67,31,.09);
     }
     body { margin:0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",sans-serif; background:var(--paper); color:var(--ink); line-height:1.5; }
     button,input,select,textarea { font:inherit; }
     .num { font-family:'IBM Plex Mono',monospace; }
     .wrap { max-width:960px; margin:0 auto; padding:48px 24px 120px; }
 
-    .topline{display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:40px;}
-    .brand{display:flex; align-items:baseline; gap:10px;}
-    .brand b{font-size:21px; font-weight:600; letter-spacing:-.2px;}
+    /* [원고지 UX] 브랜드 헤더 — 원고지 표지 느낌 (세로쓰기 라벨 + 인장 + 매수 표기) */
+    .topline{ display:flex; align-items:stretch; gap:20px; padding-bottom:22px; margin-bottom:40px; border-bottom:2px solid var(--guide); }
+    .ms-vert{ writing-mode:vertical-rl; text-orientation:upright; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; color:var(--guide); padding:2px 0; border-right:1px solid var(--guide-soft); flex-shrink:0; user-select:none; }
+    .ms-seal{ width:40px; height:40px; background:var(--guide); color:#fff; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex-shrink:0; box-shadow:2px 2px 0 var(--guide-soft); }
+    .brand{display:flex; flex-direction:column; justify-content:center; flex:1;}
+    .brand .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--sand); letter-spacing:.08em; margin-bottom:4px; }
+    .brand b{font-size:22px; font-weight:700; letter-spacing:-.2px;}
     .brand span{font-size:12px; color:var(--ink-soft);}
+    .ms-count{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); text-align:right; flex-shrink:0; align-self:flex-end; line-height:1.6; }
+    .ms-count b{ color:var(--guide); font-size:13px; }
 
     .search-row{display:flex; gap:10px; margin-bottom:10px;}
     .search-row input{flex:1; border:1px solid var(--ink); background:var(--paper-2); padding:16px 18px; font-size:16px; font-family:inherit; color:var(--ink); border-radius:3px; outline:0;}
-    .search-row button{border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:0 26px; font-size:14px; font-weight:500; cursor:pointer; border-radius:3px; font-family:inherit;}
+    .search-row button{border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:0 26px; font-size:14px; font-weight:500; cursor:pointer; border-radius:3px; font-family:inherit; min-width:128px; text-align:center;}
+    /* [원고지 UX] 메인 검색창만 톤 맞춤(왼쪽 붉은 가이드선 + 포커스 강조). 콤보창(#comboRow)은 미변경. */
+    .search-row-main{ position:relative; }
+    .search-row-main::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--guide); border-radius:2px 0 0 2px; z-index:1; }
+    .search-row-main input{ border-left:none; border-radius:0 3px 3px 0; padding-left:21px; transition:border-color .15s, background .15s; }
+    .search-row-main input:focus{ border-color:var(--guide); background:#fff; }
+    .search-row-main button{ border-color:var(--guide); background:var(--guide); }
     .steps{display:flex; gap:8px; margin:14px 0 56px; flex-wrap:wrap;}
     .step{flex:1; min-width:130px; padding:10px 12px; border:1px solid var(--line); background:var(--paper-2); font-size:11px; color:var(--ink-soft); text-align:center; border-radius:3px; font-weight:600;}
     .step.active{border-color:var(--clear); color:var(--clear); background:var(--clear-soft);}
@@ -49,8 +63,12 @@
     .strategy-list{ display:flex; flex-direction:column; gap:8px; margin:24px 0 8px; max-width:70ch; grid-column:1/-1; }
     .strategy-item{ font-size:13px; color:var(--ink-soft); padding-left:16px; border-left:2px solid var(--clear); }
 
-    .section-title{ display:flex; align-items:baseline; justify-content:space-between; margin:64px 0 18px; }
-    .section-title h3{ font-size:15px; font-weight:600; margin:0; }
+    /* [원고지 UX] 섹션 타이틀 — 원고지 칸 마커 + 점선 룰선 */
+    .section-title{ display:flex; align-items:center; gap:10px; margin:64px 0 18px; }
+    .section-title h3{ font-size:15px; font-weight:700; margin:0; white-space:nowrap; }
+    .st-tick{ width:14px; height:14px; border:1.5px solid var(--guide); flex-shrink:0; position:relative; }
+    .st-tick::after{ content:''; position:absolute; inset:3px; background:var(--guide); }
+    .st-rule{ flex:1; height:1px; background:repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 8px); }
     .micro-hint{ font-size:11px; color:var(--ink-soft); white-space:nowrap; }
     .table-caption{ font-size:12px; color:var(--ink-soft); margin:-8px 0 14px; }
 
@@ -124,8 +142,16 @@
     .tb-chosen{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
     .tb-pin{ display:inline-flex; align-items:center; gap:5px; background:var(--clear-soft); color:var(--clear); border-radius:10px; padding:5px 8px 5px 12px; font-size:11px; font-weight:600; }
     .tb-pin b{ cursor:pointer; color:var(--clear); font-size:13px; }
-    .tb-preview{ margin-top:16px; border:1px dashed var(--line); border-radius:4px; padding:14px 16px; background:var(--paper); }
-    .tb-pline{ font-size:15px; font-weight:600; color:var(--ink); line-height:1.5; overflow-wrap:anywhere; }
+    .tb-preview{ margin-top:16px; border:1px dashed var(--line); border-radius:4px; padding:14px 16px; background:var(--paper); overflow-x:auto; }
+    /* [원고지 UX] 제목 조합기 미리보기 — 20자마다 자동 개행되는 원고지 격자 */
+    .ms-title-strip{ display:inline-block; border-top:1.5px solid var(--guide); border-left:1.5px solid var(--guide); background:#fff; }
+    .ms-title-row{ display:flex; }
+    .ms-title-cell{ width:26px; height:32px; flex-shrink:0; border-right:1px solid var(--guide-soft); border-bottom:1.5px solid var(--guide); display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:13.5px; font-weight:600; color:var(--ink); }
+    .ms-title-cell.group-end{ border-right:1px solid var(--guide); }
+    .ms-title-cell.empty{ color:transparent; }
+    .ms-title-rowno{ width:20px; height:32px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--sand); border-right:1px solid var(--guide); border-bottom:1.5px solid var(--guide-soft); }
+    .ms-title-count{ margin-top:9px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); }
+    .ms-title-count b{ color:var(--flag); }
     .tb-edit{ width:100%; margin-top:8px; border:1px solid var(--line); border-radius:3px; padding:9px 11px; font-size:13px; font-family:inherit; background:#fff; }
     .tb-actions{ display:flex; gap:8px; margin-top:12px; }
     .tb-actions button{ flex:1; border:1px solid var(--ink); background:transparent; padding:10px; font-size:12.5px; font-family:inherit; cursor:pointer; border-radius:3px; }
@@ -161,10 +187,23 @@
     textarea{ width:100%; border:1px solid var(--line); background:#fff; font-family:inherit; font-size:13px; padding:10px 11px; border-radius:3px; resize:vertical; outline:0; }
 
     /* 프롬프트 (항상 펼침) */
-    .prompt-card{ border:1px solid var(--ink); border-radius:4px; overflow:hidden; }
+    /* [원고지 UX] 프롬프트 박스 — 은은한 격자 배경 + 제목/플랫폼/문체/분량 필드띠. textarea 기능(스크롤·복사·선택)은 그대로. */
+    .prompt-card{ border:1px solid var(--guide-soft); border-top:3px solid var(--guide); border-radius:3px; overflow:hidden; }
     .prompt-head{ background:var(--deep); color:var(--paper-2); padding:16px 20px; font-size:13px; }
     .prompt-head .full-btn{ width:100%; margin-top:10px; border:1px solid var(--paper-2); background:transparent; color:var(--paper-2); font-size:12.5px; padding:10px; border-radius:3px; cursor:pointer; font-family:inherit; }
-    #draftPrompt{ background:var(--paper-2); border:none; border-radius:0; padding:20px; font-size:12.5px; color:var(--ink-soft); line-height:1.8; min-height:180px; max-height:260px; font-family:'IBM Plex Mono',monospace; resize:vertical; }
+    .prompt-fields{ display:flex; border-bottom:1px solid var(--guide-soft); background:var(--paper-2); font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    .prompt-fields .f{ flex:1; padding:9px 14px; border-right:1px solid var(--line); color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .prompt-fields .f:last-child{ border-right:none; }
+    .prompt-fields .f b{ color:var(--ink); font-weight:600; margin-left:6px; }
+    .prompt-gridbg{
+      background-color:var(--paper-2);
+      background-image:
+        repeating-linear-gradient(0deg, var(--guide-faint) 0 1px, transparent 1px 26px),
+        repeating-linear-gradient(90deg, var(--guide-faint) 0 1px, transparent 1px 22px);
+    }
+    #draftPrompt{ width:100%; box-sizing:border-box; background:transparent; border:none; border-radius:0; outline:0; padding:20px; font-size:12.5px; color:var(--ink-soft); line-height:26px; min-height:180px; max-height:260px; font-family:'IBM Plex Mono',monospace; resize:vertical; }
+    .prompt-count-bar{ display:flex; justify-content:space-between; align-items:center; padding:8px 20px 14px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); background:var(--paper-2); }
+    .prompt-count-bar b{ color:var(--flag); }
 
     .action-row{ display:flex; gap:10px; margin-top:60px; }
     .action-row button{ flex:1; border:1px solid var(--ink); background:transparent; padding:14px; font-size:13px; font-family:inherit; cursor:pointer; border-radius:3px; color:var(--ink); }
@@ -182,10 +221,17 @@
 <div class="wrap">
 
   <div class="topline">
-    <div class="brand"><b>글감레이더</b><span>키워드 하나로 쓸 글감과 제목까지</span></div>
+    <div class="ms-vert">글 감 레 이 더 원 고 지</div>
+    <div class="ms-seal">감</div>
+    <div class="brand">
+      <span class="eyebrow">200자 원고지 · KEYWORD MANUSCRIPT</span>
+      <b>글감레이더</b>
+      <span>키워드 하나로 쓸 글감과 제목까지</span>
+    </div>
+    <div class="ms-count" id="msDate">작성일 -<br/>매 수 <b>001</b></div>
   </div>
 
-  <div class="search-row">
+  <div class="search-row search-row-main">
     <input id="keywordInput" value="" placeholder="예: 기후동행카드환급, 카지노 출연진, 쑥국 레시피" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="분석할 키워드" />
     <button id="analyzeBtn">분석하기 →</button>
   </div>
@@ -218,7 +264,9 @@
   </div>
 
   <div class="section-title">
+    <span class="st-tick"></span>
     <h3>블루오션 글감 TOP 6</h3>
+    <span class="st-rule"></span>
     <span class="micro-hint">의도 명확 + 경쟁 적음 + AI 인용형 우선</span>
   </div>
   <p class="table-caption">검색 수요는 받쳐주면서 발행량이 적고, 검색의도가 뚜렷하며 AI 브리핑이 인용하기 쉬운 답변형 후보를 우선 추천합니다.</p>
@@ -241,7 +289,9 @@
   </details>
 
   <div class="section-title" style="margin-top:64px;">
+    <span class="st-tick"></span>
     <h3 id="clusterTitleHeading">선택 키워드 기반 클러스터·제목</h3>
+    <span class="st-rule"></span>
     <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
   </div>
 
@@ -279,7 +329,9 @@
   </details>
 
   <div class="section-title" style="margin-top:64px;">
+    <span class="st-tick"></span>
     <h3>선택 키워드 판단</h3>
+    <span class="st-rule"></span>
   </div>
   <div class="table-wrap" style="max-height:none; border:1px solid var(--line); border-radius:4px; padding:18px 20px; background:#fff;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:12px;">
@@ -293,13 +345,22 @@
     <div id="sideMetrics" class="mini-list"></div>
   </div>
 
-  <div class="section-title"><h3>원고 작성 프롬프트</h3><span class="micro-hint">완성됨 — 복사해서 사용</span></div>
+  <div class="section-title"><span class="st-tick"></span><h3>원고 작성 프롬프트</h3><span class="st-rule"></span><span class="micro-hint">완성됨 — 복사해서 사용</span></div>
   <div class="prompt-card">
     <div class="prompt-head">
       위 설정을 반영해 자동으로 만들어졌습니다. 그대로 복사해서 ChatGPT·Claude 등 AI에 붙여넣고 원고를 받으세요.
       <button class="full-btn" id="copyPromptBtn">원고 프롬프트 복사</button>
     </div>
-    <textarea id="draftPrompt" readonly></textarea>
+    <div class="prompt-fields">
+      <div class="f">제목<b id="pfTitle">-</b></div>
+      <div class="f">플랫폼<b id="pfPlatform">-</b></div>
+      <div class="f">문체<b id="pfTone">-</b></div>
+      <div class="f">분량<b id="pfLength">-</b></div>
+    </div>
+    <div class="prompt-gridbg">
+      <textarea id="draftPrompt" readonly></textarea>
+    </div>
+    <div class="prompt-count-bar"><span>공백 제외 <b id="pfCount">0</b>자</span><span>스크롤해서 전체 확인 · 복사 버튼은 원문 전체 복사</span></div>
   </div>
 
   <div class="action-row"><button class="green" id="copyKeywordsBtn">키워드 복사</button><button class="black" id="resetBtn">초기화</button></div>
@@ -310,7 +371,8 @@
 <script>
 const $ = id => document.getElementById(id);
 const els = {
-  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint')
+  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint'),
+  pfTitle:$('pfTitle'), pfPlatform:$('pfPlatform'), pfTone:$('pfTone'), pfLength:$('pfLength'), pfCount:$('pfCount'), msDate:$('msDate'), msPageNo:$('msPageNo')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -319,6 +381,40 @@ const apiCache = new Map();
 function normalizeSpace(v){ return String(v ?? '').trim().replace(/\s+/g,' '); }
 function normalizeKey(v){ return normalizeSpace(v).replace(/\s+/g,'').toUpperCase(); }
 function escapeHTML(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+
+/* ===== [원고지 UX] 프롬프트 박스 필드띠 갱신 =====
+   draftPrompt.value가 바뀔 때마다(analyze/renderSelected/클러스터 프롬프트 등) 호출해서
+   제목/플랫폼/문체/분량/글자수 필드띠를 최신 상태로 맞춘다. 프롬프트 텍스트 자체를 파싱해서
+   메인 키워드를 뽑기 때문에, 이 함수를 부르는 호출부가 늘어나도 별도 상태 동기화가 필요 없다. */
+function updatePromptMeta(){
+  if(!els.pfTitle) return;
+  const text = els.draftPrompt.value || '';
+  const m = text.match(/## 메인 키워드\n([^\n]+)/);
+  els.pfTitle.textContent = m ? m[1] : '-';
+  els.pfPlatform.textContent = els.platformSelect ? els.platformSelect.value : '-';
+  els.pfTone.textContent = els.toneSelect ? els.toneSelect.value : '-';
+  els.pfLength.textContent = els.lengthSelect ? els.lengthSelect.value : '-';
+  els.pfCount.textContent = text.replace(/\s/g,'').length.toLocaleString('ko-KR');
+}
+
+/* ===== [원고지 UX] 제목 조합기 미리보기 — 20자마다 자동 개행되는 원고지 격자 HTML 생성 =====
+   글자수가 20자를 넘으면(실제로 더 흔함) 자연스럽게 다음 줄로 넘어간다. 줄번호도 함께 표시. */
+function buildManuscriptGridHTML(text, cols){
+  const chars = Array.from(text || '');
+  const rows = Math.max(1, Math.ceil(chars.length / cols));
+  let html = '';
+  for(let r=0; r<rows; r++){
+    html += `<div class="ms-title-row"><div class="ms-title-rowno">${r+1}</div>`;
+    for(let c=0; c<cols; c++){
+      const idx = r*cols + c;
+      const ch = chars[idx] || '';
+      const groupEnd = (c+1) % 5 === 0 && c !== cols-1;
+      html += `<div class="ms-title-cell ${groupEnd?'group-end':''} ${ch===''?'empty':''}">${escapeHTML(ch)}</div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
+}
 function parseNumber(v){
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   const s = String(v ?? '').replace(/,/g,'').trim();
@@ -1216,7 +1312,8 @@ function drawTitleBuilder(){
     <div class="tb-mini">조합한 제목</div>
     <div class="tb-chosen">${pins}</div>
     <div class="tb-preview">
-      <div class="tb-pline" id="tbPreview">${escapeHTML(preview)}</div>
+      <div class="ms-title-strip" id="tbPreview">${buildManuscriptGridHTML(preview, 20)}</div>
+      <div class="ms-title-count">글자수 <b>${Array.from(preview).length}</b>자 · 20자마다 자동 개행</div>
       <input class="tb-edit" id="tbEdit" placeholder="직접 편집하려면 입력 (참고 후킹도 여기서 추가)" value="${escapeHTML(ts.edited||'')}"/>
     </div>
     <div class="tb-actions">
@@ -1301,7 +1398,7 @@ function renderIdle(){
   els.keywordTable.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
-  els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','AI 인용 적합도','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value='';
+  els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','AI 인용 적합도','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value=''; updatePromptMeta();
   if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
   if(els.comboRow){ els.comboRow.style.display='none'; } if(els.comboHint){ els.comboHint.style.display='none'; } if(els.comboInput){ els.comboInput.value=''; }
 }
@@ -1429,6 +1526,7 @@ async function generateClusterPrompt(kind, idx){
     : cluster.spokes.filter((_,i)=> i!==idx).map(s=>s.kw);
   const linkTargets = [kind==='spoke' ? cluster.hub : null, ...siblings].filter(Boolean);
   els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub:cluster.hub, kind });
+  updatePromptMeta();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
@@ -1643,6 +1741,7 @@ ${els.tableCheck.checked?'- 비교·기준·수치는 표로 정리하되, 표 �
 ${internalLinkBlock()}
 
 먼저 [1단계] 설계 결과(의도·제목·질문·목차)를 정리해 보여준 뒤, 확정된 목차대로 [2단계] 본문을 작성해줘.`;
+  updatePromptMeta();
 }
 
 // [FIX 2026-08-13] 접미어를 seed에 붙일 때 띄어쓰기 없이 붙인 형태(${seed}${suf})만 검색광고 API에
@@ -1844,6 +1943,11 @@ els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended|
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });
 [els.platformSelect,els.toneSelect,els.lengthSelect,els.outputSelect,els.tableCheck,els.faqCheck].forEach(el=>el.addEventListener('change', renderSelected));
 if(els.expInput) els.expInput.addEventListener('input', renderSelected);
+if(els.msDate){
+  const today = new Date();
+  const dateText = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+  els.msDate.innerHTML = `작성일 ${dateText}<br/>매 수 <b id="msPageNo">001</b>`;
+}
 renderIdle();
 window.addEventListener('load', ()=>{ if(els.expInput) els.expInput.value=''; });
 </script>

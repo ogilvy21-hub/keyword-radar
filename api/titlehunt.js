@@ -5,6 +5,11 @@
 // [v22.12] 관련도순(sim)만 쓰면 "민경욱프로필"처럼 오래된 프로필 기사가 최신 속보(2026년 사건)를
 // 밀어내는 문제가 있었다. 최신순(date) 검색도 같이 가져와 합치고, 최종은 실제 pubDate 기준으로
 // 재정렬해서 최신 기사가 항상 위로 오게 한다.
+// [v22.15 / 2026-09-15] 네이버 블로그 검색(sort=sim)은 정확한 문구 일치 결과가 적으면
+// "프로필", "가수"처럼 흔한 단어 하나만 겹쳐도 전혀 무관한 글을 관련도순으로 끼워 넣는다.
+// 이걸 그대로 후킹어 추출·샘플 제목에 쓰면 "김범수 프로필"을 검색했는데 "인요한 프로필",
+// "박효신 노래모음"처럼 완전히 무관한 제목이 섞여 나온다. 키워드의 각 단어를 전부 포함하지
+// 않는 제목은 이 단계에서 걸러낸다(index.html의 relevanceScore()와 같은 취지, 서버 쪽 적용).
 // 키: 네이버 개발자센터 검색 API. Vercel 환경변수 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 필요.
 // 차단/실패에 강하게: 타임아웃, 개별 실패 격리, 전체 실패해도 200+빈결과(본체 보호).
 
@@ -27,6 +32,26 @@ function stripTags(s) {
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
     .trim();
+}
+
+// [FIX 2026-09-15] 공백만 제거하고 대문자로 맞춰 "글자 겹침" 비교를 쉽게 한다.
+// index.html의 normalizeKey()와 동일한 방식(구두점은 그대로 둠 — 여긴 단어 단위 포함 여부만 보면 충분).
+function normalizeKeyCompact(s) {
+  return String(s || '').replace(/\s+/g, '').toUpperCase();
+}
+
+// [FIX 2026-09-15] 키워드를 공백 기준으로 쪼갠 "단어" 전부가 제목 안에 글자 그대로 들어있어야
+// 관련 있다고 본다. 예: "김범수 프로필" -> ["김범수","프로필"] 둘 다 포함된 제목만 통과.
+// 한 글자짜리 조사·접속어(예: "그", "이")는 오탐이 심해서 판별 기준에서 제외한다.
+function isRelevantTitle(title, keyword) {
+  const compactTitle = normalizeKeyCompact(title);
+  const parts = String(keyword || '')
+    .trim()
+    .split(/\s+/)
+    .map(normalizeKeyCompact)
+    .filter((p) => p.length >= 2);
+  if (!parts.length) return true; // 쪼갤 단어가 없으면(한 글자 키워드 등) 걸러내지 않는다
+  return parts.every((p) => compactTitle.includes(p));
 }
 
 async function fetchNaverSearch(type, keyword, clientId, clientSecret, sort='sim') {
@@ -209,11 +234,17 @@ export default async function handler(req, res) {
 
   try {
     // 블로그 제목(후킹용) + 뉴스 제목(맥락용) + 뉴스 스니펫(사실확인 근거용, 관련도+최신 합침) 병렬 수집
-    const [blogTitles, newsTitles, newsSnippets] = await Promise.all([
+    const [blogTitlesRaw, newsTitles, newsSnippets] = await Promise.all([
       fetchNaverSearch('blog', keyword, clientId, clientSecret),
       fetchNaverSearch('news', keyword, clientId, clientSecret),
       fetchNaverNewsSnippets(keyword, clientId, clientSecret),
     ]);
+
+    // [FIX 2026-09-15] 키워드 단어를 전부 포함하지 않는(=네이버가 "프로필" 같은 흔한 단어
+    // 하나만 겹쳐서 끼워 넣은) 무관한 블로그 제목을 후킹어 추출·샘플 제목 목록에서 제외한다.
+    const blogTitles = blogTitlesRaw.filter(t => isRelevantTitle(t, keyword));
+    const droppedCount = blogTitlesRaw.length - blogTitles.length;
+
     const hooks = extractHooks(blogTitles, keyword);
 
     res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600'); // 6h 캐시
@@ -226,6 +257,7 @@ export default async function handler(req, res) {
       sampleTitles: blogTitles.slice(0, 15),
       newsTitles: newsTitles.slice(0, 6),
       newsSnippets,             // [{title, description, source, pubDate}] — 최신순 재정렬된 사실확인 근거
+      _filteredOutCount: droppedCount, // 참고용: 관련도 필터로 제외된 블로그 제목 개수
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);

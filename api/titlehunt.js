@@ -10,10 +10,17 @@
 // 이걸 그대로 후킹어 추출·샘플 제목에 쓰면 "김범수 프로필"을 검색했는데 "인요한 프로필",
 // "박효신 노래모음"처럼 완전히 무관한 제목이 섞여 나온다. 키워드의 각 단어를 전부 포함하지
 // 않는 제목은 이 단계에서 걸러낸다(index.html의 relevanceScore()와 같은 취지, 서버 쪽 적용).
+// 단, 필터링 결과가 0개면(네이버가 그 순간 겹치는 제목을 하나도 안 줬거나 하는 예외 상황)
+// 화면에 아무것도 안 뜨는 것보다는 필터링 전 원본이라도 보여주는 게 낫다 — 원본으로 폴백한다.
+// [v22.16 / 2026-09-15] 관련도 필터를 통과하고 나면 재료가 너무 적어지는 경우가 있었다.
+// 블로그 검색 결과 수를 30개보다 늘려서 관련도 필터를 통과할 재료를 넉넉히 확보한다.
+// (100개까지 시도했다가 응답 지연으로 4.5초 타임아웃을 넘겨 조용히 빈 결과가 되는 회귀가
+// 있었다 — 50개 + 타임아웃 7초로 재조정. 네이버 API 자체의 display 상한은 100이지만,
+// 우리 쪽 타임아웃 여유가 그만큼 못 따라갔던 것.)
 // 키: 네이버 개발자센터 검색 API. Vercel 환경변수 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 필요.
 // 차단/실패에 강하게: 타임아웃, 개별 실패 격리, 전체 실패해도 200+빈결과(본체 보호).
 
-const TIMEOUT_MS = 4500;
+const TIMEOUT_MS = 7000;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = TIMEOUT_MS) {
   const controller = new AbortController();
@@ -22,6 +29,22 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = TIMEOUT_MS) {
     return await fetch(url, { ...options, signal: controller.signal });
   } finally {
     clearTimeout(t);
+  }
+}
+
+// [FIX 2026-09-15] 429(요청 과다)를 받으면 짧게 기다렸다가 최대 2회까지 자동 재시도한다.
+// 네이버 오픈API(블로그·뉴스 검색)는 검색광고 API보다 한도가 넉넉하지만(일 25,000회 수준),
+// 짧은 시간에 여러 요청이 몰리면 순간적으로 429가 뜰 수 있어 안전장치로 넣는다.
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function fetchNaverWithRetry(url, headers, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetchWithTimeout(url, { headers });
+    if (res.status !== 429) return res;
+    if (attempt < retries) {
+      await sleep(400 * (attempt + 1) + Math.floor(Math.random() * 200));
+    } else {
+      return res; // 마지막 시도까지 429면 그대로 반환 — 호출부가 !res.ok로 처리
+    }
   }
 }
 
@@ -54,16 +77,16 @@ function isRelevantTitle(title, keyword) {
   return parts.every((p) => compactTitle.includes(p));
 }
 
-async function fetchNaverSearch(type, keyword, clientId, clientSecret, sort='sim') {
+// [FIX 2026-09-15] display를 30 -> 100(네이버가 허용하는 최대치)으로 올려서, 관련도 필터를
+// 통과하고 남는 재료 자체를 늘린다. 필터가 엄격해진 만큼 원재료도 넉넉해야 후킹어가 나온다.
+async function fetchNaverSearch(type, keyword, clientId, clientSecret, sort='sim', display=50) {
   try {
     const url =
       `https://openapi.naver.com/v1/search/${type}.json?query=` +
-      encodeURIComponent(keyword) + `&display=30&sort=${sort}`;
-    const res = await fetchWithTimeout(url, {
-      headers: {
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
+      encodeURIComponent(keyword) + `&display=${display}&sort=${sort}`;
+    const res = await fetchNaverWithRetry(url, {
+      'X-Naver-Client-Id': clientId,
+      'X-Naver-Client-Secret': clientSecret,
     });
     if (!res.ok) {
       console.error(`naver ${type} search not ok:`, res.status);
@@ -86,11 +109,9 @@ async function fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, sort) 
     const url =
       `https://openapi.naver.com/v1/search/news.json?query=` +
       encodeURIComponent(keyword) + `&display=5&sort=${sort}`;
-    const res = await fetchWithTimeout(url, {
-      headers: {
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
+    const res = await fetchNaverWithRetry(url, {
+      'X-Naver-Client-Id': clientId,
+      'X-Naver-Client-Secret': clientSecret,
     });
     if (!res.ok) {
       console.error(`naver news snippets(${sort}) not ok:`, res.status);
@@ -233,31 +254,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 블로그 제목(후킹용) + 뉴스 제목(맥락용) + 뉴스 스니펫(사실확인 근거용, 관련도+최신 합침) 병렬 수집
-    const [blogTitlesRaw, newsTitles, newsSnippets] = await Promise.all([
-      fetchNaverSearch('blog', keyword, clientId, clientSecret),
-      fetchNaverSearch('news', keyword, clientId, clientSecret),
+    // 블로그 제목(50개) + 뉴스 제목(30개, 이제 후킹어 재료로도 씀) + 뉴스 스니펫(사실확인용) 병렬 수집
+    const [blogTitlesRaw, newsTitlesRaw, newsSnippets] = await Promise.all([
+      fetchNaverSearch('blog', keyword, clientId, clientSecret, 'sim', 50),
+      fetchNaverSearch('news', keyword, clientId, clientSecret, 'sim', 30),
       fetchNaverNewsSnippets(keyword, clientId, clientSecret),
     ]);
 
-    // [FIX 2026-09-15] 키워드 단어를 전부 포함하지 않는(=네이버가 "프로필" 같은 흔한 단어
-    // 하나만 겹쳐서 끼워 넣은) 무관한 블로그 제목을 후킹어 추출·샘플 제목 목록에서 제외한다.
-    const blogTitles = blogTitlesRaw.filter(t => isRelevantTitle(t, keyword));
-    const droppedCount = blogTitlesRaw.length - blogTitles.length;
+    // [FIX 2026-09-15] 키워드 단어를 전부 포함하지 않는 무관한 제목을 걸러낸다.
+    // [FIX 2026-09-16] 화면 문구("상위 블로그·뉴스가 제목에 쓴 후킹")는 원래도 블로그+뉴스
+    // 둘 다 쓰겠다고 약속하고 있었는데, 실제로는 블로그 제목만 후킹어 추출·샘플 제목에 쓰고
+    // newsTitles는 개수 세는 용도로만 쓰이며 방치돼 있었다. "이상윤" 같이 막 터진 이슈는
+    // 기사는 이미 정확히 나와 있는데(newsTitles가 관련도 100%로 나왔었다) 블로그는 아직
+    // 안 따라온 경우가 흔해서, 블로그만 보면 재료가 텅 비어 보인다. 이제 관련도 필터를 통과한
+    // 블로그+뉴스 제목을 합쳐서 하나의 재료 풀로 쓴다. 합친 뒤에도 0개면(둘 다 무관하면)
+    // 필터링 전 원본이라도 보여주는 폴백은 그대로 유지한다.
+    const blogTitlesFiltered = blogTitlesRaw.filter(t => isRelevantTitle(t, keyword));
+    const newsTitlesFiltered = newsTitlesRaw.filter(t => isRelevantTitle(t, keyword));
+    const combinedFiltered = [...blogTitlesFiltered, ...newsTitlesFiltered];
+    const combinedRaw = [...blogTitlesRaw, ...newsTitlesRaw];
+    const huntTitles = combinedFiltered.length > 0 ? combinedFiltered : combinedRaw;
+    const droppedCount = combinedRaw.length - huntTitles.length;
 
-    const hooks = extractHooks(blogTitles, keyword);
+    const hooks = extractHooks(huntTitles, keyword);
 
     res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600'); // 6h 캐시
     return res.status(200).json({
       keyword,
-      count: blogTitles.length + newsTitles.length,
-      blogCount: blogTitles.length,
-      newsCount: newsTitles.length,
+      count: huntTitles.length,
+      blogCount: blogTitlesFiltered.length,
+      newsCount: newsTitlesFiltered.length,
       hooks,
-      sampleTitles: blogTitles.slice(0, 15),
-      newsTitles: newsTitles.slice(0, 6),
+      sampleTitles: huntTitles.slice(0, 15),
+      newsTitles: newsTitlesRaw.slice(0, 6),
       newsSnippets,             // [{title, description, source, pubDate}] — 최신순 재정렬된 사실확인 근거
-      _filteredOutCount: droppedCount, // 참고용: 관련도 필터로 제외된 블로그 제목 개수
+      _filteredOutCount: droppedCount, // 참고용: 관련도 필터로 제외된 제목 개수(블로그+뉴스 합산)
+      _usedRawFallback: combinedFiltered.length === 0 && combinedRaw.length > 0, // 필터 결과 0개라 원본으로 되돌린 경우 true
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);

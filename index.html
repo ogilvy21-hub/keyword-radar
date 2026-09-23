@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v22 | 패턴제목 + 범용축</title>
+  <title>글감레이더 v23 | 패턴제목 + 발행작업실</title>
   <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -224,6 +224,75 @@
     .mini-list div{ display:flex; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-2); border-radius:4px; font-size:12px; }
     .mini-list div span{ color:var(--ink-soft); }
     .mini-list div b{ font-weight:600; }
+
+
+    /* ===== [v23] 완성 원고 · 이미지 세탁기 · 발행 작업실 ===== */
+    .pub-card{ border:1px solid var(--line); border-radius:4px; background:#fff; overflow:hidden; }
+    .pub-head{ display:flex; justify-content:space-between; gap:14px; align-items:flex-start; padding:16px 18px; border-bottom:1px solid var(--line); background:var(--paper-2); }
+    .pub-head b{ font-size:13px; }
+    .pub-head span{ display:block; margin-top:3px; font-size:10.5px; color:var(--ink-soft); line-height:1.5; }
+    .pub-body{ padding:18px; }
+    .pub-textarea{ width:100%; min-height:420px; border:1px solid var(--line); border-radius:3px; padding:16px; background:#fff; color:var(--ink); font-size:13px; line-height:1.75; resize:vertical; outline:0; }
+    .pub-textarea:focus{ border-color:var(--guide); box-shadow:0 0 0 2px var(--guide-faint); }
+    .pub-toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .pub-btn{ border:1px solid var(--ink); background:transparent; color:var(--ink); border-radius:3px; padding:10px 13px; font-size:12px; font-weight:600; cursor:pointer; }
+    .pub-btn.primary{ background:var(--ink); color:var(--paper); }
+    .pub-btn.green{ background:var(--clear); border-color:var(--clear); color:#fff; }
+    .pub-btn.red{ border-color:var(--flag); color:var(--flag); }
+    .pub-btn:disabled{ opacity:.4; cursor:not-allowed; }
+    .pub-count{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); white-space:nowrap; }
+    .pub-report{ margin-top:12px; border:1px solid var(--line); border-radius:3px; padding:12px 14px; background:var(--paper-2); color:var(--ink-soft); font-size:11.5px; line-height:1.65; }
+    .pub-report.good{ border-color:#BBD8CC; background:#EEF7F2; color:#27634F; }
+    .pub-report.bad{ border-color:#E5B7AA; background:#FBEEEA; color:#8C3E27; }
+    .pub-note{ margin-top:9px; font-size:10.5px; color:var(--ink-soft); line-height:1.6; }
+    .pub-status{ font-size:10.5px; color:var(--ink-soft); }
+    .pub-status.ok{ color:var(--clear); font-weight:700; }
+    .pub-status.warn{ color:var(--flag); font-weight:700; }
+
+    .img-hero-slot{ border:1px solid var(--line); border-radius:4px; padding:12px; background:var(--paper-2); margin-bottom:12px; }
+    .img-hero-slot-title{ font-size:11.5px; font-weight:700; margin-bottom:8px; }
+    .img-hero-empty{ padding:22px; text-align:center; color:var(--ink-soft); background:#fff; border:1px dashed var(--line); border-radius:3px; font-size:11px; }
+    .img-hero-wrap{ display:grid; grid-template-columns:150px 1fr; gap:14px; align-items:center; }
+    .img-hero-wrap img{ width:150px; height:100px; object-fit:cover; border-radius:3px; background:var(--paper); }
+    .img-hero-wrap b{ display:block; font-size:12px; }
+    .img-hero-wrap small{ display:block; margin-top:5px; color:var(--ink-soft); font-size:10px; }
+    .img-drop-grid{ display:grid; grid-template-columns:.8fr 1.2fr; gap:12px; }
+    .img-drop{ border:2px dashed var(--line); border-radius:4px; min-height:112px; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; background:var(--paper-2); cursor:pointer; transition:.12s; }
+    .img-drop:hover,.img-drop.drag{ border-color:var(--guide); background:#FFF9F6; }
+    .img-drop b{ font-size:13px; margin-bottom:6px; }
+    .img-drop span{ font-size:10.5px; color:var(--ink-soft); line-height:1.5; }
+    .img-list{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .img-card{ border:1px solid var(--line); border-radius:4px; overflow:hidden; background:#fff; }
+    .img-thumb{ aspect-ratio:16/10; background:var(--paper-2); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .img-thumb img{ width:100%; height:100%; object-fit:cover; }
+    .img-meta{ padding:9px; }
+    .img-meta strong{ display:block; font-size:10.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .img-meta small{ display:block; color:var(--ink-soft); margin:3px 0 7px; font-size:9.5px; }
+    .img-meta select{ width:100%; border:1px solid var(--line); background:#fff; border-radius:3px; padding:7px; font-size:10px; }
+    .img-mini-btns{ display:flex; gap:5px; margin-top:7px; }
+    .img-mini-btns button{ flex:1; border:1px solid var(--line); background:#fff; border-radius:3px; padding:6px 4px; font-size:9.5px; cursor:pointer; color:var(--ink); }
+
+    .publish-preview{ border:1px solid var(--line); border-radius:4px; background:#fff; padding:24px; min-height:280px; }
+    .publish-preview h1{ font-size:24px; line-height:1.35; margin:0 0 20px; }
+    .publish-preview h2{ font-size:18px; margin:30px 0 10px; }
+    .publish-preview h3{ font-size:15px; margin:22px 0 8px; }
+    .publish-preview p{ line-height:1.8; margin:10px 0; color:var(--ink); }
+    .publish-preview figure{ margin:14px 0 20px; }
+    .publish-preview figure img{ width:100%; max-height:560px; object-fit:contain; background:var(--paper-2); border-radius:3px; }
+    .publish-preview figcaption{ font-size:10px; color:var(--ink-soft); margin-top:5px; }
+    .publish-preview table{ width:100%; min-width:0; border-collapse:collapse; margin:15px 0 22px; font-size:12px; }
+    .publish-preview th,.publish-preview td{ border:1px solid var(--line); padding:9px 10px; text-align:left; vertical-align:top; white-space:normal; }
+    .publish-preview th{ background:var(--paper-2); font-weight:700; }
+    .publish-preview ul,.publish-preview ol{ padding-left:22px; line-height:1.75; }
+    .publish-preview .faq-block{ border-top:1px dashed var(--line); margin-top:28px; padding-top:8px; }
+    .publish-keyword{ display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid var(--guide-soft); background:#FFF8F4; color:var(--guide); border-radius:3px; font-size:10.5px; font-weight:700; }
+
+    @media(max-width:760px){
+      .img-drop-grid{ grid-template-columns:1fr; }
+      .img-list{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .img-hero-wrap{ grid-template-columns:100px 1fr; }
+      .img-hero-wrap img{ width:100px; height:74px; }
+    }
   </style>
 </head>
 <body>
@@ -255,6 +324,9 @@
     <div class="step active">STEP 3 · 경쟁 발행량 확인</div>
     <div class="step active">STEP 4 · 블루오션 선별</div>
     <div class="step active">STEP 5 · 허브·스포크·제목</div>
+    <div class="step">STEP 6 · 원고 검수</div>
+    <div class="step">STEP 7 · 이미지 세탁</div>
+    <div class="step">STEP 8 · 발행 준비</div>
   </div>
 
   <div class="summary-grid">
@@ -372,16 +444,96 @@
     <div class="prompt-count-bar"><span>공백 제외 <b id="pfCount">0</b>자</span><span>스크롤해서 전체 확인 · 복사 버튼은 원문 전체 복사</span></div>
   </div>
 
+  <div class="section-title" style="margin-top:64px;">
+    <span class="st-tick"></span>
+    <h3>STEP 6 · 완성 원고 검수</h3>
+    <span class="st-rule"></span>
+    <span class="micro-hint">ChatGPT·Claude 원고를 그대로 붙여넣기</span>
+  </div>
+  <div class="pub-card">
+    <div class="pub-head">
+      <div><b>완성 원고</b><span>AI 응답 전체를 붙여도 됩니다. 응답에 [2단계 · 본문 작성]이 있으면 발행 미리보기는 그 이후 원고를 우선 사용합니다.</span></div>
+      <div class="pub-count" id="articleCount">0자</div>
+    </div>
+    <div class="pub-body">
+      <textarea id="articleBox" class="pub-textarea" placeholder="# 최종 제목\n\n도입부...\n\n## 목차\n...\n\n## 첫 번째 소제목\n...\n\n## FAQ\nQ1. 질문\n답변...\n\n## 자료 출처\n...\n\n## 태그\n..."></textarea>
+      <div class="pub-toolbar">
+        <button class="pub-btn" id="aiStyleBtn">AI 문체 검사</button>
+        <button class="pub-btn green" id="autoCleanBtn">원고 자동 정리</button>
+      </div>
+      <div class="pub-note">문체 검사는 원고를 바꾸지 않고 등록된 상투 표현만 찾습니다. 자동 정리는 상투어·습관 연결어·구분선·FAQ 질문 앞 ###를 실제 원고에서 정리합니다. 내용과 사실관계는 바꾸지 않습니다.</div>
+      <div id="styleReport" class="pub-report">완성 원고를 붙여넣은 뒤 문체 검사 또는 자동 정리를 실행하세요.</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:64px;">
+    <span class="st-tick"></span>
+    <h3>STEP 7 · 이미지 세탁기</h3>
+    <span class="st-rule"></span>
+    <span class="micro-hint">JPG 자동변환 · H2 섹션별 최대 3장</span>
+  </div>
+  <div class="pub-card">
+    <div class="pub-head">
+      <div><b>이미지 작업</b><span>대표 이미지는 본문에 다시 넣지 않습니다. 본문 H2를 자동 인식하고 목차·FAQ·자료 출처·태그는 이미지 섹션에서 제외합니다.</span></div>
+      <div><span class="publish-keyword" id="publishKeyword">키워드 -</span><div id="imageStatus" class="pub-status" style="margin-top:6px;text-align:right;"></div></div>
+    </div>
+    <div class="pub-body">
+      <div class="img-hero-slot">
+        <div class="img-hero-slot-title">대표 이미지 · 1장</div>
+        <div id="heroSlot"><div class="img-hero-empty">대표 이미지 없음</div></div>
+      </div>
+      <div class="img-drop-grid">
+        <div id="heroDropzone" class="img-drop" tabindex="0">
+          <b>대표 이미지 전용 드롭</b>
+          <span>PNG / WEBP / JPG → JPG · 긴 변 최대 1600px</span>
+          <input id="heroInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        </div>
+        <div id="dropzone" class="img-drop" tabindex="0">
+          <b>본문 이미지를 한꺼번에 드래그</b>
+          <span>원고의 실제 H2 순서대로 섹션별 최대 3장 자동 배치 · 초과 이미지는 미배치</span>
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        </div>
+      </div>
+      <div class="pub-toolbar">
+        <button class="pub-btn" id="clearImagesBtn" disabled>이미지 비우기</button>
+        <button class="pub-btn primary" id="downloadAllBtn" disabled>이미지 ZIP 다운로드</button>
+      </div>
+      <div id="imageList" class="img-list"><div class="empty">본문 이미지가 없습니다.</div></div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:64px;">
+    <span class="st-tick"></span>
+    <h3>STEP 8 · 발행 준비</h3>
+    <span class="st-rule"></span>
+    <span class="micro-hint">티스토리 제목·본문 분리 복사</span>
+  </div>
+  <div class="pub-card">
+    <div class="pub-head">
+      <div><b>배치 미리보기</b><span>H2·표 서식을 유지하고, 본문 이미지 자리는 ZIP 파일명과 같은 삽입 표시로 복사합니다.</span></div>
+      <div id="publishStatus" class="pub-status"></div>
+    </div>
+    <div class="pub-body">
+      <div class="pub-toolbar" style="margin-top:0;margin-bottom:14px;">
+        <button class="pub-btn" id="copyTistoryTitleBtn">티스토리 제목 복사</button>
+        <button class="pub-btn green" id="copyTistoryBodyBtn">티스토리 본문 복사</button>
+      </div>
+      <div id="publishPreview" class="publish-preview"><div class="empty">완성 원고를 붙여넣으면 미리보기가 표시됩니다.</div></div>
+    </div>
+  </div>
+
   <div class="action-row"><button class="green" id="copyKeywordsBtn">키워드 복사</button><button class="black" id="resetBtn">초기화</button></div>
 
-  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v22</p>
+  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v23 · KEYWORD → ARTICLE → CLEAN → JPG → PUBLISH</p>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
 const els = {
   keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint'),
-  pfTitle:$('pfTitle'), pfPlatform:$('pfPlatform'), pfTone:$('pfTone'), pfLength:$('pfLength'), pfCount:$('pfCount'), msDate:$('msDate'), msPageNo:$('msPageNo')
+  pfTitle:$('pfTitle'), pfPlatform:$('pfPlatform'), pfTone:$('pfTone'), pfLength:$('pfLength'), pfCount:$('pfCount'), msDate:$('msDate'), msPageNo:$('msPageNo'),
+  articleBox:$('articleBox'), articleCount:$('articleCount'), aiStyleBtn:$('aiStyleBtn'), autoCleanBtn:$('autoCleanBtn'), styleReport:$('styleReport'),
+  publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), copyTistoryTitleBtn:$('copyTistoryTitleBtn'), copyTistoryBodyBtn:$('copyTistoryBodyBtn')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -1424,6 +1576,8 @@ function renderIdle(){
   els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','AI 인용 적합도','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value=''; updatePromptMeta();
   if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
   if(els.comboRow){ els.comboRow.style.display='none'; } if(els.comboHint){ els.comboHint.style.display='none'; } if(els.comboInput){ els.comboInput.value=''; }
+  publishWorkspaceKeyword='';
+  resetPublishingWorkspace();
 }
 function renderRecommendTable(){
   const rows=state.recommended;
@@ -1611,6 +1765,10 @@ function renderSelected(){
   const rows = state.recommended.length ? state.recommended : state.rows;
   const row = rows[state.selectedIndex] || rows[0];
   if(!row){ renderIdle(); return; }
+  const nextPublishKey=normalizeKey(row.kw);
+  if(publishWorkspaceKeyword && publishWorkspaceKeyword!==nextPublishKey) resetPublishingWorkspace();
+  publishWorkspaceKeyword=nextPublishKey;
+  updatePublishKeyword();
   ensureHooksFor(row.kw);
   const curHooks = (state.hooksByKw && state.hooksByKw[normalizeSpace(row.kw)]) || [];
   const intent = getIntentForSelected(row);
@@ -1956,6 +2114,458 @@ async function addComboKeyword(){
     els.comboBtn.disabled = false; els.comboBtn.textContent='붙여서 확인';
   }
 }
+
+
+/* ===== [v23] 완성 원고 · 이미지 세탁기 · 발행 준비 ===== */
+let publishImages = [];
+let publishHeroId = null;
+let publishWorkspaceKeyword = '';
+
+const AI_STYLE_PATTERNS = [
+  ['빈 도입','오늘은','오늘은 알아보겠습니다'],
+  ['빈 도입','최근 많은 분들이','최근 많은 분들이 궁금해합니다'],
+  ['빈 도입','관심이 높아지고 있습니다','관심이 높아지고 있습니다'],
+  ['빈 도입','함께 알아보겠습니다','함께 알아보겠습니다'],
+  ['빈 도입','자세히 알아보겠습니다','자세히 알아보겠습니다'],
+  ['빈 안내','아래에서 자세히','아래에서 자세히'],
+  ['상투 연결어','핵심은 바로','핵심은 바로'],
+  ['상투 연결어','주목할 점은','주목할 점은'],
+  ['상투 연결어','무엇보다 중요한 것은','무엇보다 중요한 것은'],
+  ['상투 연결어','이러한 점에서','이러한 점에서'],
+  ['상투 연결어','결론적으로','결론적으로'],
+  ['상투 연결어','정리해보면','정리해보면'],
+  ['빈 맺음말','이상으로 포스팅을 마칩니다','이상으로 포스팅을 마칩니다'],
+  ['빈 맺음말','도움이 되셨길 바랍니다','도움이 되셨길 바랍니다'],
+  ['빈 맺음말','끝까지 읽어주셔서 감사합니다','끝까지 읽어주셔서 감사합니다'],
+  ['빈 맺음말','다음에 더 유용한 정보로','다음에 더 유용한 정보로']
+];
+
+function selectedPublishRow(){
+  const rows = state.recommended && state.recommended.length ? state.recommended : state.rows;
+  return (rows || [])[state.selectedIndex] || (rows || [])[0] || null;
+}
+function selectedPublishKeyword(){
+  return normalizeSpace(selectedPublishRow()?.kw || state.seed || '');
+}
+function updatePublishKeyword(){
+  if(els.publishKeyword) els.publishKeyword.textContent = `키워드 · ${selectedPublishKeyword() || '-'}`;
+}
+function flashPublish(target, message, cls='ok'){
+  const el = typeof target === 'string' ? $(target) : target;
+  if(!el) return;
+  el.textContent = message;
+  el.className = `pub-status ${cls}`;
+  setTimeout(()=>{ if(el.textContent === message) el.textContent=''; }, 2600);
+}
+function countRegex(text, re){ const m=String(text||'').match(re); return m ? m.length : 0; }
+function updateArticleCount(){
+  if(!els.articleCount) return;
+  const n=(els.articleBox?.value||'').replace(/\s/g,'').length;
+  els.articleCount.textContent=`${n.toLocaleString('ko-KR')}자`;
+}
+function scanAiStyle(){
+  const text=els.articleBox?.value||'';
+  if(!text.trim()){
+    els.styleReport.className='pub-report bad';
+    els.styleReport.textContent='원고가 비어 있습니다.';
+    return;
+  }
+  const hits=[];
+  for(const [category,key,label] of AI_STYLE_PATTERNS){
+    const re=new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
+    const n=(text.match(re)||[]).length;
+    if(n) hits.push(`${category}: “${label}” ${n}회`);
+  }
+  const connector=(text.match(/(?:한편|따라서|또한|특히|결론적으로|정리하면)/g)||[]);
+  const freq={}; connector.forEach(x=>freq[x]=(freq[x]||0)+1);
+  Object.entries(freq).filter(([,n])=>n>=4).forEach(([word,n])=>hits.push(`반복 연결어: “${word}” ${n}회`));
+  if(!hits.length){
+    els.styleReport.className='pub-report good';
+    els.styleReport.innerHTML='<b>상투어 검사 통과</b><br>등록된 AI 상투 표현의 뚜렷한 반복이 없습니다. 사실관계와 문장 자연스러움은 마지막으로 직접 확인하세요.';
+  }else{
+    els.styleReport.className='pub-report bad';
+    els.styleReport.innerHTML=`<b>AI 상투 표현 ${hits.length}종 발견</b><br>${hits.map(escapeHTML).join('<br>')}`;
+  }
+}
+function autoCleanArticle(){
+  let text=els.articleBox?.value||'';
+  if(!text.trim()){
+    els.styleReport.className='pub-report bad';
+    els.styleReport.textContent='원고가 비어 있습니다.';
+    return;
+  }
+  let clicheRemoved=0, connectorRemoved=0, faqHashesRemoved=0, separatorsRemoved=0;
+  const removable=[
+    /오늘은[^.!?\n]{0,60}(?:알아보겠습니다|살펴보겠습니다)\s*[.!?]?/g,
+    /최근 많은 분들이[^.!?\n]{0,70}(?:궁금해합니다|관심을 보이고 있습니다)\s*[.!?]?/g,
+    /아래에서[^.!?\n]{0,60}(?:알아보겠습니다|확인해보겠습니다|살펴보겠습니다)\s*[.!?]?/g,
+    /함께 알아보겠습니다\s*[.!?]?/g,
+    /이상으로[^.!?\n]{0,60}(?:마칩니다|마무리하겠습니다)\s*[.!?]?/g,
+    /도움이 되셨길 바랍니다\s*[.!?]?/g,
+    /끝까지 읽어주셔서 감사합니다\s*[.!?]?/g,
+    /다음에 더 유용한 정보로[^.!?\n]{0,60}/g
+  ];
+  for(const re of removable){ clicheRemoved+=countRegex(text,re); text=text.replace(re,''); }
+  const connectorRe=/(^|\n)\s*(결론적으로|정리해보면|이러한 점에서|무엇보다 중요한 것은)\s*[,,:]?\s*/g;
+  connectorRemoved+=countRegex(text,connectorRe); text=text.replace(connectorRe,'$1');
+  let lines=text.replace(/\r/g,'').split('\n');
+  let inFaq=false;
+  lines=lines.map(line=>{
+    const trim=line.trim();
+    if(/^##\s+(FAQ|자주\s*묻는)/i.test(trim)){ inFaq=true; return line; }
+    if(inFaq && /^##\s+/.test(trim)) inFaq=false;
+    if(inFaq && /^###\s+(Q\s*\d+[.)]?\s*.*)$/i.test(trim)){ faqHashesRemoved++; return trim.replace(/^###\s+/,''); }
+    if(/^---+$/.test(trim)){ separatorsRemoved++; return ''; }
+    return line;
+  });
+  text=lines.join('\n').replace(/[ \t]+\n/g,'\n').replace(/\n{4,}/g,'\n\n\n').trim();
+  els.articleBox.value=text;
+  articleChanged();
+  els.styleReport.className='pub-report good';
+  els.styleReport.innerHTML=`<b>원고 자동 정리 완료</b><br>AI 상투어·습관 연결어 ${clicheRemoved+connectorRemoved}개 제거 · 구분선 ${separatorsRemoved}개 제거 · FAQ ### ${faqHashesRemoved}개 제거<br>내용과 사실관계는 변경하지 않았습니다.`;
+}
+
+function htmlTableToMarkdown(table){
+  const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('th,td')].map(td=>normalizeSpace(td.textContent)));
+  if(!rows.length) return '';
+  const width=Math.max(...rows.map(r=>r.length),1);
+  const safe=v=>String(v||'').replace(/\|/g,'\\|');
+  const head=Array.from({length:width},(_,i)=>rows[0][i]||'');
+  const body=rows.slice(1);
+  return [`| ${head.map(safe).join(' | ')} |`,`| ${Array(width).fill('---').join(' | ')} |`,...body.map(r=>`| ${Array.from({length:width},(_,i)=>safe(r[i]||'')).join(' | ')} |`)].join('\n');
+}
+function clipboardHtmlToMarkdown(plain, html){
+  if(!html) return String(plain||'');
+  try{
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const tokens=new Map(); let tokenNo=0;
+    [...doc.querySelectorAll('table')].forEach(table=>{
+      const md=htmlTableToMarkdown(table); if(!md) return;
+      const token=`__KR_TABLE_${tokenNo++}__`; tokens.set(token,md);
+      const p=doc.createElement('p'); p.textContent=token; table.replaceWith(p);
+    });
+    [...doc.querySelectorAll('h1,h2,h3')].forEach(h=>{
+      const level=h.tagName==='H1'?'#':h.tagName==='H2'?'##':'###';
+      const p=doc.createElement('p'); p.textContent=`${level} ${normalizeSpace(h.textContent)}`; h.replaceWith(p);
+    });
+    [...doc.querySelectorAll('li')].forEach(li=>{
+      const p=doc.createElement('p'); p.textContent=`- ${normalizeSpace(li.textContent)}`; li.replaceWith(p);
+    });
+    [...doc.querySelectorAll('br')].forEach(br=>br.replaceWith('\n'));
+    [...doc.querySelectorAll('p,div')].forEach(el=>{ if(!el.textContent.endsWith('\n')) el.append('\n'); });
+    let out=doc.body.textContent||String(plain||'');
+    tokens.forEach((md,token)=>{ out=out.replace(token,md); });
+    return out.replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+  }catch(e){ return String(plain||''); }
+}
+function extractFinalArticleStage(raw){
+  const text=String(raw||'').replace(/\r/g,'');
+  const lines=text.split('\n');
+  let cut=-1;
+  for(let i=0;i<lines.length;i++){
+    const t=lines[i].replace(/^#{1,4}\s*/,'').trim();
+    if(/(?:\[?2단계\]?|2단계).*(?:본문|원고)/i.test(t)) cut=i+1;
+  }
+  return cut>=0 ? lines.slice(cut).join('\n').trim() : text.trim();
+}
+function isTailHeading(h){ return /^(자료\s*출처|출처|태그|함께\s*보면\s*좋은\s*글|참고\s*자료|관련\s*글)/i.test(String(h||'').replace(/^\d+[.)]\s*/,'')); }
+function parsePublishArticle(){
+  const original=els.articleBox?.value||'';
+  let raw=extractFinalArticleStage(original);
+  if(/<h[1-3]\b|<table\b|<p\b/i.test(raw) && !/^#{1,3}\s+/m.test(raw)) raw=clipboardHtmlToMarkdown('',raw);
+  let title=state.titleApplied?.draft || selectedPublishKeyword() || '제목';
+  if(!raw.trim()) return {title,intro:'',sections:[],faq:'',tail:''};
+  const lines=raw.split('\n');
+  const firstH1=lines.findIndex(line=>/^#\s+/.test(line.trim())&&!/^##/.test(line.trim()));
+  if(firstH1>=0){ title=lines[firstH1].trim().replace(/^#\s+/,'').trim(); lines.splice(firstH1,1); }
+  const blocks=[]; let current={heading:'__intro__',body:[]};
+  for(const line of lines){
+    const m=line.match(/^##\s+(.+)$/);
+    if(m){ blocks.push(current); current={heading:m[1].trim(),body:[]}; }
+    else if(line.trim()!=='---') current.body.push(line);
+  }
+  blocks.push(current);
+  const intro=(blocks.find(b=>b.heading==='__intro__')?.body||[]).join('\n').trim();
+  const sections=[]; let faq=''; const tail=[];
+  for(const b of blocks.slice(1)){
+    const h=b.heading.trim(), body=b.body.join('\n').trim();
+    if(/^목차$/i.test(h)) continue;
+    if(/^(FAQ|자주\s*묻는)/i.test(h)){ faq=body; continue; }
+    if(isTailHeading(h)){ tail.push(`## ${h}\n${body}`.trim()); continue; }
+    sections.push({ heading:h, body });
+  }
+  return {title,intro,sections,faq,tail:tail.join('\n\n')};
+}
+function eligiblePublishSections(){
+  return parsePublishArticle().sections.map((section,i)=>({key:`s${i+1}`,label:section.heading||`본문 ${i+1}`}));
+}
+function articleChanged(){
+  updateArticleCount();
+  const valid=new Set(eligiblePublishSections().map(s=>s.key));
+  publishImages.filter(x=>x.kind!=='hero'&&x.id!==publishHeroId).forEach(img=>{ if(img.section!=='unassigned'&&!valid.has(img.section)) img.section='unassigned'; });
+  renderPublishImages(); renderPublishHero(); refreshPublishPreview(); updateImageButtons(); updatePublishKeyword();
+}
+
+function inlineMarkdown(text){
+  return escapeHTML(String(text||''))
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/__(.+?)__/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^\)]+)\)/g,'<a href="$2">$1</a>');
+}
+function tableCells(line){ return String(line||'').trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(x=>x.trim()); }
+function isTableSeparator(line){ const cells=tableCells(line); return cells.length>=2&&cells.every(c=>/^:?-{3,}:?$/.test(c)); }
+function markdownToHtml(text){
+  const lines=String(text||'').replace(/\r/g,'').split('\n'); let html='', para=[];
+  const flush=()=>{ if(!para.length) return; html+=`<p>${para.map(inlineMarkdown).join('<br>')}</p>`; para=[]; };
+  for(let i=0;i<lines.length;){
+    const line=lines[i], trim=line.trim();
+    if(trim.includes('|')&&i+1<lines.length&&isTableSeparator(lines[i+1])){
+      flush(); const head=tableCells(line); i+=2; const rows=[];
+      while(i<lines.length&&lines[i].trim()&&lines[i].includes('|')){ rows.push(tableCells(lines[i])); i++; }
+      html+='<table><thead><tr>'+head.map(c=>`<th>${inlineMarkdown(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+head.map((_,j)=>`<td>${inlineMarkdown(r[j]||'')}</td>`).join('')+'</tr>').join('')+'</tbody></table>'; continue;
+    }
+    if(/^###\s+/.test(trim)){ flush(); html+=`<h3>${inlineMarkdown(trim.replace(/^###\s+/,''))}</h3>`; i++; continue; }
+    if(/^##\s+/.test(trim)){ flush(); html+=`<h2>${inlineMarkdown(trim.replace(/^##\s+/,''))}</h2>`; i++; continue; }
+    if(/^[-*]\s+/.test(trim)){
+      flush(); const items=[]; while(i<lines.length&&/^[-*]\s+/.test(lines[i].trim())){ items.push(lines[i].trim().replace(/^[-*]\s+/,'')); i++; }
+      html+='<ul>'+items.map(x=>`<li>${inlineMarkdown(x)}</li>`).join('')+'</ul>'; continue;
+    }
+    if(/^\d+[.)]\s+/.test(trim)){
+      flush(); const items=[]; while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){ items.push(lines[i].trim().replace(/^\d+[.)]\s+/,'')); i++; }
+      html+='<ol>'+items.map(x=>`<li>${inlineMarkdown(x)}</li>`).join('')+'</ol>'; continue;
+    }
+    if(/^---+$/.test(trim)){ flush(); i++; continue; }
+    if(!trim){ flush(); i++; continue; }
+    para.push(line); i++;
+  }
+  flush(); return html;
+}
+function faqToHtml(text){
+  const clean=String(text||'').replace(/^###\s+(Q\s*\d+[.)]?\s*.*)$/gmi,'$1');
+  const lines=clean.replace(/\r/g,'').split('\n'); let html='', para=[];
+  const flush=()=>{ if(!para.length)return; html+=`<p>${para.map(inlineMarkdown).join('<br>')}</p>`; para=[]; };
+  for(const line of lines){ const trim=line.trim(); if(/^Q\s*\d+[.)]?\s+/i.test(trim)){ flush(); html+=`<p><strong>${inlineMarkdown(trim)}</strong></p>`; } else if(!trim){ flush(); } else para.push(line); }
+  flush(); return html;
+}
+function stripMarkdown(text){
+  return String(text||'').replace(/^#{1,6}\s+/gm,'').replace(/^---+$/gm,'').replace(/\*\*(.*?)\*\*/g,'$1').replace(/__(.*?)__/g,'$1').replace(/`([^`]+)`/g,'$1').replace(/\[([^\]]+)\]\([^\)]+\)/g,'$1').replace(/\n{3,}/g,'\n\n').trim();
+}
+function bodyPublishImages(){ return publishImages.filter(x=>x.kind!=='hero'&&x.id!==publishHeroId); }
+function imagesForSection(key){ return bodyPublishImages().filter(x=>x.section===key).slice(0,3); }
+function refreshPublishPreview(){
+  if(!els.publishPreview) return;
+  if(!(els.articleBox?.value||'').trim()){ els.publishPreview.innerHTML='<div class="empty">완성 원고를 붙여넣으면 미리보기가 표시됩니다.</div>'; return; }
+  const p=parsePublishArticle();
+  let html=`<h1>${escapeHTML(p.title)}</h1>${markdownToHtml(p.intro)}`;
+  p.sections.forEach((section,i)=>{
+    const key=`s${i+1}`; html+=`<h2>${escapeHTML(section.heading)}</h2>${markdownToHtml(section.body)}`;
+    for(const img of imagesForSection(key)) html+=`<figure><img src="${img.url}" alt=""><figcaption>${escapeHTML(img.filename)}</figcaption></figure>`;
+  });
+  if(p.faq) html+=`<div class="faq-block"><h2>FAQ</h2>${faqToHtml(p.faq)}</div>`;
+  if(p.tail) html+=markdownToHtml(p.tail);
+  els.publishPreview.innerHTML=html;
+}
+
+function filenameBase(){
+  return selectedPublishKeyword().trim().replace(/\s+/g,'-').replace(/[\\/:*?"<>|]/g,'').slice(0,60)||'image';
+}
+async function loadPublishBitmap(file){
+  if('createImageBitmap' in window) return await createImageBitmap(file);
+  return await new Promise((resolve,reject)=>{ const img=new Image(), url=URL.createObjectURL(file); img.onload=()=>{URL.revokeObjectURL(url);resolve(img)}; img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('image read fail'))}; img.src=url; });
+}
+async function convertPublishImage(file){
+  const bm=await loadPublishBitmap(file); const max=1600; let w=bm.width,h=bm.height; const scale=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*scale)); h=Math.max(1,Math.round(h*scale));
+  const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); ctx.drawImage(bm,0,0,w,h); if(bm.close) bm.close();
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('convert fail')),'image/jpeg',.88));
+  return {id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),blob,url:URL.createObjectURL(blob),filename:'',section:'unassigned',kind:'body',size:blob.size,w,h};
+}
+function renumberPublishImages(){
+  const hero=publishImages.find(x=>x.id===publishHeroId); if(hero) hero.filename=`${filenameBase()}-대표.jpg`;
+  bodyPublishImages().forEach((img,i)=>img.filename=`${filenameBase()}-${String(i+1).padStart(2,'0')}.jpg`);
+}
+function nextAvailableSection(){
+  const sections=eligiblePublishSections();
+  for(const sec of sections){ if(bodyPublishImages().filter(x=>x.section===sec.key).length<3) return sec.key; }
+  return 'unassigned';
+}
+async function handleHeroFile(file){
+  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)) return;
+  try{
+    const img=await convertPublishImage(file); img.kind='hero';
+    const old=publishImages.find(x=>x.id===publishHeroId);
+    if(old&&old.kind==='hero'){ try{URL.revokeObjectURL(old.url)}catch(e){} publishImages=publishImages.filter(x=>x.id!==old.id); }
+    publishImages.unshift(img); publishHeroId=img.id; renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons(); flashPublish(els.imageStatus,'대표 이미지 JPG 변환 완료','ok');
+  }catch(e){ console.error(e); flashPublish(els.imageStatus,'대표 이미지 변환 실패','warn'); }
+}
+async function handleBodyFiles(list){
+  const valid=[...list].filter(f=>['image/png','image/jpeg','image/webp'].includes(f.type));
+  if(!valid.length) return;
+  els.imageStatus.textContent=`${valid.length}장 JPG 변환 중...`; els.imageStatus.className='pub-status warn';
+  for(const file of valid){
+    try{ const img=await convertPublishImage(file); img.section=nextAvailableSection(); publishImages.push(img); }
+    catch(e){ console.error(e); }
+  }
+  renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
+  const unassigned=bodyPublishImages().filter(x=>x.section==='unassigned').length;
+  els.imageStatus.textContent=`본문 ${bodyPublishImages().length}장 변환 완료${unassigned?` · 미배치 ${unassigned}장`:''}`; els.imageStatus.className='pub-status ok';
+}
+function setPublishHero(id){
+  const next=publishImages.find(x=>x.id===id); if(!next) return;
+  const prev=publishImages.find(x=>x.id===publishHeroId);
+  if(prev&&prev.kind==='hero'&&prev.id!==id){ try{URL.revokeObjectURL(prev.url)}catch(e){} publishImages=publishImages.filter(x=>x.id!==prev.id); }
+  else if(prev&&prev.id!==id){ prev.section=nextAvailableSection(); }
+  publishHeroId=id; renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
+}
+function renderPublishHero(){
+  if(!els.heroSlot) return;
+  const hero=publishImages.find(x=>x.id===publishHeroId);
+  if(!hero){ els.heroSlot.innerHTML='<div class="img-hero-empty">대표 이미지 없음</div>'; return; }
+  els.heroSlot.innerHTML=`<div class="img-hero-wrap"><img src="${hero.url}" alt=""><div><b>${escapeHTML(hero.filename)}</b><small>${hero.w}×${hero.h} · 본문에는 삽입하지 않음</small><div class="pub-toolbar"><button class="pub-btn" data-hero-save="${hero.id}">대표 JPG 저장</button><button class="pub-btn red" data-hero-delete="${hero.id}">대표 삭제</button></div></div></div>`;
+  els.heroSlot.querySelector('[data-hero-save]')?.addEventListener('click',()=>downloadPublishOne(hero.id));
+  els.heroSlot.querySelector('[data-hero-delete]')?.addEventListener('click',()=>removePublishImage(hero.id));
+}
+function changeImageSection(img, value, select){
+  const old=img.section;
+  if(value!=='unassigned'){
+    const used=bodyPublishImages().filter(x=>x.id!==img.id&&x.section===value).length;
+    if(used>=3){ select.value=old; flashPublish(els.imageStatus,'한 섹션에는 최대 3장까지만 배치할 수 있습니다.','warn'); return; }
+  }
+  img.section=value; refreshPublishPreview();
+}
+function renderPublishImages(){
+  if(!els.imageList) return;
+  const sections=eligiblePublishSections(), bodies=bodyPublishImages();
+  if(!bodies.length){ els.imageList.innerHTML='<div class="empty">본문 이미지가 없습니다.</div>'; return; }
+  els.imageList.innerHTML='';
+  bodies.forEach(img=>{
+    const card=document.createElement('div'); card.className='img-card';
+    const options=[...sections.map(sec=>`<option value="${sec.key}" ${img.section===sec.key?'selected':''}>${escapeHTML(sec.label)}</option>`),`<option value="unassigned" ${img.section==='unassigned'?'selected':''}>미배치</option>`].join('');
+    card.innerHTML=`<div class="img-thumb"><img src="${img.url}" alt=""></div><div class="img-meta"><strong>${escapeHTML(img.filename)}</strong><small>${img.w}×${img.h} · ${(img.size/1024).toFixed(0)}KB</small><select>${options}</select><div class="img-mini-btns"><button data-hero>대표로</button><button data-save>JPG 저장</button><button data-delete>삭제</button></div></div>`;
+    const sel=card.querySelector('select'); sel.addEventListener('change',()=>changeImageSection(img,sel.value,sel));
+    card.querySelector('[data-hero]').addEventListener('click',()=>setPublishHero(img.id));
+    card.querySelector('[data-save]').addEventListener('click',()=>downloadPublishOne(img.id));
+    card.querySelector('[data-delete]').addEventListener('click',()=>removePublishImage(img.id));
+    els.imageList.appendChild(card);
+  });
+}
+function removePublishImage(id){
+  const idx=publishImages.findIndex(x=>x.id===id); if(idx<0) return;
+  try{URL.revokeObjectURL(publishImages[idx].url)}catch(e){}
+  const wasHero=publishHeroId===id; publishImages.splice(idx,1); if(wasHero) publishHeroId=null;
+  renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
+}
+function clearPublishImages(){
+  publishImages.forEach(x=>{try{URL.revokeObjectURL(x.url)}catch(e){}}); publishImages=[]; publishHeroId=null;
+  if(els.heroInput) els.heroInput.value=''; if(els.fileInput) els.fileInput.value='';
+  renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons(); if(els.imageStatus) els.imageStatus.textContent='';
+}
+function updateImageButtons(){
+  if(els.downloadAllBtn) els.downloadAllBtn.disabled=!publishImages.length;
+  if(els.clearImagesBtn) els.clearImagesBtn.disabled=!publishImages.length;
+}
+function downloadBlob(blob,name){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function downloadPublishOne(id){ const img=publishImages.find(x=>x.id===id); if(img) downloadBlob(img.blob,img.filename); }
+const CRC32_TABLE_V23=(()=>{ const table=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); table[n]=c>>>0; } return table; })();
+function crc32V23(bytes){ let c=0xFFFFFFFF; for(let i=0;i<bytes.length;i++) c=CRC32_TABLE_V23[(c^bytes[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function dosDateTimeV23(d=new Date()){ const year=Math.max(1980,d.getFullYear()); return {time:((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|(Math.floor(d.getSeconds()/2)&31),date:(((year-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31)}; }
+function writeU16V23(view,o,v){ view.setUint16(o,v,true); }
+function writeU32V23(view,o,v){ view.setUint32(o,v>>>0,true); }
+async function makeZipBlobV23(files){
+  const enc=new TextEncoder(), prepared=[]; let localTotal=0, centralTotal=0; const dt=dosDateTimeV23();
+  for(const f of files){ const name=enc.encode(f.name), data=new Uint8Array(await f.blob.arrayBuffer()), crc=crc32V23(data); prepared.push({name,data,crc,offset:localTotal}); localTotal+=30+name.length+data.length; centralTotal+=46+name.length; }
+  const out=new Uint8Array(localTotal+centralTotal+22), view=new DataView(out.buffer); let o=0;
+  for(const f of prepared){ writeU32V23(view,o,0x04034b50); writeU16V23(view,o+4,20); writeU16V23(view,o+6,0x0800); writeU16V23(view,o+8,0); writeU16V23(view,o+10,dt.time); writeU16V23(view,o+12,dt.date); writeU32V23(view,o+14,f.crc); writeU32V23(view,o+18,f.data.length); writeU32V23(view,o+22,f.data.length); writeU16V23(view,o+26,f.name.length); writeU16V23(view,o+28,0); out.set(f.name,o+30); out.set(f.data,o+30+f.name.length); o+=30+f.name.length+f.data.length; }
+  const centralOffset=o;
+  for(const f of prepared){ writeU32V23(view,o,0x02014b50); writeU16V23(view,o+4,20); writeU16V23(view,o+6,20); writeU16V23(view,o+8,0x0800); writeU16V23(view,o+10,0); writeU16V23(view,o+12,dt.time); writeU16V23(view,o+14,dt.date); writeU32V23(view,o+16,f.crc); writeU32V23(view,o+20,f.data.length); writeU32V23(view,o+24,f.data.length); writeU16V23(view,o+28,f.name.length); writeU16V23(view,o+30,0); writeU16V23(view,o+32,0); writeU16V23(view,o+34,0); writeU16V23(view,o+36,0); writeU32V23(view,o+38,0); writeU32V23(view,o+42,f.offset); out.set(f.name,o+46); o+=46+f.name.length; }
+  const centralSize=o-centralOffset; writeU32V23(view,o,0x06054b50); writeU16V23(view,o+4,0); writeU16V23(view,o+6,0); writeU16V23(view,o+8,prepared.length); writeU16V23(view,o+10,prepared.length); writeU32V23(view,o+12,centralSize); writeU32V23(view,o+16,centralOffset); writeU16V23(view,o+20,0);
+  return new Blob([out],{type:'application/zip'});
+}
+async function downloadPublishZip(){
+  if(!publishImages.length) return;
+  try{
+    els.imageStatus.textContent='이미지 ZIP 만드는 중...'; els.imageStatus.className='pub-status warn'; renumberPublishImages();
+    const ordered=[...publishImages].sort((a,b)=>{ if(a.id===publishHeroId)return-1; if(b.id===publishHeroId)return 1; return a.filename.localeCompare(b.filename,'ko'); });
+    const zip=await makeZipBlobV23(ordered.map(x=>({name:x.filename,blob:x.blob})));
+    downloadBlob(zip,`${filenameBase()}-images.zip`); flashPublish(els.imageStatus,`이미지 ${publishImages.length}장 ZIP 다운로드 완료`,'ok');
+  }catch(e){ console.error(e); flashPublish(els.imageStatus,'ZIP 생성 실패 · 개별 JPG 저장을 이용하세요','warn'); }
+}
+
+function tistoryBodyHtmlV23(){
+  const p=parsePublishArticle(); let html=markdownToHtml(p.intro);
+  p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>${markdownToHtml(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); });
+  if(p.faq) html+=`<h2>FAQ</h2>${faqToHtml(p.faq)}`;
+  if(p.tail) html+=markdownToHtml(p.tail);
+  return html;
+}
+function tistoryBodyPlainV23(){
+  const p=parsePublishArticle(); let out=stripMarkdown(p.intro);
+  p.sections.forEach((section,i)=>{ out+=`\n\n${section.heading}\n\n${stripMarkdown(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>out+=`\n\n[이미지 삽입: ${img.filename}]`); });
+  if(p.faq) out+=`\n\nFAQ\n\n${stripMarkdown(p.faq)}`;
+  if(p.tail) out+=`\n\n${stripMarkdown(p.tail)}`;
+  return out.trim();
+}
+async function copyTistoryTitleV23(){
+  const title=parsePublishArticle().title;
+  try{ await navigator.clipboard.writeText(title); flashPublish(els.publishStatus,'티스토리 제목 복사 완료','ok'); }
+  catch(e){ flashPublish(els.publishStatus,'제목 복사 실패','warn'); }
+}
+async function copyTistoryBodyV23(){
+  const html=tistoryBodyHtmlV23(), plain=tistoryBodyPlainV23();
+  try{
+    if(window.ClipboardItem&&navigator.clipboard?.write){ const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})}); await navigator.clipboard.write([item]); }
+    else await navigator.clipboard.writeText(plain);
+    flashPublish(els.publishStatus,'티스토리 본문 복사 완료 · H2/표 서식 포함','ok');
+  }catch(e){
+    console.error(e);
+    try{ await navigator.clipboard.writeText(plain); flashPublish(els.publishStatus,'서식 복사 제한 · 순수 텍스트로 복사됨','warn'); }
+    catch(_){ flashPublish(els.publishStatus,'본문 복사 실패','warn'); }
+  }
+}
+function resetPublishingWorkspace(){
+  if(els.articleBox) els.articleBox.value='';
+  if(els.articleCount) els.articleCount.textContent='0자';
+  if(els.styleReport){ els.styleReport.className='pub-report'; els.styleReport.textContent='완성 원고를 붙여넣은 뒤 문체 검사 또는 자동 정리를 실행하세요.'; }
+  clearPublishImages();
+  if(els.publishPreview) els.publishPreview.innerHTML='<div class="empty">완성 원고를 붙여넣으면 미리보기가 표시됩니다.</div>';
+  if(els.publishStatus) els.publishStatus.textContent='';
+  updatePublishKeyword();
+}
+
+if(els.articleBox){
+  els.articleBox.addEventListener('input',articleChanged);
+  els.articleBox.addEventListener('paste',e=>{
+    const plain=e.clipboardData?.getData('text/plain')||'';
+    const html=e.clipboardData?.getData('text/html')||'';
+    if(!plain && !html) return;
+    const normalized=clipboardHtmlToMarkdown(plain,html);
+    if(!html || normalized===plain) return;
+    e.preventDefault(); const ta=els.articleBox, start=ta.selectionStart??ta.value.length, end=ta.selectionEnd??start;
+    ta.value=ta.value.slice(0,start)+normalized+ta.value.slice(end); ta.selectionStart=ta.selectionEnd=start+normalized.length; articleChanged();
+  });
+}
+if(els.aiStyleBtn) els.aiStyleBtn.addEventListener('click',scanAiStyle);
+if(els.autoCleanBtn) els.autoCleanBtn.addEventListener('click',autoCleanArticle);
+if(els.heroDropzone&&els.heroInput){
+  els.heroDropzone.addEventListener('click',()=>els.heroInput.click());
+  els.heroInput.addEventListener('change',e=>handleHeroFile(e.target.files?.[0]));
+  ['dragenter','dragover'].forEach(ev=>els.heroDropzone.addEventListener(ev,e=>{e.preventDefault();els.heroDropzone.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>els.heroDropzone.addEventListener(ev,e=>{e.preventDefault();els.heroDropzone.classList.remove('drag')}));
+  els.heroDropzone.addEventListener('drop',e=>handleHeroFile(e.dataTransfer.files?.[0]));
+}
+if(els.dropzone&&els.fileInput){
+  els.dropzone.addEventListener('click',()=>els.fileInput.click());
+  els.fileInput.addEventListener('change',e=>handleBodyFiles(e.target.files));
+  ['dragenter','dragover'].forEach(ev=>els.dropzone.addEventListener(ev,e=>{e.preventDefault();els.dropzone.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>els.dropzone.addEventListener(ev,e=>{e.preventDefault();els.dropzone.classList.remove('drag')}));
+  els.dropzone.addEventListener('drop',e=>handleBodyFiles(e.dataTransfer.files));
+}
+if(els.clearImagesBtn) els.clearImagesBtn.addEventListener('click',clearPublishImages);
+if(els.downloadAllBtn) els.downloadAllBtn.addEventListener('click',downloadPublishZip);
+if(els.copyTistoryTitleBtn) els.copyTistoryTitleBtn.addEventListener('click',copyTistoryTitleV23);
+if(els.copyTistoryBodyBtn) els.copyTistoryBodyBtn.addEventListener('click',copyTistoryBodyV23);
 
 els.analyzeBtn.addEventListener('click', analyze);
 els.keywordInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); analyze(); } });

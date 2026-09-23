@@ -506,17 +506,17 @@
     <span class="st-tick"></span>
     <h3>STEP 8 · 발행 준비</h3>
     <span class="st-rule"></span>
-    <span class="micro-hint">티스토리 제목·본문 분리 복사</span>
+    <span class="micro-hint" id="publishPlatformHint">선택 플랫폼 제목·본문 분리 복사</span>
   </div>
   <div class="pub-card">
     <div class="pub-head">
-      <div><b>배치 미리보기</b><span>H2·표 서식을 유지하고, 본문 이미지 자리는 ZIP 파일명과 같은 삽입 표시로 복사합니다.</span></div>
+      <div><b>배치 미리보기 · <span id="publishPlatformName">티스토리</span></b><span id="publishAdapterDesc">선택한 플랫폼에 맞는 형식으로 제목과 본문을 복사합니다.</span></div>
       <div id="publishStatus" class="pub-status"></div>
     </div>
     <div class="pub-body">
       <div class="pub-toolbar" style="margin-top:0;margin-bottom:14px;">
-        <button class="pub-btn" id="copyTistoryTitleBtn">티스토리 제목 복사</button>
-        <button class="pub-btn green" id="copyTistoryBodyBtn">티스토리 본문 복사</button>
+        <button class="pub-btn" id="copyPublishTitleBtn">제목 복사</button>
+        <button class="pub-btn green" id="copyPublishBodyBtn">본문 복사</button>
       </div>
       <div id="publishPreview" class="publish-preview"><div class="empty">완성 원고를 붙여넣으면 미리보기가 표시됩니다.</div></div>
     </div>
@@ -533,7 +533,7 @@ const els = {
   keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint'),
   pfTitle:$('pfTitle'), pfPlatform:$('pfPlatform'), pfTone:$('pfTone'), pfLength:$('pfLength'), pfCount:$('pfCount'), msDate:$('msDate'), msPageNo:$('msPageNo'),
   articleBox:$('articleBox'), articleCount:$('articleCount'), aiStyleBtn:$('aiStyleBtn'), autoCleanBtn:$('autoCleanBtn'), styleReport:$('styleReport'),
-  publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), copyTistoryTitleBtn:$('copyTistoryTitleBtn'), copyTistoryBodyBtn:$('copyTistoryBodyBtn')
+  publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), publishPlatformHint:$('publishPlatformHint'), publishPlatformName:$('publishPlatformName'), publishAdapterDesc:$('publishAdapterDesc'), copyPublishTitleBtn:$('copyPublishTitleBtn'), copyPublishBodyBtn:$('copyPublishBodyBtn')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -2493,34 +2493,101 @@ async function downloadPublishZip(){
   }catch(e){ console.error(e); flashPublish(els.imageStatus,'ZIP 생성 실패 · 개별 JPG 저장을 이용하세요','warn'); }
 }
 
-function tistoryBodyHtmlV23(){
+function richBodyHtmlV23(){
   const p=parsePublishArticle(); let html=markdownToHtml(p.intro);
   p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>${markdownToHtml(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); });
   if(p.faq) html+=`<h2>FAQ</h2>${faqToHtml(p.faq)}`;
   if(p.tail) html+=markdownToHtml(p.tail);
   return html;
 }
-function tistoryBodyPlainV23(){
+function richBodyPlainV23(){
   const p=parsePublishArticle(); let out=stripMarkdown(p.intro);
   p.sections.forEach((section,i)=>{ out+=`\n\n${section.heading}\n\n${stripMarkdown(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>out+=`\n\n[이미지 삽입: ${img.filename}]`); });
   if(p.faq) out+=`\n\nFAQ\n\n${stripMarkdown(p.faq)}`;
   if(p.tail) out+=`\n\n${stripMarkdown(p.tail)}`;
   return out.trim();
 }
-async function copyTistoryTitleV23(){
+function editorFriendlyHtmlV23(text){
+  return markdownToHtml(text)
+    .replace(/<h2>(.*?)<\/h2>/g,'<p><strong>$1</strong></p>')
+    .replace(/<h3>(.*?)<\/h3>/g,'<p><strong>$1</strong></p>');
+}
+function naverBodyHtmlV23(){
+  const p=parsePublishArticle(); let html=editorFriendlyHtmlV23(p.intro);
+  p.sections.forEach((section,i)=>{
+    html+=`<p><strong>${escapeHTML(section.heading)}</strong></p>${editorFriendlyHtmlV23(section.body)}`;
+    imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; });
+  });
+  if(p.faq) html+=`<p><strong>FAQ</strong></p>${faqToHtml(p.faq)}`;
+  if(p.tail) html+=editorFriendlyHtmlV23(p.tail);
+  return html;
+}
+function brunchBodyHtmlV23(){
+  return naverBodyHtmlV23();
+}
+const PUBLISH_ADAPTERS_V23 = {
+  '티스토리': {
+    label:'티스토리', mode:'rich',
+    desc:'H2·표 HTML 서식을 유지하고, 이미지 자리는 ZIP 파일명과 같은 삽입 표시로 복사합니다.'
+  },
+  '워드프레스': {
+    label:'워드프레스', mode:'rich',
+    desc:'워드프레스 블록 에디터가 인식하기 쉬운 H2·표 HTML로 복사합니다.'
+  },
+  '블로그스팟': {
+    label:'블로그스팟', mode:'rich',
+    desc:'Blogger 편집기에 붙여넣기 쉬운 H2·표 HTML로 복사합니다.'
+  },
+  '네이버 블로그': {
+    label:'네이버 블로그', mode:'naver',
+    desc:'네이버 스마트에디터용으로 H2 표시는 제거하고, 굵은 소제목·문단·표 중심의 붙여넣기 형식으로 복사합니다.'
+  },
+  '네이버 홈판용': {
+    label:'네이버 홈판용', mode:'naver',
+    desc:'네이버 편집기용으로 굵은 소제목·짧은 문단 중심의 붙여넣기 형식으로 복사합니다.'
+  },
+  '브런치': {
+    label:'브런치', mode:'brunch',
+    desc:'브런치 편집기에 붙여넣기 쉽게 굵은 소제목과 본문 중심 형식으로 복사합니다.'
+  }
+};
+function currentPublishAdapterV23(){
+  const platform=els.platformSelect?.value||'티스토리';
+  return PUBLISH_ADAPTERS_V23[platform]||{label:platform,mode:'rich',desc:'선택한 플랫폼에 맞는 형식으로 제목과 본문을 복사합니다.'};
+}
+function updatePublishingAdapterV23(){
+  const a=currentPublishAdapterV23();
+  if(els.publishPlatformHint) els.publishPlatformHint.textContent=`${a.label} 제목·본문 분리 복사`;
+  if(els.publishPlatformName) els.publishPlatformName.textContent=a.label;
+  if(els.publishAdapterDesc) els.publishAdapterDesc.textContent=a.desc;
+  if(els.copyPublishTitleBtn) els.copyPublishTitleBtn.textContent=`${a.label} 제목 복사`;
+  if(els.copyPublishBodyBtn) els.copyPublishBodyBtn.textContent=`${a.label} 본문 복사`;
+}
+function publishBodyPayloadV23(){
+  const a=currentPublishAdapterV23();
+  const plain=richBodyPlainV23();
+  if(a.mode==='naver') return {html:naverBodyHtmlV23(),plain,formatLabel:'네이버 에디터용 서식'};
+  if(a.mode==='brunch') return {html:brunchBodyHtmlV23(),plain,formatLabel:'브런치 에디터용 서식'};
+  return {html:richBodyHtmlV23(),plain,formatLabel:'H2/표 HTML 서식'};
+}
+async function copyPublishTitleV23(){
+  const a=currentPublishAdapterV23();
   const title=parsePublishArticle().title;
-  try{ await navigator.clipboard.writeText(title); flashPublish(els.publishStatus,'티스토리 제목 복사 완료','ok'); }
+  try{ await navigator.clipboard.writeText(title); flashPublish(els.publishStatus,`${a.label} 제목 복사 완료`,'ok'); }
   catch(e){ flashPublish(els.publishStatus,'제목 복사 실패','warn'); }
 }
-async function copyTistoryBodyV23(){
-  const html=tistoryBodyHtmlV23(), plain=tistoryBodyPlainV23();
+async function copyPublishBodyV23(){
+  const a=currentPublishAdapterV23();
+  const payload=publishBodyPayloadV23();
   try{
-    if(window.ClipboardItem&&navigator.clipboard?.write){ const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})}); await navigator.clipboard.write([item]); }
-    else await navigator.clipboard.writeText(plain);
-    flashPublish(els.publishStatus,'티스토리 본문 복사 완료 · H2/표 서식 포함','ok');
+    if(window.ClipboardItem&&navigator.clipboard?.write){
+      const item=new ClipboardItem({'text/html':new Blob([payload.html],{type:'text/html'}),'text/plain':new Blob([payload.plain],{type:'text/plain'})});
+      await navigator.clipboard.write([item]);
+    } else await navigator.clipboard.writeText(payload.plain);
+    flashPublish(els.publishStatus,`${a.label} 본문 복사 완료 · ${payload.formatLabel}`,'ok');
   }catch(e){
     console.error(e);
-    try{ await navigator.clipboard.writeText(plain); flashPublish(els.publishStatus,'서식 복사 제한 · 순수 텍스트로 복사됨','warn'); }
+    try{ await navigator.clipboard.writeText(payload.plain); flashPublish(els.publishStatus,`${a.label} 서식 복사 제한 · 순수 텍스트로 복사됨`,'warn'); }
     catch(_){ flashPublish(els.publishStatus,'본문 복사 실패','warn'); }
   }
 }
@@ -2564,8 +2631,8 @@ if(els.dropzone&&els.fileInput){
 }
 if(els.clearImagesBtn) els.clearImagesBtn.addEventListener('click',clearPublishImages);
 if(els.downloadAllBtn) els.downloadAllBtn.addEventListener('click',downloadPublishZip);
-if(els.copyTistoryTitleBtn) els.copyTistoryTitleBtn.addEventListener('click',copyTistoryTitleV23);
-if(els.copyTistoryBodyBtn) els.copyTistoryBodyBtn.addEventListener('click',copyTistoryBodyV23);
+if(els.copyPublishTitleBtn) els.copyPublishTitleBtn.addEventListener('click',copyPublishTitleV23);
+if(els.copyPublishBodyBtn) els.copyPublishBodyBtn.addEventListener('click',copyPublishBodyV23);
 
 els.analyzeBtn.addEventListener('click', analyze);
 els.keywordInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); analyze(); } });
@@ -2575,6 +2642,7 @@ els.copyPromptBtn.addEventListener('click',()=>copyText(els.draftPrompt.value, e
 els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${row.score}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });
 [els.platformSelect,els.toneSelect,els.lengthSelect,els.outputSelect,els.tableCheck,els.faqCheck].forEach(el=>el.addEventListener('change', renderSelected));
+if(els.platformSelect) els.platformSelect.addEventListener('change',()=>{ updatePublishingAdapterV23(); refreshPublishPreview(); });
 if(els.expInput) els.expInput.addEventListener('input', renderSelected);
 if(els.msDate){
   const today = new Date();
@@ -2582,7 +2650,8 @@ if(els.msDate){
   els.msDate.innerHTML = `작성일 ${dateText}<br/>매 수 <b id="msPageNo">001</b>`;
 }
 renderIdle();
-window.addEventListener('load', ()=>{ if(els.expInput) els.expInput.value=''; });
+updatePublishingAdapterV23();
+window.addEventListener('load', ()=>{ if(els.expInput) els.expInput.value=''; updatePublishingAdapterV23(); });
 </script>
 </body>
 </html>

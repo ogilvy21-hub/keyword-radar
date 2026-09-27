@@ -519,6 +519,7 @@
       <div class="pub-toolbar" style="margin-top:0;margin-bottom:14px;">
         <button class="pub-btn" id="copyPublishTitleBtn">제목 복사</button>
         <button class="pub-btn green" id="copyPublishBodyBtn">본문 복사</button>
+        <button class="pub-btn primary" id="sendTistoryAutoBtn">티스토리로 보내기</button>
       </div>
       <div id="publishPreview" class="publish-preview"><div class="empty">완성 원고를 붙여넣으면 미리보기가 표시됩니다.</div></div>
     </div>
@@ -535,7 +536,7 @@ const els = {
   keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboClearBtn:$('comboClearBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint'), platformStrategyHint:$('platformStrategyHint'), imagePlatformHint:$('imagePlatformHint'), imagePlatformDesc:$('imagePlatformDesc'), imageDropHint:$('imageDropHint'),
   pfTitle:$('pfTitle'), pfPlatform:$('pfPlatform'), pfTone:$('pfTone'), pfLength:$('pfLength'), pfCount:$('pfCount'), msDate:$('msDate'), msPageNo:$('msPageNo'),
   articleBox:$('articleBox'), articleCount:$('articleCount'), aiStyleBtn:$('aiStyleBtn'), autoCleanBtn:$('autoCleanBtn'), styleReport:$('styleReport'),
-  publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), publishPlatformHint:$('publishPlatformHint'), publishPlatformName:$('publishPlatformName'), publishAdapterDesc:$('publishAdapterDesc'), copyPublishTitleBtn:$('copyPublishTitleBtn'), copyPublishBodyBtn:$('copyPublishBodyBtn')
+  publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), publishPlatformHint:$('publishPlatformHint'), publishPlatformName:$('publishPlatformName'), publishAdapterDesc:$('publishAdapterDesc'), copyPublishTitleBtn:$('copyPublishTitleBtn'), copyPublishBodyBtn:$('copyPublishBodyBtn'), sendTistoryAutoBtn:$('sendTistoryAutoBtn')
 };
 
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
@@ -2716,6 +2717,11 @@ function updatePublishingAdapterV23(){
   if(els.publishAdapterDesc) els.publishAdapterDesc.textContent=a.desc;
   if(els.copyPublishTitleBtn) els.copyPublishTitleBtn.textContent=`${a.label} 제목 복사`;
   if(els.copyPublishBodyBtn) els.copyPublishBodyBtn.textContent=`${a.label} 본문 복사`;
+  if(els.sendTistoryAutoBtn){
+    const isTistory=(els.platformSelect?.value||'티스토리')==='티스토리';
+    els.sendTistoryAutoBtn.style.display=isTistory?'':'none';
+    els.sendTistoryAutoBtn.disabled=!isTistory;
+  }
 }
 function publishBodyPayloadV23(){
   const a=currentPublishAdapterV23();
@@ -2743,6 +2749,96 @@ async function copyPublishBodyV23(){
     console.error(e);
     try{ await navigator.clipboard.writeText(payload.plain); flashPublish(els.publishStatus,`${a.label} 서식 복사 제한 · 순수 텍스트로 복사됨`,'warn'); }
     catch(_){ flashPublish(els.publishStatus,'본문 복사 실패','warn'); }
+  }
+}
+let radarExtensionSeqV24=0;
+function requestRadarExtensionV24(type,payload={}){
+  return new Promise((resolve,reject)=>{
+    const requestId='keyword-radar-'+Date.now()+'-'+(++radarExtensionSeqV24);
+    const timer=setTimeout(()=>{
+      window.removeEventListener('message',onMessage);
+      reject(new Error('확장프로그램 응답이 없습니다. Radar Tistory Helper v0.7을 확인하세요.'));
+    },15000);
+    function onMessage(event){
+      if(event.source!==window) return;
+      const data=event.data;
+      if(!data||data.source!=='DAUM_RADAR_TISTORY_EXTENSION'||data.type!=='ACK'||data.requestId!==requestId) return;
+      clearTimeout(timer);
+      window.removeEventListener('message',onMessage);
+      const response=data.response||{};
+      if(response.ok) resolve(response);
+      else reject(new Error(response.error||'확장프로그램 처리 실패'));
+    }
+    window.addEventListener('message',onMessage);
+    window.postMessage({source:'DAUM_RADAR_PAGE',type,payload,requestId},window.location.origin);
+  });
+}
+function blobToDataUrlV24(blob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||''));
+    reader.onerror=()=>reject(new Error('이미지 읽기 실패'));
+    reader.readAsDataURL(blob);
+  });
+}
+function normalizedImagesForTistorySendV24(){
+  const sections=eligiblePublishSections();
+  const counts=Object.fromEntries(sections.map(sec=>[sec.key,0]));
+  const valid=new Set(sections.map(sec=>sec.key));
+  const chooseLeast=()=>{
+    if(!sections.length) return 'unassigned';
+    return [...sections].sort((a,b)=>(counts[a.key]||0)-(counts[b.key]||0))[0].key;
+  };
+  return bodyPublishImages().map(img=>{
+    let section=(img.section&&img.section!=='unassigned'&&valid.has(img.section))?img.section:chooseLeast();
+    if(section!=='unassigned') counts[section]=(counts[section]||0)+1;
+    return {...img,section};
+  });
+}
+function buildTistorySendMetaV24(images){
+  const p=parsePublishArticle();
+  return {
+    source:'keyword-radar',
+    title:p.title,
+    introHtml:markdownToHtml(p.intro),
+    sections:p.sections.map(section=>({heading:section.heading,bodyHtml:markdownToHtml(section.body)})),
+    faqHtml:p.faq?faqToHtml(p.faq):'',
+    tailHtml:p.tail?markdownToHtml(p.tail):'',
+    images:images.map(img=>({id:img.id,filename:img.filename,section:img.section,w:img.w,h:img.h}))
+  };
+}
+async function sendTistoryAutoV24(){
+  if((els.platformSelect?.value||'티스토리')!=='티스토리'){
+    flashPublish(els.publishStatus,'플랫폼을 티스토리로 선택해주세요','warn');
+    return;
+  }
+  if(!(els.articleBox?.value||'').trim()){
+    flashPublish(els.publishStatus,'완성 원고를 먼저 넣어주세요','warn');
+    return;
+  }
+  renumberPublishImages();
+  const images=normalizedImagesForTistorySendV24();
+  const meta=buildTistorySendMetaV24(images);
+  const jobId='keyword-radar-'+Date.now();
+  if(els.sendTistoryAutoBtn) els.sendTistoryAutoBtn.disabled=true;
+  try{
+    flashPublish(els.publishStatus,'제목·원고·이미지 묶음 준비 중...','warn');
+    await requestRadarExtensionV24('RADAR_JOB_START',{jobId,meta});
+    for(let i=0;i<images.length;i++){
+      const img=images[i];
+      flashPublish(els.publishStatus,'이미지 전송 '+(i+1)+'/'+images.length+' · '+img.filename,'warn');
+      const dataUrl=await blobToDataUrlV24(img.blob);
+      await requestRadarExtensionV24('RADAR_JOB_IMAGE',{jobId,image:{id:img.id,filename:img.filename,dataUrl,w:img.w,h:img.h}});
+    }
+    flashPublish(els.publishStatus,'티스토리 새 글 화면을 여는 중...','warn');
+    const result=await requestRadarExtensionV24('RADAR_JOB_COMMIT',{jobId});
+    flashPublish(els.publishStatus,'전송 완료 · '+(result.host||'티스토리')+'에서 자동 배치 중','ok');
+  }catch(e){
+    console.error(e);
+    try{await requestRadarExtensionV24('CANCEL_JOB',{jobId});}catch(_){ }
+    flashPublish(els.publishStatus,'전송 실패 · '+String(e?.message||e),'warn');
+  }finally{
+    if(els.sendTistoryAutoBtn) els.sendTistoryAutoBtn.disabled=false;
   }
 }
 function resetPublishingWorkspace(){
@@ -2787,6 +2883,7 @@ if(els.clearImagesBtn) els.clearImagesBtn.addEventListener('click',clearPublishI
 if(els.downloadAllBtn) els.downloadAllBtn.addEventListener('click',downloadPublishZip);
 if(els.copyPublishTitleBtn) els.copyPublishTitleBtn.addEventListener('click',copyPublishTitleV23);
 if(els.copyPublishBodyBtn) els.copyPublishBodyBtn.addEventListener('click',copyPublishBodyV23);
+if(els.sendTistoryAutoBtn) els.sendTistoryAutoBtn.addEventListener('click',sendTistoryAutoV24);
 
 els.analyzeBtn.addEventListener('click', analyze);
 els.keywordInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); analyze(); } });

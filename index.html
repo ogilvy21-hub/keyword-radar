@@ -2757,7 +2757,7 @@ function requestRadarExtensionV24(type,payload={}){
     const requestId='keyword-radar-'+Date.now()+'-'+(++radarExtensionSeqV24);
     const timer=setTimeout(()=>{
       window.removeEventListener('message',onMessage);
-      reject(new Error('확장프로그램 응답이 없습니다. Radar Tistory Helper v0.7을 확인하세요.'));
+      reject(new Error('확장프로그램 응답이 없습니다. Radar Tistory Helper v0.8.1을 확인하세요.'));
     },15000);
     function onMessage(event){
       if(event.source!==window) return;
@@ -2795,15 +2795,29 @@ function normalizedImagesForTistorySendV24(){
     return {...img,section};
   });
 }
+function buildTistoryTocHtmlV24(sections){
+  if(!sections?.length) return '';
+  const items=sections.map((section,i)=>'<li style="margin:3px 0;line-height:1.55;">'+escapeHTML((i+1)+'. '+section.heading)+'</li>').join('');
+  return '<h2>목차</h2><ol style="margin:8px 0 22px;padding-left:24px;">'+items+'</ol>';
+}
+function compactTistoryTailHtmlV24(text){
+  if(!text) return '';
+  const cleaned=String(text).replace(/^\s*-\s*$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
+  return markdownToHtml(cleaned)
+    .replace(/<ul>/g,'<ul style="margin:8px 0 14px;padding-left:22px;line-height:1.55;">')
+    .replace(/<ol>/g,'<ol style="margin:8px 0 14px;padding-left:22px;line-height:1.55;">')
+    .replace(/<li>/g,'<li style="margin:3px 0;">');
+}
 function buildTistorySendMetaV24(images){
   const p=parsePublishArticle();
   return {
     source:'keyword-radar',
     title:p.title,
     introHtml:markdownToHtml(p.intro),
+    tocHtml:buildTistoryTocHtmlV24(p.sections),
     sections:p.sections.map(section=>({heading:section.heading,bodyHtml:markdownToHtml(section.body)})),
     faqHtml:p.faq?faqToHtml(p.faq):'',
-    tailHtml:p.tail?markdownToHtml(p.tail):'',
+    tailHtml:compactTistoryTailHtmlV24(p.tail),
     images:images.map(img=>({id:img.id,filename:img.filename,section:img.section,w:img.w,h:img.h}))
   };
 }

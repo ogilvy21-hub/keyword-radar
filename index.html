@@ -527,7 +527,7 @@
 
   <div class="action-row"><button class="green" id="copyKeywordsBtn">키워드 복사</button><button class="black" id="resetBtn">초기화</button></div>
 
-  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v24 · 30D SUPPLY → ARTICLE → CLEAN → JPG → PUBLISH</p>
+  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v24.1 · 30D SUPPLY → ARTICLE → CLEAN → JPG → PUBLISH</p>
 </div>
 
 <script>
@@ -2727,8 +2727,8 @@ const PUBLISH_ADAPTERS_V23 = {
     desc:'H2·표 HTML로 복사합니다. 이미지는 현재처럼 미디어 라이브러리에 별도 업로드하고, 미리보기는 대표 1장 + 본문 최대 4장 기준입니다.'
   },
   '블로그스팟': {
-    label:'블로그스팟', mode:'rich',
-    desc:'Blogger 편집기에 붙여넣기 쉬운 H2·표 HTML로 복사합니다.'
+    label:'블로그스팟', mode:'blogspot',
+    desc:'다음레이더에서 확인한 방식대로 본문 HTML과 이미지를 한 묶음으로 복사해 Blogger 편집기에 한 번에 붙여넣습니다.'
   },
   '네이버 블로그': {
     label:'네이버 블로그', mode:'naver',
@@ -2753,18 +2753,100 @@ function updatePublishingAdapterV23(){
   if(els.publishPlatformName) els.publishPlatformName.textContent=a.label;
   if(els.publishAdapterDesc) els.publishAdapterDesc.textContent=a.desc;
   if(els.copyPublishTitleBtn) els.copyPublishTitleBtn.textContent=`${a.label} 제목 복사`;
-  if(els.copyPublishBodyBtn) els.copyPublishBodyBtn.textContent=`${a.label} 본문 복사`;
+  if(els.copyPublishBodyBtn){
+    els.copyPublishBodyBtn.textContent=a.mode==='blogspot'?'블로그스팟 본문+이미지 묶음 복사':`${a.label} 본문 복사`;
+  }
+  if(els.publishPlatformHint){
+    els.publishPlatformHint.textContent=a.mode==='blogspot'?'블로그스팟 · 제목 별도 + 본문/이미지 묶음 복사':`${a.label} 제목·본문 분리 복사`;
+  }
   if(els.sendTistoryAutoBtn){
     const isTistory=(els.platformSelect?.value||'티스토리')==='티스토리';
     els.sendTistoryAutoBtn.style.display=isTistory?'':'none';
     els.sendTistoryAutoBtn.disabled=!isTistory;
   }
 }
+
+function blogspotCopyImageRowV24(imgs,srcMap){
+  if(!imgs?.length) return '';
+  const width=(100/imgs.length).toFixed(3);
+  return '<table role="presentation" style="width:100%;border-collapse:separate;border-spacing:6px;margin:10px 0 18px;border:0"><tbody><tr>'+
+    imgs.map(img=>'<td style="width:'+width+'%;padding:0;border:0;vertical-align:top">'+
+      '<img src="'+(srcMap.get(img.id)||'')+'" alt="'+escapeHTML(img.filename||'')+'" style="display:block;width:100%;height:auto;border:0;margin:0">'+
+      '</td>').join('')+
+    '</tr></tbody></table>';
+}
+async function blogspotEmbeddedImageMapV24(){
+  const map=new Map();
+  await Promise.all(bodyPublishImages().map(async img=>{
+    map.set(img.id,await blobToDataUrlV24(img.blob));
+  }));
+  return map;
+}
+function blogspotBodyHtmlV24(srcMap){
+  const p=parsePublishArticle();
+  let html=markdownToHtml(p.intro);
+  p.sections.forEach((section,i)=>{
+    const imgs=imagesForSection('s'+(i+1));
+    html+='<h2>'+escapeHTML(section.heading)+'</h2>'+blogspotCopyImageRowV24(imgs,srcMap)+markdownToHtml(section.body);
+  });
+  if(p.faq) html+='<h2>FAQ</h2>'+faqToHtml(p.faq);
+  if(p.tail) html+=markdownToHtml(p.tail);
+  return html;
+}
+function blogspotBodyPlainV24(){
+  const p=parsePublishArticle();
+  let out=stripMarkdown(p.intro);
+  p.sections.forEach((section,i)=>{
+    const imgs=imagesForSection('s'+(i+1));
+    out+='\n\n'+section.heading;
+    if(imgs.length) out+='\n[이미지 '+imgs.length+'장 소제목 아래 묶음 배치]';
+    out+='\n\n'+stripMarkdown(section.body);
+  });
+  if(p.faq) out+='\n\nFAQ\n\n'+stripMarkdown(p.faq);
+  if(p.tail) out+='\n\n'+stripMarkdown(p.tail);
+  return out.trim();
+}
+async function copyBlogspotBundleV24(){
+  const plain=blogspotBodyPlainV24();
+  const btn=els.copyPublishBodyBtn;
+  if(btn){ btn.disabled=true; btn.textContent='이미지 묶음 준비 중...'; }
+  try{
+    flashPublish(els.publishStatus,'본문과 이미지를 한 묶음으로 만드는 중...','warn');
+    const srcMap=await blogspotEmbeddedImageMapV24();
+    const html=blogspotBodyHtmlV24(srcMap);
+    if(window.ClipboardItem&&navigator.clipboard?.write){
+      const item=new ClipboardItem({
+        'text/html':new Blob([html],{type:'text/html'}),
+        'text/plain':new Blob([plain],{type:'text/plain'})
+      });
+      await navigator.clipboard.write([item]);
+      flashPublish(els.publishStatus,'블로그스팟 본문+이미지 묶음 복사 완료 · Blogger 본문에 한 번 붙여넣으세요','ok');
+    }else{
+      await navigator.clipboard.writeText(plain);
+      flashPublish(els.publishStatus,'브라우저 제한으로 텍스트만 복사됨 · 이미지 묶음 복사는 Chrome에서 사용하세요','warn');
+    }
+  }catch(e){
+    console.error(e);
+    try{
+      await navigator.clipboard.writeText(plain);
+      flashPublish(els.publishStatus,'이미지 묶음 복사 실패 · 텍스트만 복사됨','warn');
+    }catch(_){
+      flashPublish(els.publishStatus,'블로그스팟 묶음 복사 실패','warn');
+    }
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent='블로그스팟 본문+이미지 묶음 복사';
+    }
+  }
+}
+
 function publishBodyPayloadV23(){
   const a=currentPublishAdapterV23();
   const plain=richBodyPlainV23();
   if(a.mode==='naver') return {html:naverBodyHtmlV23(),plain,formatLabel:'네이버 에디터용 서식'};
   if(a.mode==='brunch') return {html:brunchBodyHtmlV23(),plain,formatLabel:'브런치 에디터용 서식'};
+  if(a.mode==='blogspot') return {html:richBodyHtmlV23(),plain,formatLabel:'블로그스팟 묶음 복사'};
   return {html:richBodyHtmlV23(),plain,formatLabel:'H2/표 HTML 서식'};
 }
 async function copyPublishTitleV23(){
@@ -2775,6 +2857,10 @@ async function copyPublishTitleV23(){
 }
 async function copyPublishBodyV23(){
   const a=currentPublishAdapterV23();
+  if(a.mode==='blogspot'){
+    await copyBlogspotBundleV24();
+    return;
+  }
   const payload=publishBodyPayloadV23();
   try{
     if(window.ClipboardItem&&navigator.clipboard?.write){

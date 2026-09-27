@@ -340,7 +340,7 @@
     <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">글감점수</div></div>
     <div>
       <h1 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h1>
-      <p id="judgementReason">검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.</p>
+      <p id="judgementReason">검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.</p>
     </div>
     <div class="strategy-list" id="strategyList"></div>
   </div>
@@ -351,20 +351,20 @@
     <span class="st-rule"></span>
     <span class="micro-hint">의도 명확 + 경쟁 적음 + AI 인용형 우선</span>
   </div>
-  <p class="table-caption">검색 수요는 받쳐주면서 발행량이 적고, 검색의도가 뚜렷하며 AI 브리핑이 인용하기 쉬운 답변형 후보를 우선 추천합니다.</p>
+  <p class="table-caption">검색 수요는 받쳐주면서 최근 30일 블로그 발행이 적고, 검색의도가 뚜렷하며 AI 브리핑이 인용하기 쉬운 답변형 후보를 우선 추천합니다.</p>
   <div class="table-wrap recommend-table">
     <table>
-      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>발행량</th><th>경쟁비율</th><th>의도근거</th><th>구글적합</th><th>AI인용</th><th>점수</th></tr></thead>
+      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>구글적합</th><th>AI인용</th><th>점수</th></tr></thead>
       <tbody id="keywordTable"></tbody>
     </table>
   </div>
 
   <details style="margin-top:20px;">
     <summary><span class="fold-title">상세 후보 검증표</span> <span class="micro-hint">추천 근거가 궁금할 때 펼쳐보세요</span></summary>
-    <p class="table-caption">각 키워드의 검색량·발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
+    <p class="table-caption">각 키워드의 검색량·최근30일 발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
     <div class="table-wrap detail-table">
       <table>
-        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그</th><th>카페</th><th>발행량</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>AI인용</th><th>점수</th><th>추천 이유</th></tr></thead>
+        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>AI인용</th><th>점수</th><th>추천 이유</th></tr></thead>
         <tbody id="detailKeywordTable"></tbody>
       </table>
     </div>
@@ -527,7 +527,7 @@
 
   <div class="action-row"><button class="green" id="copyKeywordsBtn">키워드 복사</button><button class="black" id="resetBtn">초기화</button></div>
 
-  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v23 · KEYWORD → ARTICLE → CLEAN → JPG → PUBLISH</p>
+  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v24 · 30D SUPPLY → ARTICLE → CLEAN → JPG → PUBLISH</p>
 </div>
 
 <script>
@@ -581,10 +581,13 @@ function ratioText(row){
   const monthly=Number(row.monthly||0);
   if(monthly<=0) return '-';
   const r=ratioValue(row);
-  return `${r.toFixed(1)}배`;
+  const prefix=row?.contentCapped?'≥':'';
+  if(r<1) return `${prefix}${r.toFixed(2)}배 · ${(r*100).toFixed(1)}%`;
+  return `${prefix}${r.toFixed(1)}배`;
 }
 function contentStatus(row){
-  return row?.contentSkipped ? '발행량 미검증' : format(row.totalContent);
+  if(row?.contentSkipped) return '발행량 미검증';
+  return `${row?.contentCapped?'≥':''}${format(row.totalContent)}`;
 }
 function uniqueByKeyword(rows){ const seen=new Set(); return (rows||[]).filter(row=>{ const k=normalizeKey(row.kw); if(!k || seen.has(k)) return false; seen.add(k); return true; }); }
 
@@ -686,7 +689,7 @@ async function fetchSearchAdCached(keyword){
 async function fetchContentCached(keyword){
   const key = `content:${normalizeSpace(keyword)}`;
   if (apiCache.has(key)) return apiCache.get(key);
-  const promise = fetchContent(keyword).catch(err => ({ blogTotal:0, cafeTotal:0, _error:err.message }));
+  const promise = fetchContent(keyword).catch(err => ({ recentBlogTotal:0, recentCafeTotal:0, recentBlogCapped:false, recentCafeCapped:false, _error:err.message }));
   apiCache.set(key, promise);
   return promise;
 }
@@ -716,11 +719,13 @@ function scoreMonthly(monthly){
 // 발행량 절대량 평가 (적을수록 가점)
 function scoreContent(total){
   if(total<=0) return 6;
-  if(total<=1000) return 20;
-  if(total<=5000) return 16;
-  if(total<=10000) return 12;
-  if(total<=30000) return 8;
-  if(total<=100000) return 4;
+  if(total<=50) return 20;
+  if(total<=100) return 18;
+  if(total<=300) return 16;
+  if(total<=500) return 14;
+  if(total<=1000) return 12;
+  if(total<=3000) return 8;
+  if(total<=10000) return 4;
   return 1;
 }
 // 경쟁비율(발행량÷검색량)이 주력 정렬 기준. 최대 40점으로 강화.
@@ -837,7 +842,7 @@ function makeReason(row, score, intent){
   // 대상으로 '교정 제안'했을 가능성)는 이유 문장 끝에 경고를 붙인다. 필터링은 하지 않고
   // 판단은 사용자에게 맡긴다.
   const homonymWarn = (Number(row.relevance||0) === 0) ? ' ⚠ 이 키워드는 원키워드와 겹치는 글자가 전혀 없어 관련도가 낮게 계산됐습니다 — 동명이인이거나 다른 주제일 수도, 표현만 다른 같은 주제일 수도 있으니 실제로 확인해보세요.' : '';
-  if(row.monthly>0) return `월간 검색수 ${format(row.monthly)}회 대비 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 글이 ${ratioValue(row)<0.5?'매우 적어 블루오션으로':(ratioValue(row)<1.0?'적은 편으로':'다소 많은 편으로')} 보고 ${row.grade || '후보'}에 배치했습니다.${cpc}${gtext}${evidence}${homonymWarn}`;
+  if(row.monthly>0) return `월간 검색수 ${format(row.monthly)}회 대비 최근 30일 블로그 발행 ${contentStatus(row)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 글이 ${ratioValue(row)<0.5?'매우 적어 블루오션으로':(ratioValue(row)<1.0?'적은 편으로':'다소 많은 편으로')} 보고 ${row.grade || '후보'}에 배치했습니다.${cpc}${gtext}${evidence}${homonymWarn}`;
   return `${row.sourceType}에는 포함됐지만 검색량 수치가 부족합니다. 추천 후보가 부족할 때 연관검색어 묶음으로 참고합니다.${homonymWarn}`;
 }
 
@@ -947,6 +952,7 @@ function sortCandidates(rows){
 }
 function recoTier(row){
   if(row?.contentSkipped) return 0;
+  if(Number(row?.relevance||0)===0) return 0;
   const m=Number(row.monthly||0), r=ratioValue(row);
   if(m<300) return 0;
   if(r<0.5) return 1;
@@ -1634,7 +1640,7 @@ function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'scor
 function renderIdle(){
   state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null, titleApplied:null };
   els.totalKeywords.textContent='0개'; els.bestKeywordText.textContent='-'; els.bestScoreText.textContent='0'; els.intentShortText.textContent='대기';
-  els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 발행량이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
+  els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
@@ -1675,7 +1681,7 @@ function shortSourceLabel(sourceType){
 function renderDetailTable(){
   const rows=state.rows;
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${format(row.blog)}</td><td>${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${row.contentCapped?'≥':''}${format(row.blog)}</td><td>${row.cafeCapped?'≥':''}${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
   els.detailKeywordTable.querySelectorAll('.reason-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const idx = btn.dataset.ridx;
     const textEl = els.detailKeywordTable.querySelector(`.reason-text[data-ridx="${idx}"]`);
@@ -1850,9 +1856,9 @@ function renderSelected(){
   } else {
     const particle = /[가-힣]$/.test(row.grade) && (row.grade.charCodeAt(row.grade.length-1)-0xAC00)%28!==0 && (row.grade.charCodeAt(row.grade.length-1)-0xAC00)%28!==8 ? '으로' : '로';
     els.judgementTitle.textContent = `${row.kw}, ${row.grade}${particle} 추천합니다`;
-    els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 발행량 ${format(row.totalContent)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 발행량이 적은 순으로 정렬했습니다.`;
+    els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 최근 30일 블로그 발행 ${contentStatus(row)}건, 경쟁비율 ${ratioText(row)}입니다. 같은 30일 시간축의 검색 수요와 블로그 공급량을 비교합니다.`;
   }
-  els.strategyList.innerHTML = ['경쟁비율이 낮은 키워드일수록 상위 노출 가능성이 높습니다.','도입부와 각 소제목 첫 문단은 질문에 바로 답해야 AI 인용에 유리합니다.','표·체크리스트·실제 경험을 넣어 사람이 믿고 AI가 가져가기 쉬운 글로 만드세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
+  els.strategyList.innerHTML = ['경쟁비율은 최근 30일 블로그 발행량을 월간 검색수와 비교합니다.','도입부와 각 소제목 첫 문단은 질문에 바로 답해야 AI 인용에 유리합니다.','표·체크리스트·실제 경험을 넣어 사람이 믿고 AI가 가져가기 쉬운 글로 만드세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
   renderCluster(row);
   renderTitleBuilder(row.kw, curHooks);
   const top3 = curHooks.slice(0,3);
@@ -1883,8 +1889,8 @@ ${state.entityFilter ? `\n## 대상 구분 필터\n${state.entityFilter}\n※ �
 ${state.titleApplied ? '\n'+appliedTitleBlock()+'\n' : ''}
 ## 데이터 (네이버 API 기준)
 - 월간 검색수: ${format(row.monthly)}회 (PC ${format(row.pc)} / 모바일 ${format(row.mo)})
-- 발행량: ${format(row.totalContent)}건 (블로그 ${format(row.blog)} / 카페 ${format(row.cafe)})
-- 경쟁비율(발행량÷검색수): ${ratioText(row)}
+- 최근 30일 발행량: 블로그 ${contentStatus(row)}건 / 카페 ${row.cafeCapped?'≥':''}${format(row.cafe)}건
+- 경쟁비율(최근 30일 블로그 발행÷월간 검색수): ${ratioText(row)}
 - 자동 분류 의도(참고용): ${intent.label}
 - 구글 유입 적합도: ${row.googleFit||'네이버형'}
 - AI 브리핑 인용 적합도: ${row.aiCitationLabel||'구조 보강 필요'} (${row.aiCitationScore||0}점)
@@ -2082,17 +2088,26 @@ async function analyze(){
     const hookProbeRows = await mapLimit(hookSuffixes, 2, w => probeSeedSuffix(seed, w, '발행제목 기반 보강'));
     baseRows = uniqueByKeyword([...baseRows, ...hookProbeRows.filter(Boolean)]);
 
-    const CONTENT_LOOKUP_LIMIT = 24;
+    const CONTENT_LOOKUP_LIMIT = 12;
     const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
     const lookupSet = new Set(byDemand.slice(0, CONTENT_LOOKUP_LIMIT).map(r=>normalizeKey(r.kw)));
+    lookupSet.add(normalizeKey(seed));
     const hydrated = await mapLimit(baseRows, 2, async row => {
       if(!lookupSet.has(normalizeKey(row.kw))){
-        return { ...row, blog:0, cafe:0, totalContent:0, contentSkipped:true };
+        return { ...row, blog:0, cafe:0, totalContent:0, contentSkipped:true, contentWindowDays:30 };
       }
       const content = await fetchContentCached(row.kw);
-      const blog = parseNumber(content.blogTotal ?? content.blog ?? 0);
-      const cafe = parseNumber(content.cafeTotal ?? content.cafe ?? 0);
-      return { ...row, blog, cafe, totalContent:blog+cafe };
+      const blog = parseNumber(content.recentBlogTotal ?? 0);
+      const cafe = parseNumber(content.recentCafeTotal ?? 0);
+      return {
+        ...row, blog, cafe, totalContent:blog,
+        contentCapped:!!content.recentBlogCapped,
+        cafeCapped:!!content.recentCafeCapped,
+        contentWindowDays:Number(content.windowDays||30),
+        allTimeBlogTotal:parseNumber(content.allTimeBlogTotal||0),
+        allTimeCafeTotal:parseNumber(content.allTimeCafeTotal||0),
+        contentMethod:content.method||'recent30d'
+      };
     });
     const enrichedRaw = uniqueByKeyword(hydrated).map(row=>enrichScore(row, hydrated));
     const sorted = sortCandidates(enrichedRaw);
@@ -2147,6 +2162,27 @@ function evidenceTextV23(value){
   if(typeof value==='object') return Object.values(value).map(evidenceTextV23).join(' ');
   return '';
 }
+const ENTITY_DOMAIN_TERMS_V24 = {
+  entertainment:['배우','가수','아이돌','연예인','우주소녀','보나','드라마','영화','방송인','모델'],
+  sports:['선수','축구','농구','배구','야구','당구','골프','쇼트트랙','펜싱','테니스','배드민턴','수영','육상'],
+  medical:['의사','약사','치과','한의사','간호사','병원','원장'],
+  politics:['국회의원','의원','정치인','시장','군수','도지사','장관','대통령','대변인'],
+  academic:['교수','박사','연구원','학자'],
+  business:['회장','CEO','ceo','기업인']
+};
+function entityDomainsV24(text){
+  const c=compactFilterTextV23(text);
+  const out=[];
+  for(const [domain,terms] of Object.entries(ENTITY_DOMAIN_TERMS_V24)){
+    if(terms.some(t=>c.includes(compactFilterTextV23(t)))) out.push(domain);
+  }
+  return out;
+}
+function hasEntityDomainConflictV24(rowText, filterText){
+  const f=entityDomainsV24(filterText), r=entityDomainsV24(rowText);
+  if(!f.length||!r.length) return false;
+  return !r.some(d=>f.includes(d));
+}
 function rowMatchesEntityFilterV23(row, filter, evidence){
   const kw=normalizeSpace(row?.kw||''), seed=normalizeSpace(state.seed||'');
   if(!kw) return false;
@@ -2155,6 +2191,7 @@ function rowMatchesEntityFilterV23(row, filter, evidence){
   const filterCompact=compactFilterTextV23(filter);
   const evidenceCompact=compactFilterTextV23(evidence);
   if(kwCompact===seedCompact) return true;
+  if(hasEntityDomainConflictV24(kw,filter)) return false;
   if(filterCompact && kwCompact.includes(filterCompact)) return true;
   if(kwCompact && evidenceCompact.includes(kwCompact)) return true;
   const seedTokens=new Set(filterTokensV23(seed));

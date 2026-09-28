@@ -2516,6 +2516,18 @@ function markdownToHtml(text){
   }
   flush(); return html;
 }
+
+function normalizeTistoryTableHtmlV25(html){
+  return String(html||'').replace(/<table><thead><tr>([\s\S]*?)<\/tr><\/thead><tbody>/gi,(_,headRow)=>{
+    const cells=String(headRow||'')
+      .replace(/<th>/gi,'<td><strong>')
+      .replace(/<\/th>/gi,'</strong></td>');
+    return '<table><tbody><tr>'+cells+'</tr>';
+  });
+}
+function tistoryMarkdownToHtmlV25(text){
+  return normalizeTistoryTableHtmlV25(markdownToHtml(text));
+}
 function faqToHtml(text){
   const clean=String(text||'').replace(/^###\s+(Q\s*\d+[.)]?\s*.*)$/gmi,'$1');
   const lines=clean.replace(/\r/g,'').split('\n'); let html='', para=[];
@@ -2692,6 +2704,13 @@ function richBodyHtmlV23(){
   if(p.tail) html+=markdownToHtml(p.tail);
   return html;
 }
+function tistoryRichBodyHtmlV25(){
+  const p=parsePublishArticle(); let html=tistoryMarkdownToHtmlV25(p.intro);
+  p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>${tistoryMarkdownToHtmlV25(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); });
+  if(p.faq) html+=`<h2>FAQ</h2>${faqToHtml(p.faq)}`;
+  if(p.tail) html+=tistoryMarkdownToHtmlV25(p.tail);
+  return html;
+}
 function richBodyPlainV23(){
   const p=parsePublishArticle(); let out=stripMarkdown(p.intro);
   p.sections.forEach((section,i)=>{ out+=`\n\n${section.heading}\n\n${stripMarkdown(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>out+=`\n\n[이미지 삽입: ${img.filename}]`); });
@@ -2847,6 +2866,7 @@ function publishBodyPayloadV23(){
   if(a.mode==='naver') return {html:naverBodyHtmlV23(),plain,formatLabel:'네이버 에디터용 서식'};
   if(a.mode==='brunch') return {html:brunchBodyHtmlV23(),plain,formatLabel:'브런치 에디터용 서식'};
   if(a.mode==='blogspot') return {html:richBodyHtmlV23(),plain,formatLabel:'블로그스팟 묶음 복사'};
+  if(a.label==='티스토리') return {html:tistoryRichBodyHtmlV25(),plain,formatLabel:'티스토리 표 테마 호환 서식'};
   return {html:richBodyHtmlV23(),plain,formatLabel:'H2/표 HTML 서식'};
 }
 async function copyPublishTitleV23(){
@@ -2920,13 +2940,16 @@ function normalizedImagesForTistorySendV24(){
 }
 function buildTistoryTocHtmlV24(sections){
   if(!sections?.length) return '';
-  const items=sections.map((section,i)=>'<li style="margin:3px 0;line-height:1.55;">'+escapeHTML((i+1)+'. '+section.heading)+'</li>').join('');
+  const items=sections.map(section=>{
+    const label=String(section?.heading||'').replace(/^(?:\s*\d+\s*[.)]\s*)+/,'').trim();
+    return '<li style="margin:3px 0;line-height:1.55;">'+escapeHTML(label)+'</li>';
+  }).join('');
   return '<h2>목차</h2><ol style="margin:8px 0 22px;padding-left:24px;">'+items+'</ol>';
 }
 function compactTistoryTailHtmlV24(text){
   if(!text) return '';
   const cleaned=String(text).replace(/^\s*-\s*$/gm,'').replace(/\n{3,}/g,'\n\n').trim();
-  return markdownToHtml(cleaned)
+  return tistoryMarkdownToHtmlV25(cleaned)
     .replace(/<ul>/g,'<ul style="margin:8px 0 14px;padding-left:22px;line-height:1.55;">')
     .replace(/<ol>/g,'<ol style="margin:8px 0 14px;padding-left:22px;line-height:1.55;">')
     .replace(/<li>/g,'<li style="margin:3px 0;">');
@@ -2936,9 +2959,9 @@ function buildTistorySendMetaV24(images){
   return {
     source:'keyword-radar',
     title:p.title,
-    introHtml:markdownToHtml(p.intro),
+    introHtml:tistoryMarkdownToHtmlV25(p.intro),
     tocHtml:buildTistoryTocHtmlV24(p.sections),
-    sections:p.sections.map(section=>({heading:section.heading,bodyHtml:markdownToHtml(section.body)})),
+    sections:p.sections.map(section=>({heading:section.heading,bodyHtml:tistoryMarkdownToHtmlV25(section.body)})),
     faqHtml:p.faq?faqToHtml(p.faq):'',
     tailHtml:compactTistoryTailHtmlV24(p.tail),
     images:images.map(img=>({id:img.id,filename:img.filename,section:img.section,w:img.w,h:img.h}))

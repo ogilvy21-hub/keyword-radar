@@ -581,13 +581,20 @@ function ratioText(row){
   const monthly=Number(row.monthly||0);
   if(monthly<=0) return '-';
   const r=ratioValue(row);
-  const prefix=row?.contentCapped?'≥':'';
-  if(r<1) return `${prefix}${r.toFixed(2)}배 · ${(r*100).toFixed(1)}%`;
-  return `${prefix}${r.toFixed(1)}배`;
+  const suffix=row?.contentCapped?' 이상':'';
+  if(r<1){
+    const pct=r*100;
+    const digits=pct<0.1?2:1;
+    return `${pct.toFixed(digits)}%${suffix}`;
+  }
+  return `${r.toFixed(1)}배${suffix}`;
+}
+function countStatus(value,capped){
+  return capped ? `${format(value)}건 이상` : `${format(value)}건`;
 }
 function contentStatus(row){
   if(row?.contentSkipped) return '발행량 미검증';
-  return `${row?.contentCapped?'≥':''}${format(row.totalContent)}`;
+  return countStatus(row.totalContent,row.contentCapped);
 }
 function uniqueByKeyword(rows){ const seen=new Set(); return (rows||[]).filter(row=>{ const k=normalizeKey(row.kw); if(!k || seen.has(k)) return false; seen.add(k); return true; }); }
 
@@ -1681,7 +1688,7 @@ function shortSourceLabel(sourceType){
 function renderDetailTable(){
   const rows=state.rows;
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${row.contentCapped?'≥':''}${format(row.blog)}</td><td>${row.cafeCapped?'≥':''}${format(row.cafe)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${escapeHTML(countStatus(row.blog,row.contentCapped))}</td><td>${escapeHTML(countStatus(row.cafe,row.cafeCapped))}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
   els.detailKeywordTable.querySelectorAll('.reason-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const idx = btn.dataset.ridx;
     const textEl = els.detailKeywordTable.querySelector(`.reason-text[data-ridx="${idx}"]`);

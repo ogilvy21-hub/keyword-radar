@@ -77,6 +77,34 @@ function isRelevantTitle(title, keyword) {
   return parts.every((p) => compactTitle.includes(p));
 }
 
+
+// [v25 / 2026-10-01] 최신 뉴스 사실근거는 "구자욱 프로필"처럼 정보형 꼬리까지 붙여 검색하면
+// 당일 이슈 기사(부상·사고·발표 등)가 빠질 수 있다. 뉴스 스니펫만큼은 프로필/나이/학력 같은
+// 고정 정보 꼬리를 제거한 '핵심 대상 검색어'로 최신순을 조회한다.
+// 예: "구자욱 삼성 야구선수 프로필" -> "구자욱 삼성 야구선수"
+const FRESH_NEWS_GENERIC_TERMS = new Set([
+  '프로필','나이','키','고향','학력','학교','대학','경력','소속','소속사',
+  '결혼','남편','아내','부인','배우자','가족','부모','아버지','어머니','자녀',
+  '아들','딸','재산','연봉','인스타','인스타그램','근황','정보','정리','뜻',
+  '주가전망','전망','공모가','상장일','실적','몇부작','출연진','등장인물','결말',
+  '원작','재방송','다시보기'
+]);
+function buildFreshNewsQuery(keyword) {
+  const tokens = String(keyword || '').trim().split(/\s+/).filter(Boolean);
+  const kept = tokens.filter(t => !FRESH_NEWS_GENERIC_TERMS.has(t));
+  return (kept.length ? kept : tokens).join(' ').trim();
+}
+function snippetAnchorToken(keyword) {
+  const tokens = buildFreshNewsQuery(keyword).split(/\s+/).filter(t => t.length >= 2);
+  return tokens[0] || '';
+}
+function isRelevantSnippet(item, originalKeyword) {
+  const anchor = normalizeKeyCompact(snippetAnchorToken(originalKeyword));
+  if (!anchor) return true;
+  const hay = normalizeKeyCompact((item?.title || '') + ' ' + (item?.description || ''));
+  return hay.includes(anchor);
+}
+
 // [FIX 2026-09-15] display를 30 -> 100(네이버가 허용하는 최대치)으로 올려서, 관련도 필터를
 // 통과하고 남는 재료 자체를 늘린다. 필터가 엄격해진 만큼 원재료도 넉넉해야 후킹어가 나온다.
 async function fetchNaverSearch(type, keyword, clientId, clientSecret, sort='sim', display=50) {
@@ -104,11 +132,11 @@ async function fetchNaverSearch(type, keyword, clientId, clientSecret, sort='sim
 // [v22.10, v22.12] 뉴스 검색 결과의 title+description(요약 스니펫)+날짜+매체를 함께 가져온다.
 // 관련도순(sim)과 최신순(date)을 둘 다 가져와 합치고, 중복 제거 후 실제 pubDate 기준으로
 // 재정렬한다. "관련도순만 쓰면 오래된 기사가 최신 속보를 밀어내는" 문제를 이렇게 해결한다.
-async function fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, sort) {
+async function fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, sort, display=5) {
   try {
     const url =
       `https://openapi.naver.com/v1/search/news.json?query=` +
-      encodeURIComponent(keyword) + `&display=5&sort=${sort}`;
+      encodeURIComponent(keyword) + `&display=${display}&sort=${sort}`;
     const res = await fetchNaverWithRetry(url, {
       'X-Naver-Client-Id': clientId,
       'X-Naver-Client-Secret': clientSecret,
@@ -134,10 +162,26 @@ async function fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, sort) 
   }
 }
 async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
-  const [simItems, dateItems] = await Promise.all([
-    fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, 'sim'),
-    fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, 'date'),
+  const freshQuery = buildFreshNewsQuery(keyword);
+  // 최신 사실근거는 핵심 대상 검색어로 조회한다. 최신순은 10개까지 받아 당일 이슈가
+  // 상위 5개 밖으로 밀려도 잡을 수 있게 하고, 관련도순은 5개로 보조한다.
+  let [simItems, dateItems] = await Promise.all([
+    fetchNaverNewsSnippetsOne(freshQuery, clientId, clientSecret, 'sim', 5),
+    fetchNaverNewsSnippetsOne(freshQuery, clientId, clientSecret, 'date', 10),
   ]);
+
+  // 핵심 대상(보통 첫 고유명사)이 실제로 들어간 기사만 남겨 동명이인/다른 분야 혼입을 줄인다.
+  simItems = simItems.filter(it => isRelevantSnippet(it, keyword));
+  dateItems = dateItems.filter(it => isRelevantSnippet(it, keyword));
+
+  // 핵심어 검색이 너무 좁아 결과가 하나도 없을 때만 원래 검색어로 폴백한다.
+  if (!simItems.length && !dateItems.length && freshQuery !== keyword) {
+    [simItems, dateItems] = await Promise.all([
+      fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, 'sim', 5),
+      fetchNaverNewsSnippetsOne(keyword, clientId, clientSecret, 'date', 10),
+    ]);
+  }
+
   // date(최신순) 결과를 먼저 넣어 최신 기사를 우선 확보하고, 링크 기준 중복 제거
   const seen = new Set();
   const merged = [];
@@ -149,7 +193,10 @@ async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
   }
   // 실제 pubDate 기준 최신순 정렬 — 관련도순으로 섞여 들어왔어도 최종은 날짜순
   merged.sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0));
-  return merged.slice(0, 5).map(({ link, ...rest }) => rest); // link는 내부 중복제거용, 응답엔 불필요
+  return {
+    query: freshQuery,
+    items: merged.slice(0, 5).map(({ link, ...rest }) => rest)
+  };
 }
 
 // ===== 후킹 추출 ===== (기존과 동일, 변경 없음)
@@ -255,11 +302,13 @@ export default async function handler(req, res) {
 
   try {
     // 블로그 제목(50개) + 뉴스 제목(30개, 이제 후킹어 재료로도 씀) + 뉴스 스니펫(사실확인용) 병렬 수집
-    const [blogTitlesRaw, newsTitlesRaw, newsSnippets] = await Promise.all([
+    const [blogTitlesRaw, newsTitlesRaw, newsSnippetResult] = await Promise.all([
       fetchNaverSearch('blog', keyword, clientId, clientSecret, 'sim', 50),
       fetchNaverSearch('news', keyword, clientId, clientSecret, 'sim', 30),
       fetchNaverNewsSnippets(keyword, clientId, clientSecret),
     ]);
+    const newsSnippets = Array.isArray(newsSnippetResult?.items) ? newsSnippetResult.items : [];
+    const freshNewsQuery = newsSnippetResult?.query || keyword;
 
     // [FIX 2026-09-15] 키워드 단어를 전부 포함하지 않는 무관한 제목을 걸러낸다.
     // [FIX 2026-09-16] 화면 문구("상위 블로그·뉴스가 제목에 쓴 후킹")는 원래도 블로그+뉴스
@@ -278,7 +327,9 @@ export default async function handler(req, res) {
 
     const hooks = extractHooks(huntTitles, keyword);
 
-    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600'); // 6h 캐시
+    // 최신 이슈를 발행 근거로 쓰는 API라 6시간 캐시는 너무 길었다.
+    // 10분 캐시로 줄여 당일 기사 반영 속도를 높인다.
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=600');
     return res.status(200).json({
       keyword,
       count: huntTitles.length,
@@ -287,7 +338,8 @@ export default async function handler(req, res) {
       hooks,
       sampleTitles: huntTitles.slice(0, 15),
       newsTitles: newsTitlesRaw.slice(0, 6),
-      newsSnippets,             // [{title, description, source, pubDate}] — 최신순 재정렬된 사실확인 근거
+      newsSnippets,             // [{title, description, source, pubDate}] — 핵심 대상 검색어 기준 최신순 사실근거
+      freshNewsQuery,           // 예: "구자욱 삼성 야구선수 프로필" -> "구자욱 삼성 야구선수"
       _filteredOutCount: droppedCount, // 참고용: 관련도 필터로 제외된 제목 개수(블로그+뉴스 합산)
       _usedRawFallback: combinedFiltered.length === 0 && combinedRaw.length > 0, // 필터 결과 0개라 원본으로 되돌린 경우 true
     });

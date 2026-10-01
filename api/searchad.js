@@ -51,18 +51,26 @@ export default async function handler(req, res) {
       showDetail: '1'
     });
 
-    const response = await fetch(
-      `https://api.searchad.naver.com${uri}?${params.toString()}`,
-      {
-        method,
-        headers: {
-          'X-Timestamp': timestamp,
-          'X-API-KEY': apiKey,
-          'X-Customer': customerId,
-          'X-Signature': signature
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    let response;
+    try {
+      response = await fetch(
+        `https://api.searchad.naver.com${uri}?${params.toString()}`,
+        {
+          method,
+          signal: controller.signal,
+          headers: {
+            'X-Timestamp': timestamp,
+            'X-API-KEY': apiKey,
+            'X-Customer': customerId,
+            'X-Signature': signature
+          }
         }
-      }
-    );
+      );
+    } finally {
+      clearTimeout(timer);
+    }
 
     const data = await response.json();
 
@@ -101,6 +109,10 @@ export default async function handler(req, res) {
 
     const monthlyPc = toNumber(exact.monthlyPcQcCnt);
     const monthlyMobile = toNumber(exact.monthlyMobileQcCnt);
+
+    // 월간 검색량은 분 단위 실시간 데이터가 아니므로 CDN에서 6시간 캐시한다.
+    // 같은 키워드/조합을 반복 분석할 때 네이버 검색광고 API 재호출을 줄인다.
+    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600');
 
     return res.status(200).json({
       keyword,

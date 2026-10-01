@@ -2005,14 +2005,15 @@ ${internalLinkBlock()}
 // 이미 구해준 exact match(rowFromExactPayload)를 직접 쓴다. 이렇게 하면 접미어 조합
 // 키워드가 네이버 원본 keywordList에서 20위 밖이라도 놓치지 않는다.
 async function probeSeedSuffix(seed, suffix, sourceLabel){
-  const variants = [`${seed}${suffix}`, `${seed} ${suffix}`];
-  for(const kw of variants){
-    try {
-      const p = await fetchSearchAdCached(kw);
-      const r = rowFromExactPayload(p, kw, sourceLabel);
-      if(r && r.monthly > 0) return r;
-    } catch(e){ /* 이 변형은 실패, 다음 변형 시도 */ }
-  }
+  // /api/searchad는 hintKeywords에서 공백을 제거하므로 "붙여쓰기"와 "띄어쓰기"를
+  // 두 번 호출해도 실제 네이버 요청은 동일하다. 예전 코드는 0검색량일 때 같은 요청을
+  // 두 번 보내 분석 시간을 거의 2배로 늘릴 수 있었다. 한 번만 조회한다.
+  const kw = `${seed}${suffix}`;
+  try {
+    const p = await fetchSearchAdCached(kw);
+    const r = rowFromExactPayload(p, kw, sourceLabel);
+    if(r && r.monthly > 0) return r;
+  } catch(e){ /* 후보 보강 실패는 본 분석을 막지 않음 */ }
   return null;
 }
 
@@ -2023,7 +2024,15 @@ async function analyze(){
   if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
   state.seed = seed;
   try{
-    const adPayload = await fetchSearchAd(seed);
+    const analyzeStartedAt = performance.now();
+    // 서로 의존하지 않는 1차 재료는 동시에 가져온다.
+    // 기존에는 searchad → suggest → titlehunt 순서로 기다려 첫 화면이 불필요하게 늦었다.
+    els.analyzeBtn.textContent='기초 데이터 수집 중...';
+    const [adPayload, suggestData, seedTitleHunt] = await Promise.all([
+      fetchSearchAd(seed),
+      fetchSuggestCached(seed),
+      fetchTitleHuntCached(seed)
+    ]);
     const list = extractKeywordList(adPayload);
     // [FIX 2026-08-17] searchad.js는 이미 잘리지 않은 전체 keywordList에서 exact match를 찾아
     // payload 최상위(relKeyword/monthlyTotal/competition)에 담아 돌려준다. 예전엔 여기서
@@ -2033,19 +2042,17 @@ async function analyze(){
     const exactRow = rowFromExactPayload(adPayload, seed, '원 키워드') || { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback', raw:null };
     const relatedRows = uniqueByKeyword(list.map(item=>rowFromSearchAdItem(item, 'API 연관키워드')).filter(row=>normalizeKey(row.kw)!==normalizeKey(seed)));
 
-    const suggestData = await fetchSuggestCached(seed);
     const adKeys = new Set([exactRow, ...relatedRows].map(r=>normalizeKey(r.kw)));
     const newSuggestKws = (suggestData.detailed || (suggestData.suggestions||[]).map(s=>({keyword:s,source:'suggest'})))
       .map(d => ({ kw:normalizeSpace(d.keyword), src:d.source }))
       .filter(d => d.kw && !adKeys.has(normalizeKey(d.kw)))
-      .slice(0, 15);
+      .slice(0, 10);
 
-    // [FIX 2026-08-17] 자동완성 후보(suggestRows)도 exactRow/probeSeedSuffix/addComboKeyword와
-    // 똑같은 버그가 있었다 — extractKeywordList(20개로 잘린 related)에서 findExactItem으로
-    // 재탐색하다 보니, 자동완성 키워드(예: 쉼표 포함 공식 제목 "그래, 이혼하자")가 검색광고 API의
-    // keywordList에서 20위 밖이면 실제 검색량이 있어도 monthly:0으로 떨어졌다. 다른 3곳과
-    // 동일하게 payload 최상위(rowFromExactPayload)를 우선 사용하도록 교체.
-    const suggestRows = await mapLimit(newSuggestKws, 1, async d => {
+    // 자동완성 보강은 최대 10개만 검증하고 3개씩 병렬 처리한다.
+    // 초기 SearchAd 응답에 이미 연관어 20개가 있어 15개를 직렬 재조회하던 예전 방식은
+    // 품질 이득 대비 대기 시간이 컸다.
+    els.analyzeBtn.textContent='연관 키워드 검증 중...';
+    const suggestRows = await mapLimit(newSuggestKws, 3, async d => {
       const sourceLabel = d.src === 'google' ? '구글 자동완성' : (d.src === 'naver' ? '네이버 자동완성' : '자동완성');
       try {
         const p = await fetchSearchAdCached(d.kw);
@@ -2067,32 +2074,41 @@ async function analyze(){
     // 그대로 통과되던 버그 수정. API가 그 조합을 '등록'만 해뒀을 뿐 실수요(monthly>0)가
     // 없으면 무관한 카테고리로 보고 편입하지 않는다.
     const CORE_SUFFIX_PROBES = ['출연진','등장인물','몇부작','결말','원작','리메이크','재방송','다시보기','시즌2','방영일','드라마'];
-    const existingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
-    const probeSuffixes = CORE_SUFFIX_PROBES.filter(suf => !existingKeys.has(normalizeKey(`${seed}${suf}`)));
-    const probeRows = await mapLimit(probeSuffixes, 2, suf => probeSeedSuffix(seed, suf, '핵심접미어 보강'));
-    baseRows = uniqueByKeyword([...baseRows, ...probeRows.filter(Boolean)]);
+    const seedHooks = Array.isArray(seedTitleHunt?.hooks) ? seedTitleHunt.hooks : [];
+    const seedSampleTitles = Array.isArray(seedTitleHunt?.sampleTitles) ? seedTitleHunt.sampleTitles : [];
+    const seedNewsSnippets = Array.isArray(seedTitleHunt?.newsSnippets) ? seedTitleHunt.newsSnippets : [];
 
-    // [FIX] 배우 이름처럼 키워드마다 달라지는 고유명사는 고정 리스트로 만들 수 없다.
-    // titlehunt.js가 뽑아준 발행 제목 상위 명사를 접미어 후보로 검색광고 API에 확인한다.
-    // [FIX 2026-08-06] 위와 동일하게 monthly>0 조건 추가 — '등록만 된' 0검색량 조합 배제.
-    let seedHooks = [], seedSampleTitles = [], seedNewsSnippets = [];
-    try {
-      const th = await fetchTitleHuntCached(seed);
-      seedHooks = Array.isArray(th.hooks) ? th.hooks : [];
-      seedSampleTitles = Array.isArray(th.sampleTitles) ? th.sampleTitles : [];
-      seedNewsSnippets = Array.isArray(th.newsSnippets) ? th.newsSnippets : [];
-    } catch(e){ /* 실패해도 본체 보호 */ }
-    const hookExistingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
-    const hookSuffixes = seedHooks.slice(0, 6).map(h=>h.word).filter(Boolean)
-      .filter(w => !hookExistingKeys.has(normalizeKey(`${seed}${w}`)));
-    const hookProbeRows = await mapLimit(hookSuffixes, 2, w => probeSeedSuffix(seed, w, '발행제목 기반 보강'));
-    baseRows = uniqueByKeyword([...baseRows, ...hookProbeRows.filter(Boolean)]);
+    // 방송·드라마 계열 신호가 있을 때만 방송 전용 접미어 11종을 검사한다.
+    // 예전에는 지원금·기업·인물·생활정보 키워드에도 "몇부작/결말/재방송..."을 전부 조회했다.
+    const contentSignalText = [
+      seed,
+      ...relatedRows.map(r=>r.kw),
+      ...(suggestData.suggestions||[]),
+      ...seedHooks.map(h=>h.word),
+      ...seedSampleTitles.slice(0,8)
+    ].join(' ');
+    const hasContentSignal = /(출연진|등장인물|몇부작|결말|원작|리메이크|재방송|다시보기|시즌\s*\d*|방영|드라마|영화|예능|배우|넷플릭스|티빙|웨이브|디즈니\+?|OTT)/i.test(contentSignalText);
+
+    const existingKeys = new Set(baseRows.map(r=>normalizeKey(r.kw)));
+    const probeSuffixes = hasContentSignal
+      ? CORE_SUFFIX_PROBES.filter(suf => !existingKeys.has(normalizeKey(`${seed}${suf}`)))
+      : [];
+    const hookSuffixes = seedHooks.slice(0, 4).map(h=>h.word).filter(Boolean)
+      .filter(w => !existingKeys.has(normalizeKey(`${seed}${w}`)));
+
+    els.analyzeBtn.textContent='후킹 키워드 보강 중...';
+    const [probeRows, hookProbeRows] = await Promise.all([
+      mapLimit(probeSuffixes, 3, suf => probeSeedSuffix(seed, suf, '핵심접미어 보강')),
+      mapLimit(hookSuffixes, 3, w => probeSeedSuffix(seed, w, '발행제목 기반 보강'))
+    ]);
+    baseRows = uniqueByKeyword([...baseRows, ...probeRows.filter(Boolean), ...hookProbeRows.filter(Boolean)]);
 
     const CONTENT_LOOKUP_LIMIT = 12;
     const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
     const lookupSet = new Set(byDemand.slice(0, CONTENT_LOOKUP_LIMIT).map(r=>normalizeKey(r.kw)));
     lookupSet.add(normalizeKey(seed));
-    const hydrated = await mapLimit(baseRows, 2, async row => {
+    els.analyzeBtn.textContent='최근 30일 발행량 계산 중...';
+    const hydrated = await mapLimit(baseRows, 3, async row => {
       if(!lookupSet.has(normalizeKey(row.kw))){
         return { ...row, blog:0, cafe:0, totalContent:0, contentSkipped:true, contentWindowDays:30 };
       }
@@ -2132,6 +2148,12 @@ async function analyze(){
     if(els.comboRow){ els.comboRow.style.display='flex'; }
     if(els.comboHint){ els.comboHint.style.display='block'; els.comboHint.textContent='동명이인·동일 키워드가 섞일 때 구분어를 넣으면 기존 후보 중 같은 대상을 뒷받침하는 후보만 남깁니다. 기존 검색량·발행량 수치는 그대로 유지합니다.'; }
     if(els.comboClearBtn) els.comboClearBtn.style.display='none';
+    console.info('[keyword-radar] analyze completed', Math.round(performance.now()-analyzeStartedAt)+'ms', {
+      suggestions:newSuggestKws.length,
+      contentSuffixProbes:probeSuffixes.length,
+      hookProbes:hookSuffixes.length,
+      contentLookups:lookupSet.size
+    });
   } catch(err){
     console.error(err);
     els.judgementTitle.textContent='분석 중 오류가 발생했습니다.';

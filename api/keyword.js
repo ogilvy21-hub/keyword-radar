@@ -163,6 +163,10 @@ export default async function handler(req, res) {
     countRecent('cafe', keyword, clientId, clientSecret),
   ]);
 
+  // 최근 30일 발행량은 매 요청마다 1~10개의 네이버 검색 페이지를 훑을 수 있다.
+  // 1시간 CDN 캐시로 반복 분석 비용과 대기 시간을 줄이되, 일중 변화는 계속 반영한다.
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
+
   return res.status(200).json({
     keyword,
     windowDays: WINDOW_DAYS,

@@ -472,7 +472,7 @@
     <span class="st-tick"></span>
     <h3>STEP 7 · 이미지 세탁기</h3>
     <span class="st-rule"></span>
-    <span class="micro-hint" id="imagePlatformHint">JPG 자동변환 · H2 섹션별 최대 3장</span>
+    <span class="micro-hint" id="imagePlatformHint">JPG 자동변환 · H2별 이미지 제한 없음</span>
   </div>
   <div class="pub-card">
     <div class="pub-head">
@@ -2599,8 +2599,9 @@ function refreshPublishPreview(){
   const p=parsePublishArticle();
   let html=`<h1>${escapeHTML(p.title)}</h1>${markdownToHtml(p.intro)}`;
   p.sections.forEach((section,i)=>{
-    const key=`s${i+1}`; html+=`<h2>${escapeHTML(section.heading)}</h2>${markdownToHtml(section.body)}`;
+    const key=`s${i+1}`; html+=`<h2>${escapeHTML(section.heading)}</h2>`;
     for(const img of imagesForSection(key)) html+=`<figure><img src="${img.url}" alt=""><figcaption>${escapeHTML(img.filename)}</figcaption></figure>`;
+    html+=markdownToHtml(section.body);
   });
   if(p.faq) html+=`<div class="faq-block"><h2>FAQ</h2>${faqToHtml(p.faq)}</div>`;
   if(p.tail) html+=markdownToHtml(p.tail);
@@ -2734,21 +2735,21 @@ async function downloadPublishZip(){
 
 function richBodyHtmlV23(){
   const p=parsePublishArticle(); let html=markdownToHtml(p.intro);
-  p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>${markdownToHtml(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); });
+  p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); html+=markdownToHtml(section.body); });
   if(p.faq) html+=`<h2>FAQ</h2>${faqToHtml(p.faq)}`;
   if(p.tail) html+=markdownToHtml(p.tail);
   return html;
 }
 function tistoryRichBodyHtmlV25(){
   const p=parsePublishArticle(); let html=tistoryMarkdownToHtmlV25(p.intro);
-  p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>${tistoryMarkdownToHtmlV25(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); });
+  p.sections.forEach((section,i)=>{ html+=`<h2>${escapeHTML(section.heading)}</h2>`; imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; }); html+=tistoryMarkdownToHtmlV25(section.body); });
   if(p.faq) html+=`<h2>FAQ</h2>${faqToHtml(p.faq)}`;
   if(p.tail) html+=tistoryMarkdownToHtmlV25(p.tail);
   return html;
 }
 function richBodyPlainV23(){
   const p=parsePublishArticle(); let out=stripMarkdown(p.intro);
-  p.sections.forEach((section,i)=>{ out+=`\n\n${section.heading}\n\n${stripMarkdown(section.body)}`; imagesForSection(`s${i+1}`).forEach(img=>out+=`\n\n[이미지 삽입: ${img.filename}]`); });
+  p.sections.forEach((section,i)=>{ out+=`\n\n${section.heading}`; imagesForSection(`s${i+1}`).forEach(img=>out+=`\n\n[이미지 삽입: ${img.filename}]`); out+=`\n\n${stripMarkdown(section.body)}`; });
   if(p.faq) out+=`\n\nFAQ\n\n${stripMarkdown(p.faq)}`;
   if(p.tail) out+=`\n\n${stripMarkdown(p.tail)}`;
   return out.trim();
@@ -2761,8 +2762,9 @@ function editorFriendlyHtmlV23(text){
 function naverBodyHtmlV23(){
   const p=parsePublishArticle(); let html=editorFriendlyHtmlV23(p.intro);
   p.sections.forEach((section,i)=>{
-    html+=`<p><strong>${escapeHTML(section.heading)}</strong></p>${editorFriendlyHtmlV23(section.body)}`;
+    html+=`<p><strong>${escapeHTML(section.heading)}</strong></p>`;
     imagesForSection(`s${i+1}`).forEach(img=>{ html+=`<p><strong>[이미지 삽입: ${escapeHTML(img.filename)}]</strong></p>`; });
+    html+=editorFriendlyHtmlV23(section.body);
   });
   if(p.faq) html+=`<p><strong>FAQ</strong></p>${faqToHtml(p.faq)}`;
   if(p.tail) html+=editorFriendlyHtmlV23(p.tail);
@@ -2778,7 +2780,7 @@ const PUBLISH_ADAPTERS_V23 = {
   },
   '워드프레스': {
     label:'워드프레스', mode:'rich',
-    desc:'H2·표 HTML로 복사합니다. 이미지는 현재처럼 미디어 라이브러리에 별도 업로드하고, 미리보기는 대표 1장 + 본문 최대 4장 기준입니다.'
+    desc:'H2·표 HTML로 복사합니다. 본문 이미지는 H2별 제한 없이 배치합니다.'
   },
   '블로그스팟': {
     label:'블로그스팟', mode:'blogspot',
@@ -2822,12 +2824,17 @@ function updatePublishingAdapterV23(){
 
 function blogspotCopyImageRowV24(imgs,srcMap){
   if(!imgs?.length) return '';
-  const width=(100/imgs.length).toFixed(3);
-  return '<table role="presentation" style="width:100%;border-collapse:separate;border-spacing:6px;margin:10px 0 18px;border:0"><tbody><tr>'+
-    imgs.map(img=>'<td style="width:'+width+'%;padding:0;border:0;vertical-align:top">'+
-      '<img src="'+(srcMap.get(img.id)||'')+'" alt="'+escapeHTML(img.filename||'')+'" style="display:block;width:100%;height:auto;border:0;margin:0">'+
-      '</td>').join('')+
-    '</tr></tbody></table>';
+  const rows=[];
+  for(let i=0;i<imgs.length;i+=3){
+    const group=imgs.slice(i,i+3);
+    const width=(100/group.length).toFixed(3);
+    rows.push('<table role="presentation" style="width:100%;border-collapse:separate;border-spacing:6px;margin:10px 0 18px;border:0"><tbody><tr>'+
+      group.map(img=>'<td style="width:'+width+'%;padding:0;border:0;vertical-align:top">'+
+        '<img src="'+(srcMap.get(img.id)||'')+'" alt="'+escapeHTML(img.filename||'')+'" style="display:block;width:100%;height:auto;border:0;margin:0">'+
+        '</td>').join('')+
+      '</tr></tbody></table>');
+  }
+  return rows.join('');
 }
 async function blogspotEmbeddedImageMapV24(){
   const map=new Map();

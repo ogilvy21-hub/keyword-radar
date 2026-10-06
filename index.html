@@ -396,7 +396,7 @@
     <summary>원고 생성 옵션 · 경험 입력</summary>
     <div class="body">
       <div class="option-grid">
-        <div class="option-field"><label for="platformSelect">플랫폼</label><select id="platformSelect"><option>티스토리</option><option>네이버 블로그</option><option>네이버 홈판용</option><option>블로그스팟</option><option>워드프레스</option><option>브런치</option></select></div>
+        <div class="option-field"><label for="platformSelect">플랫폼</label><select id="platformSelect"><option>티스토리</option><option>네이버 블로그</option><option>네이버 홈판용</option><option>블로그스팟</option><option>워드프레스</option><option>브런치</option></select></div><div class="option-field" id="tistoryChannelWrap"><label for="tistoryChannelSelect">티스토리 채널</label><select id="tistoryChannelSelect"><option value="moneyphd.tistory.com">머니박사 · 메인</option><option value="moneyfinder.tistory.com">머니파인더 · 주가·경제·복지</option><option value="kkondaego.tistory.com">꼰대고 · 일상·심리·철학·과학·역사</option></select></div>
         <div class="option-field"><label for="toneSelect">문체</label><select id="toneSelect"><option>정보형</option><option>애널리스트형</option><option>감성 에세이형</option><option>생활정보형</option><option>리뷰형</option></select></div>
         <div class="option-field"><label for="lengthSelect">분량</label><select id="lengthSelect"><option>짧게 800자</option><option selected>일반 1500자</option><option>깊게 3000자</option><option>장문 5000자 이상</option></select><span style="display:none" id="lengthHint"></span></div>
         <div class="option-field"><label for="outputSelect">출력</label><select id="outputSelect"><option>텍스트</option><option>HTML</option></select></div>
@@ -533,7 +533,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const els = {
-  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboClearBtn:$('comboClearBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint'), platformStrategyHint:$('platformStrategyHint'), imagePlatformHint:$('imagePlatformHint'), imagePlatformDesc:$('imagePlatformDesc'), imageDropHint:$('imageDropHint'),
+  keywordInput:$('keywordInput'), analyzeBtn:$('analyzeBtn'), comboRow:$('comboRow'), comboInput:$('comboInput'), comboBtn:$('comboBtn'), comboClearBtn:$('comboClearBtn'), comboHint:$('comboHint'), keywordTable:$('keywordTable'), detailKeywordTable:$('detailKeywordTable'), totalKeywords:$('totalKeywords'), bestKeywordText:$('bestKeywordText'), bestScoreText:$('bestScoreText'), intentShortText:$('intentShortText'), judgementTitle:$('judgementTitle'), judgementReason:$('judgementReason'), strategyList:$('strategyList'), selectedHint:$('selectedHint'), clusterBox:$('clusterBox'), titleBuilder:$('titleBuilder'), titleList:$('titleList'), sideKeyword:$('sideKeyword'), sideBadge:$('sideBadge'), sideScore:$('sideScore'), sideReason:$('sideReason'), sideMetrics:$('sideMetrics'), draftPrompt:$('draftPrompt'), copyPromptBtn:$('copyPromptBtn'), copyKeywordsBtn:$('copyKeywordsBtn'), resetBtn:$('resetBtn'), platformSelect:$('platformSelect'), tistoryChannelSelect:$('tistoryChannelSelect'), tistoryChannelWrap:$('tistoryChannelWrap'), toneSelect:$('toneSelect'), lengthSelect:$('lengthSelect'), outputSelect:$('outputSelect'), tableCheck:$('tableCheck'), faqCheck:$('faqCheck'), expInput:$('expInput'), expHint:$('expHint'), platformStrategyHint:$('platformStrategyHint'), imagePlatformHint:$('imagePlatformHint'), imagePlatformDesc:$('imagePlatformDesc'), imageDropHint:$('imageDropHint'),
   pfTitle:$('pfTitle'), pfPlatform:$('pfPlatform'), pfTone:$('pfTone'), pfLength:$('pfLength'), pfCount:$('pfCount'), msDate:$('msDate'), msPageNo:$('msPageNo'),
   articleBox:$('articleBox'), articleCount:$('articleCount'), aiStyleBtn:$('aiStyleBtn'), autoCleanBtn:$('autoCleanBtn'), styleReport:$('styleReport'),
   publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), publishPlatformHint:$('publishPlatformHint'), publishPlatformName:$('publishPlatformName'), publishAdapterDesc:$('publishAdapterDesc'), copyPublishTitleBtn:$('copyPublishTitleBtn'), copyPublishBodyBtn:$('copyPublishBodyBtn'), sendTistoryAutoBtn:$('sendTistoryAutoBtn')
@@ -555,7 +555,7 @@ function updatePromptMeta(){
   const text = els.draftPrompt.value || '';
   const m = text.match(/## 메인 키워드\n([^\n]+)/);
   els.pfTitle.textContent = m ? m[1] : '-';
-  els.pfPlatform.textContent = els.platformSelect ? els.platformSelect.value : '-';
+  els.pfPlatform.textContent = els.platformSelect ? platformPromptLabelV27() : '-';
   els.pfTone.textContent = els.toneSelect ? els.toneSelect.value : '-';
   els.pfLength.textContent = els.lengthSelect ? els.lengthSelect.value : '-';
   els.pfCount.textContent = text.replace(/\s/g,'').length.toLocaleString('ko-KR');
@@ -1027,11 +1027,49 @@ const PLATFORM_PROFILES_V23 = {
     strategy:`이 글은 브런치에 발행한다. 검색 최적화 체크리스트처럼 보이게 쓰지 말고, 독자가 끝까지 읽을 수 있는 칼럼·에세이 흐름으로 다듬는다. 도입부는 장면·질문·핵심 문제의식 중 하나로 자연스럽게 시작하고, 소제목은 꼭 필요한 2~4개 정도만 사용한다. 사실 정보는 정확하게 유지하되 나열보다 맥락·해석·사람의 경험을 연결해 문장 자체가 읽히게 써라.`
   }
 };
+const TISTORY_CHANNEL_PROFILES_V27 = {
+  'moneyphd.tistory.com': {
+    label:'머니박사',
+    host:'moneyphd.tistory.com',
+    scope:'실시간 이슈·생활정보·지원금·세금·대출·법률·방송 등 메인 채널',
+    strategy:`발행 채널은 머니박사다. 실시간 검색 의도와 생활에 바로 필요한 정보를 우선하고, 주제가 넓더라도 검색자가 지금 알고 싶은 답을 빠르게 주는 정보형으로 쓴다.`
+  },
+  'moneyfinder.tistory.com': {
+    label:'머니파인더',
+    host:'moneyfinder.tistory.com',
+    scope:'주가정보·기업·산업·경제·금융·세금·복지·지원금',
+    strategy:`발행 채널은 머니파인더다. 기존 주식 중심에서 주가정보·기업/산업·경제·금융·세금·복지·지원금까지 생활경제 전반으로 넓힌다. 종목을 다룰 때는 매수·매도 권유보다 실적·공시·업황·주가 변동 배경·위험요인을 중심으로 설명하고, 경제·복지 글은 금액·기간·대상·신청조건처럼 바뀌는 정보를 최신 공식 근거로 확인한다. 연예·드라마·순수 일상 소재는 이 채널의 중심 주제로 만들지 않는다.`
+  },
+  'kkondaego.tistory.com': {
+    label:'꼰대고',
+    host:'kkondaego.tistory.com',
+    scope:'일상·심리학·철학·과학·역사',
+    strategy:`발행 채널은 꼰대고다. 기존 방향을 유지해 일상에서 출발한 질문을 심리학·철학·과학·역사와 연결해 풀어낸다. 사전식 지식 나열보다 '왜 이런가 → 어떤 배경이 있는가 → 지금 우리에게 무슨 의미인가'의 흐름을 우선하고, 교양 정보와 해석을 구분해 과장된 단정이나 근거 없는 경험담을 만들지 않는다.`
+  }
+};
+function currentTistoryChannelV27(){
+  const host=els.tistoryChannelSelect?.value||'moneyphd.tistory.com';
+  return TISTORY_CHANNEL_PROFILES_V27[host] || TISTORY_CHANNEL_PROFILES_V27['moneyphd.tistory.com'];
+}
+function tistoryChannelStrategyV27(){
+  if((els.platformSelect?.value||'티스토리')!=='티스토리') return '';
+  const ch=currentTistoryChannelV27();
+  return ch.strategy;
+}
+function platformPromptLabelV27(){
+  const platform=els.platformSelect?.value||'티스토리';
+  if(platform!=='티스토리') return platform;
+  const ch=currentTistoryChannelV27();
+  return `티스토리 · ${ch.label} (${ch.host})`;
+}
+
 function platformProfileV23(platform){
   return PLATFORM_PROFILES_V23[platform] || PLATFORM_PROFILES_V23['티스토리'];
 }
 function platformStrategy(platform){
-  return platformProfileV23(platform).strategy;
+  const base=platformProfileV23(platform).strategy;
+  const channel=(platform==='티스토리')?tistoryChannelStrategyV27():'';
+  return channel ? base+'\n'+channel : base;
 }
 function platformTocInstructionV23(platform){
   const p=platformProfileV23(platform);
@@ -1045,8 +1083,11 @@ function applyPlatformDefaultsV23(){
   if(els.faqCheck) els.faqCheck.checked=!!p.defaults.faq;
 }
 function updatePlatformUiV23(){
-  const p=platformProfileV23(els.platformSelect?.value);
-  if(els.platformStrategyHint) els.platformStrategyHint.textContent=p.hint+' · 플랫폼 선택 시 권장 기본값을 적용하며, 아래 옵션은 다시 직접 바꿀 수 있습니다.';
+  const platform=els.platformSelect?.value||'티스토리';
+  const p=platformProfileV23(platform);
+  const ch=platform==='티스토리'?currentTistoryChannelV27():null;
+  if(els.tistoryChannelWrap) els.tistoryChannelWrap.style.display=platform==='티스토리'?'':'none';
+  if(els.platformStrategyHint) els.platformStrategyHint.textContent=(ch ? p.hint+' · '+ch.label+' 채널: '+ch.scope : p.hint)+' · 플랫폼 선택 시 권장 기본값을 적용하며, 아래 옵션은 다시 직접 바꿀 수 있습니다.';
   if(els.imagePlatformHint) els.imagePlatformHint.textContent='JPG 자동변환 · '+p.image.label;
   if(els.imagePlatformDesc) els.imagePlatformDesc.textContent=`대표 이미지는 본문에 다시 넣지 않습니다. ${p.image.label} 기준으로 배치하며, 목차·FAQ·자료 출처·태그는 이미지 섹션에서 제외합니다.`;
   if(els.imageDropHint) els.imageDropHint.textContent=`${p.image.label} · 업로드한 본문 이미지는 모두 자동 배치`;
@@ -1845,7 +1886,7 @@ ${linkBlock}${dedupBlock}
 - 출처는 실제 근거만 \`매체명 — 제목 (날짜)\` 형식으로. 주제와 무관한 출처 금지.
 
 ## 작성 조건
-- 플랫폼: ${els.platformSelect.value} / 문체: ${els.toneSelect.value} / 출력: ${els.outputSelect.value}
+- 플랫폼: ${platformPromptLabelV27()} / 문체: ${els.toneSelect.value} / 출력: ${els.outputSelect.value}
 - 분량: ${lengthSpec(els.lengthSelect.value)}
 - ${els.tableCheck.checked?'표 포함':''}${els.tableCheck.checked&&els.faqCheck.checked?', ':''}${els.faqCheck.checked?'FAQ 포함':''} / 글 끝에 출처·태그
 
@@ -1921,7 +1962,7 @@ ${hasRelated ? promptRelated + `
 ※ 연관키워드가 없으니, 이 키워드를 검색하는 사람의 유형·상황·궁금증을 너가 직접 3가지로 구체적으로 추정한 뒤(예: 누가·언제·왜 이 검색을 하는가), 그 추정을 근거로 의도와 목차를 설계해라. 막연히 일반론으로 채우지 말고, 추정한 검색자 시나리오에 답하는 글을 써라.`}
 
 ## 작성 조건
-- 플랫폼: ${els.platformSelect.value} / 문체: ${els.toneSelect.value} / 출력: ${els.outputSelect.value}
+- 플랫폼: ${platformPromptLabelV27()} / 문체: ${els.toneSelect.value} / 출력: ${els.outputSelect.value}
 - 분량: ${lengthSpec(els.lengthSelect.value)}
 - 구성요소: ${[els.tableCheck.checked?'표':'',els.faqCheck.checked?'FAQ':''].filter(Boolean).join(', ')||'본문 위주'} 포함 / 글 끝에 출처·태그
 - 출력 형식: ${outputFormatSpec(els.outputSelect.value)}
@@ -2817,8 +2858,10 @@ function updatePublishingAdapterV23(){
   }
   if(els.sendTistoryAutoBtn){
     const isTistory=(els.platformSelect?.value||'티스토리')==='티스토리';
+    const ch=isTistory?currentTistoryChannelV27():null;
     els.sendTistoryAutoBtn.style.display=isTistory?'':'none';
     els.sendTistoryAutoBtn.disabled=!isTistory;
+    els.sendTistoryAutoBtn.textContent=isTistory&&ch ? ch.label+'로 보내기' : '티스토리로 보내기';
   }
 }
 
@@ -2998,8 +3041,11 @@ function compactTistoryTailHtmlV24(text){
 }
 function buildTistorySendMetaV24(images){
   const p=parsePublishArticle();
+  const ch=currentTistoryChannelV27();
   return {
     source:'keyword-radar',
+    targetHost:ch.host,
+    targetLabel:ch.label,
     title:p.title,
     introHtml:tistoryMarkdownToHtmlV25(p.intro),
     tocHtml:buildTistoryTocHtmlV24(p.sections),
@@ -3024,7 +3070,7 @@ async function sendTistoryAutoV24(){
   const jobId='keyword-radar-'+Date.now();
   if(els.sendTistoryAutoBtn) els.sendTistoryAutoBtn.disabled=true;
   try{
-    flashPublish(els.publishStatus,'제목·원고·이미지 묶음 준비 중...','warn');
+    flashPublish(els.publishStatus,(meta.targetLabel||'티스토리')+' 전송 묶음 준비 중...','warn');
     await requestRadarExtensionV24('RADAR_JOB_START',{jobId,meta});
     for(let i=0;i<images.length;i++){
       const img=images[i];
@@ -3032,9 +3078,9 @@ async function sendTistoryAutoV24(){
       const dataUrl=await blobToDataUrlV24(img.blob);
       await requestRadarExtensionV24('RADAR_JOB_IMAGE',{jobId,image:{id:img.id,filename:img.filename,dataUrl,w:img.w,h:img.h}});
     }
-    flashPublish(els.publishStatus,'티스토리 새 글 화면을 여는 중...','warn');
+    flashPublish(els.publishStatus,(meta.targetLabel||'티스토리')+' 새 글 화면을 여는 중...','warn');
     const result=await requestRadarExtensionV24('RADAR_JOB_COMMIT',{jobId});
-    flashPublish(els.publishStatus,'전송 완료 · '+(result.host||'티스토리')+'에서 자동 배치 중','ok');
+    flashPublish(els.publishStatus,'전송 완료 · '+(meta.targetLabel||result.host||'티스토리')+'에서 자동 배치 중','ok');
   }catch(e){
     console.error(e);
     try{await requestRadarExtensionV24('CANCEL_JOB',{jobId});}catch(_){ }
@@ -3099,6 +3145,11 @@ els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdl
 if(els.platformSelect) els.platformSelect.addEventListener('change',()=>{
   applyPlatformDefaultsV23();
   normalizeImagePlacementForPlatformV23();
+  renderSelected();
+  updatePlatformUiV23();
+  refreshPublishPreview();
+});
+if(els.tistoryChannelSelect) els.tistoryChannelSelect.addEventListener('change',()=>{
   renderSelected();
   updatePlatformUiV23();
   refreshPublishPreview();

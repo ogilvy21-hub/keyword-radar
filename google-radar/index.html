@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Google 글감 레이더</title>
 <meta name="description" content="Google Trends 급상승 키워드를 글감레이더 엔진으로 분석하고 제목·원고 프롬프트까지 연결합니다.">
-<link rel="icon" type="image/svg+xml" href="./favicon.svg"><text y='.9em' font-size='90'>G</text></svg>">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
 <style>
 *{box-sizing:border-box} :root{--bg:#f5f7fb;--card:#fff;--ink:#141824;--muted:#697386;--line:#e3e7ef;--side:#101522;--accent:#4285f4;--accent2:#eaf1ff;--green:#168a55;--green2:#eaf8f1;--red:#c54343;--red2:#fff0f0;--yellow:#a56b00;--yellow2:#fff7df;--purple:#7257ee}
@@ -14,7 +14,9 @@ html{scroll-behavior:smooth}body{margin:0;font-family:Pretendard,-apple-system,B
 .analysisHero{display:grid;grid-template-columns:130px 1fr;gap:20px;align-items:start}.scoreBox{border:1px solid #c9d8ff;background:#eef4ff;border-radius:14px;padding:18px;text-align:center}.scoreBox strong{display:block;font-size:42px;line-height:1;color:var(--accent)}.scoreBox span{font-size:9px;color:var(--muted)}.analysisHero h2{font-size:22px;margin:2px 0 8px;letter-spacing:-.4px}.analysisHero p{font-size:11px;color:var(--muted);line-height:1.65;margin:0}.metrics{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:9px;font-weight:850;background:#f0f2f6;color:#526075}.pill.green{background:var(--green2);color:var(--green)}.pill.red{background:var(--red2);color:var(--red)}.pill.yellow{background:var(--yellow2);color:var(--yellow)}.pill.blue{background:var(--accent2);color:var(--accent)}
 .sectionTitle{display:flex;align-items:center;gap:10px;margin:28px 0 12px}.sectionTitle h4{margin:0;font-size:12px}.rule{height:1px;background:var(--line);flex:1}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:850px;font-size:10px}th{background:#f7f9fc;text-align:left;padding:10px 11px;color:#667085;white-space:nowrap}td{padding:11px;border-top:1px solid #edf0f4;white-space:nowrap}tr.pick{background:#f0f5ff}tbody tr{cursor:pointer}.reason{white-space:normal;min-width:250px;line-height:1.5;color:#5f6979}.loading{padding:32px;text-align:center;color:var(--muted);font-size:11px}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid #dce3f0;background:#fff;border-radius:999px;padding:7px 10px;font-size:9px;cursor:pointer}.chip:hover{border-color:var(--accent);color:var(--accent)}
 .writerGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.box{border:1px solid var(--line);border-radius:12px;padding:15px;background:#fbfcff}.box h4{font-size:11px;margin:0 0 10px}.field{margin-bottom:12px}.field label{display:block;font-size:9px;font-weight:850;color:#566277;margin-bottom:6px}.input,.textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:11px 12px;font-size:11px;outline:none}.textarea{min-height:150px;resize:vertical;line-height:1.65}.textarea.prompt{min-height:360px}.input:focus,.textarea:focus{border-color:#9bb9ff;box-shadow:0 0 0 3px #eef4ff}.status{font-size:9px;color:var(--muted)}.empty{font-size:10px;color:var(--muted);padding:16px 0}.newsCard{padding:10px 0;border-bottom:1px solid #edf0f4}.newsCard b{font-size:10px}.newsCard p{font-size:9px;color:var(--muted);line-height:1.45;margin:5px 0 0}.work{scroll-margin-top:20px}
-@media(max-width:1000px){.app{grid-template-columns:1fr}.side{display:none}.main{padding:18px 12px 60px}.grid,.writerGrid{grid-template-columns:1fr}.card.full{grid-column:auto}.analysisHero{grid-template-columns:1fr}.kpi{grid-template-columns:repeat(2,1fr)}}
+
+.publishGrid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.publishToolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.publishTextarea{min-height:420px}.publishStatus{font-size:9px;font-weight:800}.publishStatus.ok{color:var(--green)}.publishStatus.warn{color:var(--yellow)}.publishStatus.err{color:var(--red)}.dropGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.drop{border:1px dashed #b9c4d6;border-radius:12px;padding:20px;text-align:center;background:#fafcff;cursor:pointer;transition:.15s}.drop:hover,.drop.drag{border-color:var(--accent);background:#f1f6ff}.drop b{display:block;font-size:11px}.drop span{display:block;font-size:9px;color:var(--muted);margin-top:6px}.heroPreview{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;margin-bottom:10px}.heroPreview img{width:110px;height:78px;object-fit:cover;border-radius:8px}.heroRow{display:flex;gap:12px;align-items:center}.heroRow b{font-size:10px}.heroRow small{display:block;font-size:9px;color:var(--muted);margin-top:4px}.imgCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.imgCard{border:1px solid var(--line);border-radius:11px;padding:9px;background:#fff}.imgCard img{width:100%;height:120px;object-fit:cover;border-radius:8px}.imgCard b{font-size:9px;display:block;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.imgCard small{display:block;font-size:8px;color:var(--muted);margin:3px 0 7px}.imgCard select{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px;font-size:9px}.miniBtns{display:flex;gap:5px;margin-top:7px}.miniBtns button{flex:1;border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 4px;font-size:8px;cursor:pointer}.preview{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff;max-height:620px;overflow:auto;font-size:11px;line-height:1.7}.preview h1{font-size:21px}.preview h2{font-size:16px;margin-top:28px}.preview h3{font-size:13px}.preview img{max-width:100%;height:auto;border-radius:8px}.preview .imgRow{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:9px 0 14px}.preview table{min-width:0;font-size:9px}.destGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.publishHint{font-size:9px;color:var(--muted);line-height:1.55;margin-top:10px;padding:10px 12px;background:#f7f9fd;border-radius:9px}.publishMode{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.publishMode .field{margin:0;min-width:170px;flex:1}.count{font-size:9px;color:var(--muted);font-weight:800}
+@media(max-width:1000px){.app{grid-template-columns:1fr}.side{display:none}.main{padding:18px 12px 60px}.grid,.writerGrid,.publishGrid,.dropGrid,.destGrid{grid-template-columns:1fr}.card.full{grid-column:auto}.analysisHero{grid-template-columns:1fr}.kpi{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -25,6 +27,7 @@ html{scroll-behavior:smooth}body{margin:0;font-family:Pretendard,-apple-system,B
     <a class="active" href="#live"><span class="dot"></span>실시간 트렌드</a>
     <a href="#analysis"><span class="dot"></span>글감 분석</a>
     <a href="#writer"><span class="dot"></span>원고 작업실</a>
+    <a href="#publish"><span class="dot"></span>발행 작업실</a>
   </div>
   <div class="foot">Google Trends KR RSS 기반<br>글감레이더 검색량·발행량·경쟁비율 엔진 결합<br>RSS 순위는 '최근 감지순'이며 절대 인기순위가 아닙니다.</div>
 </aside>
@@ -103,6 +106,67 @@ html{scroll-behavior:smooth}body{margin:0;font-family:Pretendard,-apple-system,B
         </div>
       </div>
     </section>
+
+    <section class="card full work" id="publish">
+      <div class="head"><div><h3>발행 작업실</h3><div class="small">완성 원고 붙여넣기 → 이미지 JPG 변환·H2 자동배치 → 티스토리 / 블로그스팟 / 워드프레스 편집기로 전송</div></div><span id="publishStatus" class="publishStatus"></span></div>
+      <div class="body">
+        <div class="publishMode">
+          <div class="field"><label>발행 플랫폼</label><select id="publishPlatform" class="select" onchange="publishPlatformChanged()"><option value="tistory">티스토리</option><option value="blogspot">블로그스팟</option><option value="wordpress">워드프레스</option></select></div>
+          <div class="field" id="tistoryChannelField"><label>티스토리 채널</label><select id="tistoryChannel" class="select"><option value="moneyphd.tistory.com">머니박사</option><option value="moneyfinder.tistory.com">머니파인더</option><option value="kkondaego.tistory.com">꼰대고</option></select></div>
+          <div class="field" id="editorUrlField" style="display:none"><label>편집기 주소 <span class="count">브라우저에 저장</span></label><input id="editorUrl" class="input" oninput="saveEditorUrl()" placeholder="편집기 URL"></div>
+        </div>
+        <div class="publishHint" id="publishModeHint">티스토리는 Radar Helper가 제목·원고·본문 이미지를 새 글 화면에 자동 배치합니다. 최종 발행은 직접 확인 후 누릅니다.</div>
+
+        <div class="sectionTitle"><h4>완성 원고</h4><div class="rule"></div><span id="articleCount2" class="small">0자</span></div>
+        <textarea id="articleBox2" class="textarea publishTextarea" placeholder="# 최종 제목
+
+도입부...
+
+## 목차
+...
+
+## 첫 번째 소제목
+...
+
+## 두 번째 소제목
+...
+
+## FAQ
+Q1. 질문
+답변...
+
+## 자료 출처
+..."></textarea>
+
+        <div class="sectionTitle"><h4>이미지</h4><div class="rule"></div><span id="imageStatus2" class="small"></span></div>
+        <div id="heroPreview2" class="heroPreview"><div class="empty">대표 이미지 없음</div></div>
+        <div class="dropGrid">
+          <div id="heroDrop2" class="drop"><b>대표 이미지</b><span>1장 · PNG / WEBP / JPG → JPG 자동변환</span><input id="heroInput2" type="file" accept="image/png,image/jpeg,image/webp" hidden></div>
+          <div id="bodyDrop2" class="drop"><b>본문 이미지 한꺼번에 드롭</b><span>H2 순서대로 자동 분산 · 나중에 섹션 변경 가능</span><input id="bodyInput2" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></div>
+        </div>
+        <div class="publishToolbar"><button class="btn" onclick="clearPublishImages2()">이미지 비우기</button><button class="btn" onclick="downloadHero2()">대표 이미지 저장</button></div>
+        <div id="imageCards2" class="imgCards"><div class="empty">본문 이미지가 없습니다.</div></div>
+
+        <div class="publishGrid" style="margin-top:18px">
+          <div>
+            <div class="sectionTitle" style="margin-top:0"><h4>배치 미리보기</h4><div class="rule"></div></div>
+            <div id="publishPreview2" class="preview"><div class="empty">원고를 붙여넣으면 미리보기가 표시됩니다.</div></div>
+          </div>
+          <div>
+            <div class="sectionTitle" style="margin-top:0"><h4>발행 준비</h4><div class="rule"></div></div>
+            <div class="box">
+              <div id="publishSummary2" class="small">원고와 이미지를 준비해주세요.</div>
+              <div class="publishToolbar">
+                <button class="btn" onclick="copyPublishTitle2()">제목 복사</button>
+                <button class="btn" onclick="copyPublishBody2()">본문+이미지 복사</button>
+                <button id="sendPublishBtn2" class="btn primary" onclick="sendPublish2()">티스토리로 보내기</button>
+              </div>
+              <div class="publishHint">블로그스팟·워드프레스는 원고와 본문 이미지를 HTML 묶음으로 클립보드에 준비한 뒤 편집기를 엽니다. 편집기에서 본문 영역에 한 번 붙여넣으면 됩니다. 대표 이미지는 별도로 설정하세요.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </main>
 </div>
@@ -114,6 +178,7 @@ const norm=s=>String(s||'').trim().replace(/\s+/g,' ');
 const key=s=>norm(s).replace(/\s+/g,'').toUpperCase();
 
 let state={trends:[],selected:0,fetchedAt:'',analysis:[],workRow:null,suggestions:[],hooks:[],newsSnippets:[],sampleTitles:[],selectedAxes:new Set(),selectedHooks:new Set()};
+let publishImages2=[],publishHeroId2=null;
 
 function current(){return state.trends[state.selected]||null}
 function fmt(n){return Number(n||0).toLocaleString('ko-KR')}
@@ -352,6 +417,115 @@ ${news||'(없음 — 작성 전 최신 검색으로 사실관계를 다시 확�
 - FAQ는 검색 의도상 필요할 때 3~5개 포함한다.`;
 }
 async function copyPrompt(){buildPrompt();await navigator.clipboard.writeText($('promptBox').value);$('writerStatus').textContent='프롬프트 복사 완료';setTimeout(()=>$('writerStatus').textContent='',1500)}
+
+
+function pEsc(s){return esc(s)}
+function publishFlash2(msg,kind=''){const el=$('publishStatus');if(!el)return;el.textContent=msg;el.className='publishStatus '+kind}
+function stripMd2(s){return String(s||'').replace(/^#{1,6}\s+/gm,'').replace(/^---+$/gm,'').replace(/\*\*(.*?)\*\*/g,'$1').replace(/__(.*?)__/g,'$1').replace(/\[([^\]]+)\]\([^\)]+\)/g,'$1').replace(/\n{3,}/g,'\n\n').trim()}
+function inlineMd2(s){return pEsc(String(s||'')).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/__(.+?)__/g,'<strong>$1</strong>').replace(/\[([^\]]+)\]\(([^\)]+)\)/g,'<a href="$2">$1</a>')}
+function tableCells2(line){return String(line||'').trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(x=>x.trim())}
+function isSep2(line){const c=tableCells2(line);return c.length>=2&&c.every(x=>/^:?-{3,}:?$/.test(x))}
+function mdHtml2(text){
+  const lines=String(text||'').replace(/\r/g,'').split('\n');let html='',para=[];
+  const flush=()=>{if(!para.length)return;html+='<p>'+para.map(inlineMd2).join('<br>')+'</p>';para=[]};
+  for(let i=0;i<lines.length;){
+    const t=lines[i].trim();
+    if(t.includes('|')&&i+1<lines.length&&isSep2(lines[i+1])){flush();const h=tableCells2(lines[i]);i+=2;const rows=[];while(i<lines.length&&lines[i].trim()&&lines[i].includes('|')){rows.push(tableCells2(lines[i]));i++}html+='<table><thead><tr>'+h.map(x=>'<th>'+inlineMd2(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+h.map((_,j)=>'<td>'+inlineMd2(r[j]||'')+'</td>').join('')+'</tr>').join('')+'</tbody></table>';continue}
+    if(/^###\s+/.test(t)){flush();html+='<h3>'+inlineMd2(t.replace(/^###\s+/,''))+'</h3>';i++;continue}
+    if(/^##\s+/.test(t)){flush();html+='<h2>'+inlineMd2(t.replace(/^##\s+/,''))+'</h2>';i++;continue}
+    if(/^[-*]\s+/.test(t)){flush();const a=[];while(i<lines.length&&/^[-*]\s+/.test(lines[i].trim())){a.push(lines[i].trim().replace(/^[-*]\s+/,''));i++}html+='<ul>'+a.map(x=>'<li>'+inlineMd2(x)+'</li>').join('')+'</ul>';continue}
+    if(/^\d+[.)]\s+/.test(t)){flush();const a=[];while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){a.push(lines[i].trim().replace(/^\d+[.)]\s+/,''));i++}html+='<ol>'+a.map(x=>'<li>'+inlineMd2(x)+'</li>').join('')+'</ol>';continue}
+    if(!t||/^---+$/.test(t)){flush();i++;continue}
+    para.push(lines[i]);i++;
+  }flush();return html
+}
+function isTail2(h){return /^(자료\s*출처|출처|태그|함께\s*보면\s*좋은\s*글|참고\s*자료|관련\s*글)/i.test(String(h||'').replace(/^\d+[.)]\s*/,''))}
+function parseArticle2(){
+  let raw=$('articleBox2')?.value||'';let title=norm($('finalTitle')?.value)||state.workRow?.kw||current()?.keyword||'제목';
+  const lines=raw.replace(/\r/g,'').split('\n');const h1=lines.findIndex(x=>/^#\s+/.test(x.trim())&&!/^##/.test(x.trim()));if(h1>=0){title=lines[h1].trim().replace(/^#\s+/,'').trim();lines.splice(h1,1)}
+  const blocks=[];let cur={h:'__intro__',b:[]};
+  for(const line of lines){const m=line.match(/^##\s+(.+)$/);if(m){blocks.push(cur);cur={h:m[1].trim(),b:[]}}else if(line.trim()!=='---')cur.b.push(line)}blocks.push(cur);
+  const intro=(blocks.find(x=>x.h==='__intro__')?.b||[]).join('\n').trim();const sections=[];let faq='',tail=[];
+  for(const b of blocks.slice(1)){const h=b.h.trim(),body=b.b.join('\n').trim();if(/^목차$/i.test(h))continue;if(/^(FAQ|자주\s*묻는)/i.test(h)){faq=body;continue}if(isTail2(h)){tail.push('## '+h+'\n'+body);continue}sections.push({heading:h,body})}
+  return {title,intro,sections,faq,tail:tail.join('\n\n')}
+}
+function sections2(){return parseArticle2().sections.map((x,i)=>({key:'s'+(i+1),label:x.heading||('본문 '+(i+1))}))}
+function bodyImgs2(){return publishImages2.filter(x=>x.id!==publishHeroId2&&x.kind!=='hero')}
+function imgsFor2(k){return bodyImgs2().filter(x=>x.section===k)}
+function fileBase2(){return (state.workRow?.kw||current()?.keyword||'google-radar').trim().replace(/\s+/g,'-').replace(/[\\/:*?"<>|]/g,'').slice(0,60)||'image'}
+async function bitmap2(file){if('createImageBitmap'in window)return await createImageBitmap(file);return await new Promise((resolve,reject)=>{const img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(u);resolve(img)};img.onerror=reject;img.src=u})}
+async function convertImg2(file){
+  const bm=await bitmap2(file);let w=bm.width,h=bm.height;const sc=Math.min(1,1600/Math.max(w,h));w=Math.max(1,Math.round(w*sc));h=Math.max(1,Math.round(h*sc));const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(bm,0,0,w,h);if(bm.close)bm.close();const blob=await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('convert fail')),'image/jpeg',.88));return{id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),blob,url:URL.createObjectURL(blob),w,h,size:blob.size,filename:'',section:'unassigned',kind:'body'}
+}
+function renumber2(){const hero=publishImages2.find(x=>x.id===publishHeroId2);if(hero)hero.filename=fileBase2()+'-대표.jpg';bodyImgs2().forEach((x,i)=>x.filename=fileBase2()+'-'+String(i+1).padStart(2,'0')+'.jpg')}
+function assignSections2(){const ss=sections2();if(!ss.length){bodyImgs2().forEach(x=>x.section='unassigned');return}bodyImgs2().forEach((x,i)=>{if(!ss.some(s=>s.key===x.section))x.section=ss[i%ss.length].key})}
+async function addHero2(file){if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type))return;const img=await convertImg2(file);img.kind='hero';const old=publishImages2.find(x=>x.id===publishHeroId2);if(old){try{URL.revokeObjectURL(old.url)}catch{}publishImages2=publishImages2.filter(x=>x.id!==old.id)}publishImages2.unshift(img);publishHeroId2=img.id;renumber2();renderPublish2();publishFlash2('대표 이미지 변환 완료','ok')}
+async function addBodies2(list){const files=[...list].filter(f=>['image/png','image/jpeg','image/webp'].includes(f.type));if(!files.length)return;$('imageStatus2').textContent=files.length+'장 변환 중...';for(const f of files){try{publishImages2.push(await convertImg2(f))}catch(e){console.error(e)}}assignSections2();renumber2();renderPublish2();$('imageStatus2').textContent='본문 '+bodyImgs2().length+'장 준비 완료'}
+function removeImg2(id){const i=publishImages2.findIndex(x=>x.id===id);if(i<0)return;try{URL.revokeObjectURL(publishImages2[i].url)}catch{}if(publishHeroId2===id)publishHeroId2=null;publishImages2.splice(i,1);renumber2();renderPublish2()}
+function setHero2(id){const img=publishImages2.find(x=>x.id===id);if(!img)return;const old=publishImages2.find(x=>x.id===publishHeroId2);if(old&&old.id!==id&&old.kind==='hero'){try{URL.revokeObjectURL(old.url)}catch{}publishImages2=publishImages2.filter(x=>x.id!==old.id)}img.kind='hero';publishHeroId2=id;renumber2();assignSections2();renderPublish2()}
+function clearPublishImages2(){publishImages2.forEach(x=>{try{URL.revokeObjectURL(x.url)}catch{}});publishImages2=[];publishHeroId2=null;renderPublish2();$('imageStatus2').textContent=''}
+function downloadBlob2(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function downloadHero2(){const h=publishImages2.find(x=>x.id===publishHeroId2);if(h)downloadBlob2(h.blob,h.filename);else publishFlash2('대표 이미지가 없습니다','warn')}
+function renderPublish2(){
+  const p=parseArticle2();const hero=publishImages2.find(x=>x.id===publishHeroId2);
+  $('articleCount2').textContent=($('articleBox2')?.value||'').replace(/\s/g,'').length.toLocaleString('ko-KR')+'자';
+  $('heroPreview2').innerHTML=hero?'<div class="heroRow"><img src="'+hero.url+'"><div><b>'+pEsc(hero.filename)+'</b><small>'+hero.w+'×'+hero.h+' · 본문에는 삽입하지 않음</small><div class="miniBtns"><button onclick="downloadHero2()">저장</button><button onclick="removeImg2(\''+hero.id+'\')">삭제</button></div></div></div>':'<div class="empty">대표 이미지 없음</div>';
+  const ss=sections2();const bodies=bodyImgs2();
+  $('imageCards2').innerHTML=bodies.length?bodies.map(img=>'<div class="imgCard"><img src="'+img.url+'"><b>'+pEsc(img.filename)+'</b><small>'+img.w+'×'+img.h+' · '+Math.round(img.size/1024)+'KB</small><select onchange="changeSection2(\''+img.id+'\',this.value)">'+ss.map(sec=>'<option value="'+sec.key+'" '+(img.section===sec.key?'selected':'')+'>'+pEsc(sec.label)+'</option>').join('')+'<option value="unassigned" '+(img.section==='unassigned'?'selected':'')+'>미배치</option></select><div class="miniBtns"><button onclick="setHero2(\''+img.id+'\')">대표로</button><button onclick="removeImg2(\''+img.id+'\')">삭제</button></div></div>').join(''):'<div class="empty">본문 이미지가 없습니다.</div>';
+  let html='<h1>'+pEsc(p.title)+'</h1>'+mdHtml2(p.intro);
+  p.sections.forEach((sec,i)=>{html+='<h2>'+pEsc(sec.heading)+'</h2>';const imgs=imgsFor2('s'+(i+1));if(imgs.length)html+='<div class="imgRow">'+imgs.map(x=>'<img src="'+x.url+'" alt="">').join('')+'</div>';html+=mdHtml2(sec.body)});
+  if(p.faq)html+='<h2>FAQ</h2>'+mdHtml2(p.faq);if(p.tail)html+=mdHtml2(p.tail);$('publishPreview2').innerHTML=($('articleBox2')?.value||'').trim()?html:'<div class="empty">원고를 붙여넣으면 미리보기가 표시됩니다.</div>';
+  $('publishSummary2').textContent=p.title+' · H2 '+p.sections.length+'개 · 본문 이미지 '+bodies.length+'장'+(hero?' · 대표 1장':'');
+}
+function changeSection2(id,v){const x=publishImages2.find(i=>i.id===id);if(x){x.section=v;renderPublish2()}}
+function blobData2(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=rej;r.readAsDataURL(blob)})}
+async function embeddedMap2(){const m=new Map();await Promise.all(bodyImgs2().map(async x=>m.set(x.id,await blobData2(x.blob))));return m}
+function imageRowHtml2(imgs,map){if(!imgs.length)return'';let out='';for(let i=0;i<imgs.length;i+=3){const g=imgs.slice(i,i+3),w=(100/g.length).toFixed(3);out+='<table role="presentation" style="width:100%;border-collapse:separate;border-spacing:6px;margin:10px 0 18px;border:0"><tbody><tr>'+g.map(x=>'<td style="width:'+w+'%;padding:0;border:0;vertical-align:top"><img src="'+(map.get(x.id)||'')+'" alt="'+pEsc(x.filename)+'" style="display:block;width:100%;height:auto;border:0;margin:0"></td>').join('')+'</tr></tbody></table>'}return out}
+async function bundle2(){
+  const p=parseArticle2(),map=await embeddedMap2();let html=mdHtml2(p.intro),plain=stripMd2(p.intro);
+  p.sections.forEach((sec,i)=>{const imgs=imgsFor2('s'+(i+1));html+='<h2>'+pEsc(sec.heading)+'</h2>'+imageRowHtml2(imgs,map)+mdHtml2(sec.body);plain+='\n\n'+sec.heading+(imgs.length?'\n[이미지 '+imgs.length+'장]':'')+'\n\n'+stripMd2(sec.body)});
+  if(p.faq){html+='<h2>FAQ</h2>'+mdHtml2(p.faq);plain+='\n\nFAQ\n\n'+stripMd2(p.faq)}if(p.tail){html+=mdHtml2(p.tail);plain+='\n\n'+stripMd2(p.tail)}
+  return{title:p.title,html,plain:plain.trim()}
+}
+async function clipboardBundle2(){
+  const b=await bundle2();
+  if(window.ClipboardItem&&navigator.clipboard?.write){await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([b.html],{type:'text/html'}),'text/plain':new Blob([b.plain],{type:'text/plain'})})])}else await navigator.clipboard.writeText(b.plain);
+  return b
+}
+async function copyPublishTitle2(){const p=parseArticle2();try{await navigator.clipboard.writeText(p.title);publishFlash2('제목 복사 완료','ok')}catch{publishFlash2('제목 복사 실패','err')}}
+async function copyPublishBody2(){if(!($('articleBox2')?.value||'').trim())return publishFlash2('완성 원고를 먼저 넣어주세요','warn');try{await clipboardBundle2();publishFlash2('본문+이미지 묶음 복사 완료','ok')}catch(e){console.error(e);publishFlash2('본문 묶음 복사 실패','err')}}
+function saveEditorUrl(){const p=$('publishPlatform').value;if(p==='blogspot')localStorage.setItem('googleRadarBlogspotEditor',$('editorUrl').value);if(p==='wordpress')localStorage.setItem('googleRadarWordpressEditor',$('editorUrl').value)}
+function publishPlatformChanged(){
+  const p=$('publishPlatform').value,tf=$('tistoryChannelField'),ef=$('editorUrlField'),btn=$('sendPublishBtn2'),hint=$('publishModeHint');
+  if(p==='tistory'){tf.style.display='block';ef.style.display='none';btn.textContent='티스토리로 보내기';hint.textContent='티스토리는 Radar Helper가 제목·원고·본문 이미지를 새 글 화면에 자동 배치합니다. 최종 발행은 직접 확인 후 누릅니다.'}
+  else{tf.style.display='none';ef.style.display='block';const isB=p==='blogspot';$('editorUrl').value=localStorage.getItem(isB?'googleRadarBlogspotEditor':'googleRadarWordpressEditor')||(isB?'https://www.blogger.com/':'https://tmrw.co.kr/wp-admin/post-new.php');btn.textContent=(isB?'블로그스팟':'워드프레스')+'로 보내기';hint.textContent=(isB?'블로그스팟':'워드프레스')+'은 제목·본문·이미지 묶음을 클립보드에 준비한 뒤 편집기를 엽니다. 본문 영역에 한 번 붙여넣고 최종 발행은 직접 확인하세요.'}
+}
+let radarSeq2=0;
+function extReq2(type,payload={}){
+  return new Promise((resolve,reject)=>{const requestId='google-radar-'+Date.now()+'-'+(++radarSeq2),timer=setTimeout(()=>{window.removeEventListener('message',on);reject(new Error('Radar Tistory Helper 응답 없음'))},15000);function on(e){if(e.source!==window)return;const d=e.data;if(!d||d.source!=='DAUM_RADAR_TISTORY_EXTENSION'||d.type!=='ACK'||d.requestId!==requestId)return;clearTimeout(timer);window.removeEventListener('message',on);const r=d.response||{};r.ok?resolve(r):reject(new Error(r.error||'Helper 처리 실패'))}window.addEventListener('message',on);window.postMessage({source:'DAUM_RADAR_PAGE',type,payload,requestId},window.location.origin)})
+}
+function tistoryMeta2(imgs){
+  const p=parseArticle2(),host=$('tistoryChannel').value,label=$('tistoryChannel').selectedOptions[0]?.textContent||host;
+  return{source:'google-radar',targetHost:host,targetLabel:label,title:p.title,introHtml:mdHtml2(p.intro),tocHtml:p.sections.length?'<h2>목차</h2><ol>'+p.sections.map(x=>'<li>'+pEsc(x.heading.replace(/^(?:\s*\d+\s*[.)]\s*)+/,''))+'</li>').join('')+'</ol>':'',sections:p.sections.map(x=>({heading:x.heading,bodyHtml:mdHtml2(x.body)})),faqHtml:p.faq?'<h2>FAQ</h2>'+mdHtml2(p.faq):'',tailHtml:p.tail?mdHtml2(p.tail):'',images:imgs.map(x=>({id:x.id,filename:x.filename,section:x.section,w:x.w,h:x.h}))}
+}
+async function sendTistory2(){
+  assignSections2();renumber2();const imgs=bodyImgs2(),meta=tistoryMeta2(imgs),jobId='google-radar-'+Date.now();publishFlash2('티스토리 전송 묶음 준비 중...','warn');
+  try{await extReq2('RADAR_JOB_START',{jobId,meta});for(let i=0;i<imgs.length;i++){publishFlash2('이미지 전송 '+(i+1)+'/'+imgs.length,'warn');await extReq2('RADAR_JOB_IMAGE',{jobId,image:{id:imgs[i].id,filename:imgs[i].filename,dataUrl:await blobData2(imgs[i].blob),w:imgs[i].w,h:imgs[i].h}})}await extReq2('RADAR_JOB_COMMIT',{jobId});publishFlash2('티스토리 전송 완료 · 새 글 화면에서 확인하세요','ok')}catch(e){console.error(e);try{await extReq2('CANCEL_JOB',{jobId})}catch{}publishFlash2('티스토리 전송 실패 · '+e.message,'err')}
+}
+async function sendPublish2(){
+  if(!($('articleBox2')?.value||'').trim())return publishFlash2('완성 원고를 먼저 넣어주세요','warn');
+  const p=$('publishPlatform').value;if(p==='tistory')return sendTistory2();
+  try{await clipboardBundle2();const url=$('editorUrl').value.trim()||(p==='blogspot'?'https://www.blogger.com/':'https://tmrw.co.kr/wp-admin/post-new.php');saveEditorUrl();window.open(url,'_blank','noopener');publishFlash2((p==='blogspot'?'블로그스팟':'워드프레스')+' 편집기 열림 · 본문에 붙여넣으세요','ok')}catch(e){console.error(e);publishFlash2('전송 준비 실패 · '+e.message,'err')}
+}
+function initPublish2(){
+  const ta=$('articleBox2');if(ta)ta.addEventListener('input',()=>{assignSections2();renumber2();renderPublish2()});
+  const hd=$('heroDrop2'),hi=$('heroInput2'),bd=$('bodyDrop2'),bi=$('bodyInput2');
+  hd.addEventListener('click',()=>hi.click());hi.addEventListener('change',e=>addHero2(e.target.files?.[0]));
+  bd.addEventListener('click',()=>bi.click());bi.addEventListener('change',e=>addBodies2(e.target.files||[]));
+  ;[[hd,files=>addHero2(files?.[0])],[bd,files=>addBodies2(files||[])]].forEach(([el,fn])=>{['dragenter','dragover'].forEach(ev=>el.addEventListener(ev,e=>{e.preventDefault();el.classList.add('drag')}));['dragleave','drop'].forEach(ev=>el.addEventListener(ev,e=>{e.preventDefault();el.classList.remove('drag')}));el.addEventListener('drop',e=>fn(e.dataTransfer.files))});
+  publishPlatformChanged();renderPublish2();
+}
+initPublish2();
 
 document.querySelectorAll('.nav a').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav a').forEach(x=>x.classList.remove('active'));a.classList.add('active')}));
 loadGoogle();

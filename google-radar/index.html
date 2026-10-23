@@ -29,12 +29,12 @@ html{scroll-behavior:smooth}body{margin:0;font-family:Pretendard,-apple-system,B
     <a href="#writer"><span class="dot"></span>원고 작업실</a>
     <a href="#publish"><span class="dot"></span>발행 작업실</a>
   </div>
-  <div class="foot">Google Trends KR RSS 기반<br>글감레이더 검색량·발행량·경쟁비율 엔진 결합<br>RSS 순위는 '최근 감지순'이며 절대 인기순위가 아닙니다.</div>
+  <div class="foot">Google Trends KR RSS 기반<br>급상승 신호 → 검색수요 발굴 → 원고·발행<br>급상승어 자체를 글 제목으로 쓰지 않습니다.</div>
 </aside>
 
 <main class="main">
   <div class="top">
-    <div><h1>Google 실시간 글감 레이더</h1><div class="sub">Google에서 막 뜨기 시작한 검색어를 먼저 잡고, 글감레이더 방식으로 검색량·최근 발행량·경쟁비율을 다시 계산해 실제 쓸 글감만 골라냅니다.</div></div>
+    <div><h1>Google 실시간 글감 레이더</h1><div class="sub">Google 급상승어는 글감이 아니라 관심 신호로만 잡습니다. 그 신호에서 실제로 사람들이 이어서 검색하는 대표 키워드와 후속 검색의도를 찾아낸 뒤, 글감레이더 방식으로 검증합니다.</div></div>
     <div id="dataMode" class="badge">LOADING</div>
   </div>
 
@@ -56,17 +56,18 @@ html{scroll-behavior:smooth}body{margin:0;font-family:Pretendard,-apple-system,B
           <div><span>브라우저 등장</span><b id="appearanceCount">-</b></div>
         </div>
         <div id="newsMini" class="newsMini"></div>
-        <div class="actions" style="margin-top:16px"><button class="btn blue" onclick="analyzeSelected()">이 키워드 분석</button><button class="btn" onclick="openGoogleTrend()">Google Trends 보기 ↗</button></div>
+        <div class="field" style="margin-top:16px"><label>핵심 대상 · 사건 신호에서 실제 검색어를 확장할 기준</label><input id="coreSeed" class="input" placeholder="예: 김OO, 국정감사, 드라마명" oninput="this.dataset.edited='1'"></div>
+        <div class="actions" style="margin-top:12px"><button class="btn blue" onclick="analyzeSelected()">검색수요 발굴</button><button class="btn" onclick="openGoogleTrend()">Google Trends 보기 ↗</button></div>
       </div>
     </section>
 
     <section class="card full work" id="analysis">
-      <div class="head"><div><h3>글감 분석</h3><div class="small">글감레이더 엔진 · 월간검색수 + 최근30일 블로그 발행 + 경쟁비율 + Google 적합도</div></div><span id="analysisStatus" class="status">키워드를 선택한 뒤 분석하세요.</span></div>
+      <div class="head"><div><h3>검색수요 발굴</h3><div class="small">Google 급상승어는 신호로만 사용 · 핵심 대상 → 자동완성·연관검색 확장 → 검색량·공급량 검증 → 작성 / 테스트 / 패스 판정</div></div><span id="analysisStatus" class="status">급상승어를 선택한 뒤 검색수요를 발굴하세요.</span></div>
       <div class="body">
-        <div id="analysisSummary"><div class="empty">Google 급상승 키워드에서 ‘이 키워드 분석’을 누르면 표시됩니다.</div></div>
-        <div class="sectionTitle"><h4>블루오션 후보 TOP 6</h4><div class="rule"></div><span class="small">행을 누르면 원고 작업 키워드로 선택</span></div>
-        <div class="tableWrap"><table><thead><tr><th>키워드</th><th>판단</th><th>월간 검색</th><th>최근30일 블로그</th><th>경쟁비율</th><th>Google 적합</th><th>점수</th><th>판단 근거</th></tr></thead><tbody id="analysisTable"><tr><td colspan="8" class="loading">분석 대기</td></tr></tbody></table></div>
-        <div class="sectionTitle"><h4>Google·Naver 자동완성</h4><div class="rule"></div></div>
+        <div id="analysisSummary"><div class="empty">급상승어 자체가 아니라, 그 이슈에서 실제로 사람들이 이어서 검색하는 표현을 찾습니다.</div></div>
+        <div class="sectionTitle"><h4>실제 검색수요 후보 TOP 12</h4><div class="rule"></div><span class="small">30~100개 후보 중 수요가 확인된 상위 후보 · 행을 누르면 원고 키워드로 선택</span></div>
+        <div class="tableWrap"><table><thead><tr><th>키워드</th><th>역할</th><th>월간 검색</th><th>최근30일 블로그</th><th>경쟁비율</th><th>Google 자동완성</th><th>검색의도</th><th>점수</th><th>판단 근거</th></tr></thead><tbody id="analysisTable"><tr><td colspan="9" class="loading">수요 발굴 대기</td></tr></tbody></table></div>
+        <div class="sectionTitle"><h4>확장 검색어 풀</h4><div class="rule"></div><span id="expandedCount" class="small">0개</span></div>
         <div id="suggestChips" class="chips"><span class="empty">분석 후 표시됩니다.</span></div>
       </div>
     </section>
@@ -177,7 +178,7 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 const norm=s=>String(s||'').trim().replace(/\s+/g,' ');
 const key=s=>norm(s).replace(/\s+/g,'').toUpperCase();
 
-let state={trends:[],selected:0,fetchedAt:'',analysis:[],workRow:null,suggestions:[],hooks:[],newsSnippets:[],sampleTitles:[],selectedAxes:new Set(),selectedHooks:new Set()};
+let state={trends:[],selected:0,fetchedAt:'',analysis:[],workRow:null,suggestions:[],hooks:[],newsSnippets:[],sampleTitles:[],selectedAxes:new Set(),selectedHooks:new Set(),demand:null};
 let publishImages2=[],publishHeroId2=null;
 
 function current(){return state.trends[state.selected]||null}
@@ -229,7 +230,19 @@ function renderTrends(){
 }
 function pickTrend(encoded){
   const kw=decodeURIComponent(encoded),i=state.trends.findIndex(x=>x.keyword===kw); if(i<0)return;
-  state.selected=i; renderTrends();renderSelected();
+  state.selected=i;state.demand=null;state.analysis=[];state.workRow=null;
+  const coreEl=$('coreSeed');if(coreEl){coreEl.dataset.edited='';coreEl.value=''}
+  renderTrends();renderSelected();
+}
+const SIGNAL_GENERIC_TERMS=new Set(['결혼','결혼식','발표','공개','논란','이슈','속보','사망','별세','부상','승소','패소','국감','국정감사','프로필','나이','학력','남편','아내','부인','배우자','드라마','영화','예능','방송','출연','출연진','시즌','결승','우승','경기','결과','중계','인터뷰','입장','해명','공식','확정','화제','근황','오늘','내일']);
+function signalTokens(v){return norm(String(v||'').replace(/[·|,()[\]{}:;!?]/g,' ')).split(/\s+/).filter(t=>t.length>=2&&!/^20\d{2}$/.test(t)&&!/^\d+[일월년회차]?$/.test(t))}
+function extractCoreSignal(v){
+  const toks=signalTokens(v),kept=toks.filter(t=>!SIGNAL_GENERIC_TERMS.has(t));
+  if(!kept.length)return norm(v);
+  if(kept.length===1)return kept[0];
+  const tailGeneric=toks.some(t=>SIGNAL_GENERIC_TERMS.has(t));
+  if(tailGeneric)return kept.slice(0,Math.min(2,kept.length)).join(' ');
+  return kept.slice(0,Math.min(2,kept.length)).join(' ');
 }
 function renderSelected(){
   const x=current(); if(!x)return;
@@ -238,6 +251,7 @@ function renderSelected(){
   $('startedAt').textContent=relativeTime(x.started_at);
   $('newsCount').textContent=(x.news||[]).length+'건';
   $('appearanceCount').textContent=appearance(x.keyword)+'회';
+  const coreEl=$('coreSeed');if(coreEl&&!coreEl.dataset.edited)coreEl.value=extractCoreSignal(x.keyword);
   $('newsMini').innerHTML=(x.news||[]).slice(0,3).map(n=>`<a href="${esc(n.url||'#')}" target="_blank" rel="noopener"><b>${esc(n.title||'관련 기사')}</b><span>${esc(n.source||'')}</span></a>`).join('')||'<div class="empty">RSS에 연결된 관련 뉴스가 없습니다.</div>';
 }
 function toggleHistory(){$('historyPanel').classList.toggle('on')}
@@ -267,68 +281,145 @@ function googleFit(row){
   const intent=inferIntent(row.kw),info=['policy','finance','issue','howto','sports','health'].includes(intent.name);
   let b=info?7:0;if(GOOGLE_WORDS.some(w=>row.kw.includes(w)))b+=5;if(b>=10)return['구글 강세','green',b];if(b>=5)return['구글 양호','yellow',b];return['일반형','',b]
 }
-function classify(row){const r=ratio(row);if(row.monthly>=500&&r<.5)return'즉시 글감';if(row.monthly>=300&&r<1)return'우선 후보';if(row.monthly>=300&&r<2)return'차순위 글감';if(row.monthly>0)return'관찰키워드';return'API 수치 부족'}
-function calculate(row,isExact){
-  const intent=inferIntent(row.kw), gf=googleFit(row);
-  const cpc=CPC_WORDS.some(w=>row.kw.includes(w))?5:0;
-  const clarity=Math.min(10,intent.terms.length*4);
-  const trend=isExact?10:4;
-  row.score=Math.min(100,scoreMonthly(row.monthly)+scoreContent(row.blog)+scoreRatio(row)+clarity+gf[2]+cpc+trend);
-  row.grade=classify(row);row.googleFit=gf;
-  row.reason=`월간 검색 ${fmt(row.monthly)}회, 최근 30일 블로그 ${fmt(row.blog)}건, 경쟁비율 ${row.monthly?ratio(row).toFixed(2):'-'}입니다.`+(isExact?' Google 급상승 원키워드라 실시간 신호를 추가 반영했습니다.':' 관련 검색 수요 후보입니다.');
+const INTENT_BUCKETS=[
+  ['프로필',['프로필','나이','학력','고향','키','가족','남편','아내','배우자','인스타','필모그래피','출연작']],
+  ['현재이슈',['결혼','사망','별세','논란','수사','재판','발표','입장','해명','근황','부상','이적']],
+  ['방법·조건',['방법','하는법','신청','대상','조건','자격','조회','발급','등록','준비물','가격','비용']],
+  ['일정·결과',['일정','중계','결과','순위','우승','결승','몇부작','방영일','공개일','재방송']],
+  ['설명·비교',['뜻','원인','이유','차이','비교','정리','후기','줄거리','결말','원작']]
+];
+function intentBucket(kw){for(const [name,terms] of INTENT_BUCKETS){if(terms.some(t=>kw.includes(t)))return name}return '일반'}
+function relatedToCore(kw,core,signal){
+  const k=key(kw),ct=signalTokens(core),st=signalTokens(signal);
+  if(!k)return false;
+  if(ct.some(t=>k.includes(key(t))))return true;
+  const strong=st.filter(t=>!SIGNAL_GENERIC_TERMS.has(t));
+  return strong.some(t=>k.includes(key(t)));
+}
+function demandScore(row){
+  let s=0;
+  if(row.monthly>=10000)s+=35;else if(row.monthly>=3000)s+=32;else if(row.monthly>=1000)s+=28;else if(row.monthly>=500)s+=23;else if(row.monthly>=300)s+=18;else if(row.monthly>=100)s+=11;else if(row.monthly>0)s+=4;
+  s+=Math.min(18,(row.googleHits||0)*6);
+  s+=Math.min(10,(row.seedHits||0)*3);
+  if(row.monthly>0){
+    const r=ratio(row);if(row.blog<50)s+=18;else if(r<.3)s+=16;else if(r<.7)s+=13;else if(r<1.2)s+=10;else if(r<2)s+=6;else if(r<5)s+=2;
+  }
+  if(intentBucket(row.kw)!=='일반')s+=8;
+  return Math.min(100,s);
+}
+function classifyDemand(row){
+  if(row.monthly>=1000&&(row.googleHits||0)>=1)return '대표 후보';
+  if(row.monthly>=300&&(row.googleHits||0)>=1)return '확장 후보';
+  if(row.monthly>=300)return '수요 후보';
+  if((row.googleHits||0)>=1)return '검색 표현';
+  return '참고';
+}
+function calculate(row){
+  row.googleFit=googleFit(row);row.intent=intentBucket(row.kw);row.score=demandScore(row);row.grade=classifyDemand(row);
+  row.reason='월검색 '+fmt(row.monthly)+'회 · Google 자동완성 '+(row.googleHits||0)+'회 · 최근30일 블로그 '+fmt(row.blog)+'건'+(row.monthly?' · 경쟁비율 '+ratio(row).toFixed(2):'');
   return row;
+}
+function decisionForDemand(rows,expandedCount,signalTraffic){
+  const rep=rows[0]||null;
+  const depth=rows.filter(r=>r.monthly>=100&&(r.googleHits||0)>0).length;
+  const strong=rows.filter(r=>r.monthly>=500&&(r.googleHits||0)>0).length;
+  const intents=new Set(rows.filter(r=>r.monthly>=100).map(r=>r.intent).filter(x=>x&&x!=='일반'));
+  const gt=trafficValue(signalTraffic);
+  let code='PASS',label='패스',cls='red',reason='급상승 관심은 있지만 이어지는 검색 표현이 얕습니다. 이 신호만으로 글을 쓰지 않는 편이 낫습니다.';
+  if(rep&&rep.monthly>=1000&&depth>=3&&strong>=1&&intents.size>=2){code='WRITE';label='작성';cls='green';reason='대표 키워드뿐 아니라 여러 후속 검색의도가 확인됩니다. 급상승 신호를 실제 검색수요로 전환할 수 있습니다.'}
+  else if(rep&&rep.monthly>=300&&depth>=2){code='TEST';label='테스트';cls='yellow';reason='검색수요는 있으나 깊이가 아직 얕습니다. 대표 키워드 중심으로 빠르게 테스트하고 유입을 확인하는 편이 좋습니다.'}
+  const interestOnly=gt>=5000&&(depth<2||!rep||rep.monthly<300);
+  if(interestOnly){code='PASS';label='관심 신호형';cls='red';reason='Google 급상승 규모에 비해 자동완성·후속 검색량이 약합니다. 사람들이 이슈를 보기는 하지만 별도 검색으로 깊게 파고드는 형태는 아닐 가능성이 큽니다.'}
+  return{code,label,cls,reason,depth,strong,intentCount:intents.size,expandedCount,rep,interestOnly};
 }
 async function fetchJson(url){const r=await fetch(url,{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'API 오류');return j}
 async function analyzeSelected(){
   const x=current();if(!x)return;
-  $('analysisStatus').textContent='분석 중...';$('analysisTable').innerHTML='<tr><td colspan="8" class="loading">검색량·발행량 계산 중...</td></tr>';
+  const core=norm($('coreSeed')?.value)||extractCoreSignal(x.keyword);
+  if($('coreSeed'))$('coreSeed').value=core;
+  $('analysisStatus').textContent='핵심 대상에서 실제 검색어 확장 중...';
+  $('analysisTable').innerHTML='<tr><td colspan="9" class="loading">자동완성·연관검색어를 30~100개까지 확장하고 있습니다...</td></tr>';
   try{
-    const [ad,suggest,hunt]=await Promise.all([
-      fetchJson('/api/searchad?keyword='+encodeURIComponent(x.keyword)),
-      fetchJson('/api/suggest?source=both&keyword='+encodeURIComponent(x.keyword)),
-      fetchJson('/api/titlehunt?keyword='+encodeURIComponent(x.keyword))
+    const [signalAd,coreAd,signalSug,coreSug,hunt]=await Promise.all([
+      fetchJson('/api/searchad?keyword='+encodeURIComponent(x.keyword)).catch(()=>({related:[],monthlyTotal:0})),
+      core===x.keyword?Promise.resolve(null):fetchJson('/api/searchad?keyword='+encodeURIComponent(core)).catch(()=>({related:[],monthlyTotal:0})),
+      fetchJson('/api/suggest?source=both&keyword='+encodeURIComponent(x.keyword)).catch(()=>({suggestions:[],detailed:[]})),
+      core===x.keyword?Promise.resolve(null):fetchJson('/api/suggest?source=both&keyword='+encodeURIComponent(core)).catch(()=>({suggestions:[],detailed:[]})),
+      fetchJson('/api/titlehunt?keyword='+encodeURIComponent(x.keyword)).catch(()=>({hooks:[],newsSnippets:[],sampleTitles:[]}))
     ]);
-    state.suggestions=Array.isArray(suggest.suggestions)?suggest.suggestions:[];
+    const ad0=coreAd||signalAd,sug0=coreSug||signalSug;
     state.hooks=Array.isArray(hunt.hooks)?hunt.hooks:[];
     state.newsSnippets=Array.isArray(hunt.newsSnippets)?hunt.newsSnippets:[];
     state.sampleTitles=Array.isArray(hunt.sampleTitles)?hunt.sampleTitles:[];
 
-    const words=[x.keyword];
-    const adMap=new Map();
-    adMap.set(key(x.keyword),{monthly:ad.monthlyTotal||0,pc:ad.monthlyPc||0,mobile:ad.monthlyMobile||0});
-    for(const r of (ad.related||[])){
-      const k=norm(r.relKeyword);if(!k||key(k)===key(x.keyword))continue;
-      adMap.set(key(k),{monthly:r.monthlyTotal||0,pc:r.monthlyPc||0,mobile:r.monthlyMobile||0});
-    }
-    const rel=[...(ad.related||[])].filter(r=>key(r.relKeyword)!==key(x.keyword)).sort((a,b)=>(b.monthlyTotal||0)-(a.monthlyTotal||0));
-    for(const r of rel){if(words.length>=6)break;const k=norm(r.relKeyword);if(k&&!words.some(w=>key(w)===key(k)))words.push(k)}
-    for(const s of state.suggestions){if(words.length>=6)break;if(s&&!words.some(w=>key(w)===key(s)))words.push(s)}
+    const cmap=new Map();
+    const ensure=(kw)=>{kw=norm(kw);if(!kw)return null;const k=key(kw);if(!cmap.has(k))cmap.set(k,{kw,monthly:0,pc:0,mobile:0,blog:0,capped:false,googleHits:0,naverSuggestHits:0,seedHits:0});return cmap.get(k)};
+    const addAd=(ad,seed)=>{
+      if(!ad)return;
+      const exact=ensure(seed);if(exact){exact.monthly=Math.max(exact.monthly,ad.monthlyTotal||0);exact.pc=Math.max(exact.pc,ad.monthlyPc||0);exact.mobile=Math.max(exact.mobile,ad.monthlyMobile||0);exact.seedHits++}
+      for(const r of (ad.related||[])){const row=ensure(r.relKeyword);if(!row)continue;row.monthly=Math.max(row.monthly,r.monthlyTotal||0);row.pc=Math.max(row.pc,r.monthlyPc||0);row.mobile=Math.max(row.mobile,r.monthlyMobile||0);row.seedHits++}
+    };
+    const addSug=(obj)=>{
+      for(const d of (obj?.detailed||[])){const row=ensure(d.keyword);if(!row)continue;if(d.source==='google')row.googleHits++;else row.naverSuggestHits++}
+      for(const w of (obj?.suggestions||[]))ensure(w);
+    };
+    ensure(x.keyword);ensure(core);addAd(signalAd,x.keyword);addAd(coreAd,core);addSug(signalSug);addSug(coreSug);
 
-    const rows=await Promise.all(words.map(async(kw,i)=>{
-      let m=adMap.get(key(kw));
-      if(!m){try{const a=await fetchJson('/api/searchad?keyword='+encodeURIComponent(kw));m={monthly:a.monthlyTotal||0,pc:a.monthlyPc||0,mobile:a.monthlyMobile||0}}catch{m={monthly:0,pc:0,mobile:0}}}
-      let k={recentBlogTotal:0,recentBlogCapped:false};
-      try{k=await fetchJson('/api/keyword?keyword='+encodeURIComponent(kw))}catch{}
-      return calculate({kw,monthly:m.monthly||0,pc:m.pc||0,mobile:m.mobile||0,blog:k.recentBlogTotal||0,capped:!!k.recentBlogCapped},i===0)
+    // High-demand related terms become second-hop anchors. This is what turns a trend signal into a search-demand cluster.
+    const anchors=[...cmap.values()]
+      .filter(r=>relatedToCore(r.kw,core,x.keyword)&&key(r.kw)!==key(core)&&key(r.kw)!==key(x.keyword))
+      .sort((a,b)=>b.monthly-a.monthly)
+      .slice(0,3)
+      .map(r=>r.kw);
+
+    const second=await Promise.all(anchors.flatMap(anchor=>[
+      fetchJson('/api/searchad?keyword='+encodeURIComponent(anchor)).then(v=>({type:'ad',anchor,v})).catch(()=>null),
+      fetchJson('/api/suggest?source=google&keyword='+encodeURIComponent(anchor)).then(v=>({type:'sug',anchor,v})).catch(()=>null)
+    ]));
+    for(const item of second.filter(Boolean)){if(item.type==='ad')addAd(item.v,item.anchor);else addSug(item.v)}
+
+    let candidates=[...cmap.values()].filter(r=>relatedToCore(r.kw,core,x.keyword));
+    // Preserve the signal/core rows for comparison even when a heuristic misses them.
+    for(const special of [x.keyword,core]){const r=cmap.get(key(special));if(r&&!candidates.some(v=>key(v.kw)===key(r.kw)))candidates.push(r)}
+    candidates.sort((a,b)=>(b.monthly-a.monthly)||((b.googleHits||0)-(a.googleHits||0)));
+
+    const validate=candidates.slice(0,12);
+    await Promise.all(validate.map(async row=>{
+      try{const k=await fetchJson('/api/keyword?keyword='+encodeURIComponent(row.kw));row.blog=k.recentBlogTotal||0;row.capped=!!k.recentBlogCapped}catch{}
+      calculate(row);
     }));
-    rows.sort((a,b)=>b.score-a.score);state.analysis=rows;
-    state.workRow=rows.find(r=>key(r.kw)===key(x.keyword))||rows[0];
-    renderAnalysis();await loadWriterData(state.workRow.kw);document.getElementById('analysis').scrollIntoView({behavior:'smooth'});
-    $('analysisStatus').textContent='분석 완료';
-  }catch(e){console.error(e);$('analysisStatus').textContent='분석 실패 · '+e.message;$('analysisTable').innerHTML='<tr><td colspan="8" class="loading">분석에 실패했습니다.</td></tr>'}
+    validate.sort((a,b)=>b.score-a.score);
+    state.analysis=validate;
+    state.suggestions=candidates.map(r=>r.kw).slice(0,80);
+    state.demand=decisionForDemand(validate,candidates.length,x.traffic);
+    state.demand.core=core;state.demand.signal=x.keyword;state.demand.anchors=anchors;
+    state.workRow=state.demand.rep||validate[0]||null;
+    renderAnalysis();
+    if(state.workRow)await loadWriterData(state.workRow.kw);
+    document.getElementById('analysis').scrollIntoView({behavior:'smooth'});
+    $('analysisStatus').textContent='수요 발굴 완료 · 후보 '+candidates.length+'개';
+  }catch(e){
+    console.error(e);$('analysisStatus').textContent='수요 발굴 실패 · '+e.message;
+    $('analysisTable').innerHTML='<tr><td colspan="9" class="loading">검색수요 발굴에 실패했습니다.</td></tr>';
+  }
 }
-function gradeCls(g){if(['즉시 글감','우선 후보'].includes(g))return'green';if(g==='차순위 글감')return'yellow';if(g==='API 수치 부족')return'red';return''}
+function gradeCls(g){if(g==='대표 후보')return'green';if(['확장 후보','수요 후보'].includes(g))return'yellow';if(g==='참고')return'red';return'blue'}
 function renderAnalysis(){
-  const rows=state.analysis;if(!rows.length)return;const top=rows[0];
-  $('analysisSummary').innerHTML=`<div class="analysisHero"><div class="scoreBox"><strong>${top.score}</strong><span>글감점수</span></div><div><h2>${esc(top.kw)}, ${esc(top.grade)}</h2><p>${esc(top.reason)}</p><div class="metrics"><span class="pill ${gradeCls(top.grade)}">${esc(top.grade)}</span><span class="pill blue">Google 급상승 기반</span><span class="pill ${top.googleFit[1]}">${esc(top.googleFit[0])}</span></div></div></div>`;
-  $('analysisTable').innerHTML=rows.map((r,i)=>`<tr class="${state.workRow&&key(state.workRow.kw)===key(r.kw)?'pick':''}" onclick="pickAnalysis(${i})"><td><b>${esc(r.kw)}</b></td><td><span class="pill ${gradeCls(r.grade)}">${esc(r.grade)}</span></td><td>${fmt(r.monthly)}</td><td>${fmt(r.blog)}${r.capped?'+':''}</td><td>${r.monthly?ratio(r).toFixed(2):'-'}</td><td><span class="pill ${r.googleFit[1]}">${esc(r.googleFit[0])}</span></td><td><b>${r.score}</b></td><td class="reason">${esc(r.reason)}</td></tr>`).join('');
-  $('suggestChips').innerHTML=state.suggestions.slice(0,24).map(s=>`<button class="chip" onclick="useSuggestion('${encodeURIComponent(s)}')">${esc(s)}</button>`).join('')||'<span class="empty">자동완성 없음</span>';
+  const rows=state.analysis,d=state.demand;if(!rows.length||!d)return;const top=d.rep||rows[0];
+  const labelClass=d.cls==='green'?'green':d.cls==='yellow'?'yellow':'red';
+  $('analysisSummary').innerHTML='<div class="analysisHero"><div class="scoreBox"><strong>'+top.score+'</strong><span>검색수요 점수</span></div><div><h2>'+esc(d.label)+' · 대표 키워드 '+esc(top.kw)+'</h2><p>'+esc(d.reason)+'</p><div class="metrics"><span class="pill '+labelClass+'">'+esc(d.label)+'</span><span class="pill blue">원 신호 '+esc(d.signal)+'</span><span class="pill">핵심 대상 '+esc(d.core)+'</span><span class="pill">확장 '+d.expandedCount+'개</span><span class="pill">유효 검색어 '+d.depth+'개</span><span class="pill">강한 검색어 '+d.strong+'개</span><span class="pill">의도 '+d.intentCount+'종</span></div></div></div>';
+  $('analysisTable').innerHTML=rows.map((r,i)=>'<tr class="'+(state.workRow&&key(state.workRow.kw)===key(r.kw)?'pick':'')+'" onclick="pickAnalysis('+i+')"><td><b>'+esc(r.kw)+'</b></td><td><span class="pill '+gradeCls(r.grade)+'">'+esc(r.grade)+'</span></td><td>'+fmt(r.monthly)+'</td><td>'+fmt(r.blog)+(r.capped?'+':'')+'</td><td>'+(r.monthly?ratio(r).toFixed(2):'-')+'</td><td><b>'+(r.googleHits||0)+'회</b></td><td>'+esc(r.intent)+'</td><td><b>'+r.score+'</b></td><td class="reason">'+esc(r.reason)+'</td></tr>').join('');
+  $('suggestChips').innerHTML=state.suggestions.slice(0,60).map(s=>'<button class="chip" onclick="useSuggestion(\''+encodeURIComponent(s)+'\')">'+esc(s)+'</button>').join('')||'<span class="empty">확장 검색어 없음</span>';
+  if($('expandedCount'))$('expandedCount').textContent=state.suggestions.length+'개';
 }
 async function pickAnalysis(i){
   const r=state.analysis[i];if(!r)return;state.workRow=r;renderAnalysis();await loadWriterData(r.kw);document.getElementById('writer').scrollIntoView({behavior:'smooth'});
 }
 async function useSuggestion(enc){
-  const kw=decodeURIComponent(enc);state.workRow={kw,monthly:0,blog:0,score:0,grade:'자동완성 후보',googleFit:['구글 후보','blue',0]};await loadWriterData(kw);document.getElementById('writer').scrollIntoView({behavior:'smooth'});
+  const kw=decodeURIComponent(enc);
+  const found=state.analysis.find(r=>key(r.kw)===key(kw));
+  state.workRow=found||{kw,monthly:0,blog:0,score:0,grade:'확장 검색어',googleFit:['구글 후보','blue',0],intent:intentBucket(kw),googleHits:0};
+  await loadWriterData(kw);document.getElementById('writer').scrollIntoView({behavior:'smooth'});
 }
 
 const AXES={
@@ -374,48 +465,41 @@ function chooseTitle(enc){$('finalTitle').value=decodeURIComponent(enc);$('final
 function buildPrompt(){
   const trend=current(),row=state.workRow||state.analysis[0]||{kw:trend?.keyword||'',monthly:0,blog:0,score:0,grade:'-'};
   const title=norm($('finalTitle').value)||row.kw;
-  const news=state.newsSnippets.slice(0,5).map((n,i)=>`${i+1}. ${n.title} — ${n.description||''} (${n.source||''})`).join('\n');
-  const sugg=state.suggestions.slice(0,12).join(', ');
-  $('promptBox').value=`# Google 검색 대응 블로그 원고 작성 의뢰
-
-## 메인 키워드 (Exact Keyword)
-${row.kw}
-
-## 최종 제목 — 반드시 그대로 사용
-${title}
-
-## Google 실시간 신호
-- Google Trends 급상승 검색어에서 발견
-- 급상승 검색량 버킷: ${trend?.traffic||'-'}
-- 감지 시점: ${trend?.started_at||'-'}
-- RSS 관련 뉴스: ${(trend?.news||[]).length}건
-
-## 글감레이더 분석
-- 월간 검색수 참고: ${fmt(row.monthly||0)}회
-- 최근 30일 블로그 발행: ${fmt(row.blog||0)}건
-- 경쟁비율: ${row.monthly?ratio(row).toFixed(2):'-'}
-- 글감점수: ${row.score||0}
-- 판단: ${row.grade||'-'}
-- Google 적합: ${row.googleFit?.[0]||'-'}
-
-## 검색 확장어
-${sugg||'(없음)'}
-
-## 최신 검색 뉴스 근거
-${news||'(없음 — 작성 전 최신 검색으로 사실관계를 다시 확인)'}
-
-## 작성 원칙
-- Google 검색 유입을 목표로 한다.
-- 도입부 첫 1~2문장에서 검색자가 원하는 답을 바로 제시한다.
-- ## 목차 뒤 H2 3~5개로 구성하되 정보량에 따라 자율적으로 정한다.
-- 각 H2 첫 문단은 2~3문장만 읽어도 답이 되게 쓴다.
-- 날짜·수치·조건·비교가 있으면 표를 사용한다.
-- 최신 이슈는 최근 24시간 자료를 우선 확인하고, 확인되지 않은 내용은 추측하지 않는다.
-- "알아보겠습니다", "살펴보겠습니다", "관심이 높아지고 있습니다", "정리해보면", "이상으로" 같은 상투어를 쓰지 않는다.
-- 제목을 다시 만들지 말고 위 최종 제목을 그대로 사용한다.
-- 약 3,000자 내외의 완성 원고를 작성한다.
-- FAQ는 검색 의도상 필요할 때 3~5개 포함한다.`;
+  const news=state.newsSnippets.slice(0,5).map((n,i)=>(i+1)+'. '+n.title+' — '+(n.description||'')+' ('+(n.source||'')+')').join('\n');
+  const sugg=state.suggestions.slice(0,20).join(', ');
+  const d=state.demand||{};
+  $('promptBox').value='# Google 검색 대응 블로그 원고 작성 의뢰\n\n'
++'## Google 급상승 원 신호\n'+(trend?.keyword||'-')+'\n'
++'- 이 표현은 사건을 발견한 신호일 뿐, 제목이나 메인 키워드에 그대로 넣을 필요가 없다.\n'
++'- 급상승 검색량 버킷: '+(trend?.traffic||'-')+'\n'
++'- 검색수요 판정: '+(d.label||'-')+'\n'
++'- 핵심 대상: '+(d.core||'-')+'\n'
++'- 확장 후보: '+(d.expandedCount||0)+'개 / 유효 검색어: '+(d.depth||0)+'개\n\n'
++'## 메인 키워드 (검색수요 검증 후 선택)\n'+row.kw+'\n\n'
++'## 최종 제목 — 반드시 그대로 사용\n'+title+'\n\n'
++'## 검색수요 검증\n'
++'- 월간 검색수 참고: '+fmt(row.monthly||0)+'회\n'
++'- Google 자동완성 반복: '+(row.googleHits||0)+'회\n'
++'- 최근 30일 블로그 발행: '+fmt(row.blog||0)+'건\n'
++'- 경쟁비율: '+(row.monthly?ratio(row).toFixed(2):'-')+'\n'
++'- 검색수요 점수: '+(row.score||0)+'\n'
++'- 검색의도: '+(row.intent||intentBucket(row.kw))+'\n\n'
++'## 확장 검색어\n'+(sugg||'(없음)')+'\n\n'
++'## 최신 검색 뉴스 근거\n'+(news||'(없음 — 작성 전 최신 검색으로 사실관계를 다시 확인)')+'\n\n'
++'## 작성 원칙\n'
++'- Google 급상승 원문은 이슈 발견용 신호로만 사용한다. 검색자가 실제로 입력하는 메인 키워드와 확장 검색어를 중심으로 쓴다.\n'
++'- 도입부 첫 1~2문장에서 메인 키워드의 검색 의도에 바로 답한다.\n'
++'- 원 신호와 메인 키워드가 다르면 억지로 원 신호 문구를 제목에 반복하지 않는다.\n'
++'- ## 목차 뒤 H2 3~5개로 구성하되, 위 확장 검색어 중 실제로 서로 다른 검색 의도를 H2에 반영한다.\n'
++'- 각 H2 첫 문단은 2~3문장만 읽어도 답이 되게 쓴다.\n'
++'- 날짜·수치·조건·비교가 있으면 표를 사용한다.\n'
++'- 최신 이슈는 최근 24시간 자료를 우선 확인하고, 확인되지 않은 내용은 추측하지 않는다.\n'
++'- "알아보겠습니다", "살펴보겠습니다", "관심이 높아지고 있습니다", "정리해보면", "이상으로" 같은 상투어를 쓰지 않는다.\n'
++'- 제목을 다시 만들지 말고 위 최종 제목을 그대로 사용한다.\n'
++'- 약 3,000자 내외의 완성 원고를 작성한다.\n'
++'- FAQ는 검색 의도상 필요할 때 3~5개 포함한다.';
 }
+
 async function copyPrompt(){buildPrompt();await navigator.clipboard.writeText($('promptBox').value);$('writerStatus').textContent='프롬프트 복사 완료';setTimeout(()=>$('writerStatus').textContent='',1500)}
 
 

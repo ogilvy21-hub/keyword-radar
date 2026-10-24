@@ -88,28 +88,27 @@ export default async function handler(req, res) {
     const exact =
       keywordList.find(item =>
         String(item.relKeyword || '').replace(/\s+/g, '').toUpperCase() === exactKeywordCompact
-      ) ||
-      keywordList[0] ||
-      null;
+      ) || null;
 
-    if (!exact) {
-      return res.status(200).json({
-        keyword,
-        relKeyword: keyword,
-        monthlyPc: 0,
-        monthlyMobile: 0,
-        monthlyTotal: 0,
-        pcCtr: 0,
-        mobileCtr: 0,
-        competition: '',
-        plAvgDepth: 0,
-        related: []
-      });
+    function measurement(item) {
+      const read = value => {
+        if (value == null || value === '') return {value:null,status:'unavailable'};
+        if (String(value).includes('<')) return {value:null,status:'low_volume',upper:9};
+        const n=Number(String(value).replace(/,/g,''));
+        return Number.isFinite(n) && n>=0 ? {value:n,status:'exact'} : {value:null,status:'unavailable'};
+      };
+      const pc=read(item.monthlyPcQcCnt),mo=read(item.monthlyMobileQcCnt);
+      const status=pc.status==='unavailable'||mo.status==='unavailable'?'unavailable':pc.status==='low_volume'||mo.status==='low_volume'?'low_volume':'exact';
+      return {monthlyPc:pc.value,monthlyMobile:mo.value,monthlyTotal:status==='exact'?pc.value+mo.value:null,
+        pcStatus:pc.status,mobileStatus:mo.status,volumeStatus:status,
+        monthlyUpperBound:status==='low_volume'?(pc.value??pc.upper)+(mo.value??mo.upper):null};
     }
-
-    const monthlyPc = toNumber(exact.monthlyPcQcCnt);
-    const monthlyMobile = toNumber(exact.monthlyMobileQcCnt);
-
+    const related=keywordList.slice(0,20).map(item=>({relKeyword:item.relKeyword,...measurement(item),competition:item.compIdx||''}));
+    if (!exact) {
+      res.setHeader('Cache-Control','s-maxage=600');
+      return res.status(200).json({keyword,relKeyword:null,exactMatched:false,volumeStatus:'not_found',monthlyPc:null,monthlyMobile:null,monthlyTotal:null,related});
+    }
+    const measured=measurement(exact);
     // 월간 검색량은 분 단위 실시간 데이터가 아니므로 CDN에서 6시간 캐시한다.
     // 같은 키워드/조합을 반복 분석할 때 네이버 검색광고 API 재호출을 줄인다.
     res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=21600');
@@ -117,25 +116,13 @@ export default async function handler(req, res) {
     return res.status(200).json({
       keyword,
       relKeyword: exact.relKeyword,
-      monthlyPc,
-      monthlyMobile,
-      monthlyTotal: monthlyPc + monthlyMobile,
+      exactMatched: true,
+      ...measured,
       pcCtr: toNumber(exact.monthlyAvePcCtr),
       mobileCtr: toNumber(exact.monthlyAveMobileCtr),
       competition: exact.compIdx || '',
       plAvgDepth: toNumber(exact.plAvgDepth),
-      related: keywordList.slice(0, 20).map(item => {
-        const relatedPc = toNumber(item.monthlyPcQcCnt);
-        const relatedMobile = toNumber(item.monthlyMobileQcCnt);
-
-        return {
-          relKeyword: item.relKeyword,
-          monthlyPc: relatedPc,
-          monthlyMobile: relatedMobile,
-          monthlyTotal: relatedPc + relatedMobile,
-          competition: item.compIdx || ''
-        };
-      })
+      related
     });
   } catch (error) {
     console.error(error);
@@ -146,3 +133,4 @@ export default async function handler(req, res) {
     });
   }
 }
+

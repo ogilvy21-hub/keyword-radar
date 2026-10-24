@@ -314,12 +314,18 @@ function classifyDemand(row){
   if((row.googleHits||0)>=1)return '검색 표현';
   return '참고';
 }
+function verifiedRow(r){return r.volumeStatus==='exact'&&r.supplyStatus==='complete'&&Number.isFinite(r.blog)&&r.blog>=0}
+function volumeText(r){return r.volumeStatus==='exact'?fmt(r.monthly):r.volumeStatus==='low_volume'?'소량 (정확값 미제공)':'미확인'}
+function blogText(r){return r.supplyStatus==='complete'?fmt(r.blog)+'건':['partial','lower_bound'].includes(r.supplyStatus)&&Number.isFinite(r.blog)?fmt(r.blog)+'건 이상 (일부 수집)':'미확인'}
+function demandPoints(r){return Number.isFinite(r.score)?r.score:'보류'}
 function calculate(row){
-  row.googleFit=googleFit(row);row.intent=intentBucket(row.kw);row.score=demandScore(row);row.grade=classifyDemand(row);
-  row.reason='월검색 '+fmt(row.monthly)+'회 · Google 자동완성 '+(row.googleHits||0)+'회 · 최근30일 블로그 '+fmt(row.blog)+'건'+(row.monthly?' · 경쟁비율 '+ratio(row).toFixed(2):'');
+  row.googleFit=googleFit(row);row.intent=intentBucket(row.kw);row.score=verifiedRow(row)?demandScore(row):null;row.grade=verifiedRow(row)?classifyDemand(row):'측정 보류';
+  row.reason='월검색 '+volumeText(row)+' · Google 자동완성 '+(row.googleHits||0)+'회 · 최근30일 블로그 '+blogText(row)+(verifiedRow(row)&&row.monthly?' · 경쟁비율 '+ratio(row).toFixed(2):' · 수집 완료 후 판단');
   return row;
 }
 function decisionForDemand(rows,expandedCount,signalTraffic){
+  rows=rows.filter(verifiedRow);
+  if(!rows.length)return {code:'HOLD',label:'측정 보류',cls:'yellow',reason:'검색량 또는 발행량이 미확인·일부 수집 상태입니다. 수집을 완료한 뒤 판단하세요.',depth:0,strong:0,intentCount:0,expandedCount,rep:null,interestOnly:false};
   const rep=rows[0]||null;
   const depth=rows.filter(r=>r.monthly>=100&&(r.googleHits||0)>0).length;
   const strong=rows.filter(r=>r.monthly>=500&&(r.googleHits||0)>0).length;
@@ -332,7 +338,7 @@ function decisionForDemand(rows,expandedCount,signalTraffic){
   if(interestOnly){code='PASS';label='관심 신호형';cls='red';reason='Google 급상승 규모에 비해 자동완성·후속 검색량이 약합니다. 사람들이 이슈를 보기는 하지만 별도 검색으로 깊게 파고드는 형태는 아닐 가능성이 큽니다.'}
   return{code,label,cls,reason,depth,strong,intentCount:intents.size,expandedCount,rep,interestOnly};
 }
-async function fetchJson(url){const r=await fetch(url,{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'API 오류');return j}
+async function fetchJson(url){if(/^\/api\/(searchad|keyword|titlehunt)\?/.test(url))url+='&v=reliability-20261024';const r=await fetch(url,{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'API 오류');return j}
 async function analyzeSelected(){
   const x=current();if(!x)return;
   const core=norm($('coreSeed')?.value)||extractCoreSignal(x.keyword);
@@ -353,11 +359,12 @@ async function analyzeSelected(){
     state.sampleTitles=Array.isArray(hunt.sampleTitles)?hunt.sampleTitles:[];
 
     const cmap=new Map();
-    const ensure=(kw)=>{kw=norm(kw);if(!kw)return null;const k=key(kw);if(!cmap.has(k))cmap.set(k,{kw,monthly:0,pc:0,mobile:0,blog:0,capped:false,googleHits:0,naverSuggestHits:0,seedHits:0});return cmap.get(k)};
+    const ensure=(kw)=>{kw=norm(kw);if(!kw)return null;const k=key(kw);if(!cmap.has(k))cmap.set(k,{kw,monthly:0,pc:0,mobile:0,blog:null,volumeStatus:'unavailable',supplyStatus:'not_requested',capped:false,googleHits:0,naverSuggestHits:0,seedHits:0});return cmap.get(k)};
     const addAd=(ad,seed)=>{
       if(!ad)return;
-      const exact=ensure(seed);if(exact){exact.monthly=Math.max(exact.monthly,ad.monthlyTotal||0);exact.pc=Math.max(exact.pc,ad.monthlyPc||0);exact.mobile=Math.max(exact.mobile,ad.monthlyMobile||0);exact.seedHits++}
-      for(const r of (ad.related||[])){const row=ensure(r.relKeyword);if(!row)continue;row.monthly=Math.max(row.monthly,r.monthlyTotal||0);row.pc=Math.max(row.pc,r.monthlyPc||0);row.mobile=Math.max(row.mobile,r.monthlyMobile||0);row.seedHits++}
+      const accept=(row,r)=>{if(!row||!r)return;if(r.volumeStatus==='exact'&&Number.isFinite(r.monthlyTotal)){row.monthly=r.monthlyTotal;row.pc=r.monthlyPc;row.mobile=r.monthlyMobile;row.volumeStatus='exact'}else if(row.volumeStatus!=='exact')row.volumeStatus=r.volumeStatus||'unavailable';row.seedHits++};
+      if(ad.exactMatched===true&&key(ad.relKeyword||'')===key(seed))accept(ensure(seed),ad);
+      for(const r of (ad.related||[]))accept(ensure(r.relKeyword),r);
     };
     const addSug=(obj)=>{
       for(const d of (obj?.detailed||[])){const row=ensure(d.keyword);if(!row)continue;if(d.source==='google')row.googleHits++;else row.naverSuggestHits++}
@@ -385,7 +392,7 @@ async function analyzeSelected(){
 
     const validate=candidates.slice(0,12);
     await Promise.all(validate.map(async row=>{
-      try{const k=await fetchJson('/api/keyword?keyword='+encodeURIComponent(row.kw));row.blog=k.recentBlogTotal||0;row.capped=!!k.recentBlogCapped}catch{}
+      try{const k=await fetchJson('/api/keyword?keyword='+encodeURIComponent(row.kw));row.blog=Number.isFinite(k.recentBlogTotal)?k.recentBlogTotal:null;row.supplyStatus=k.blogStatus||'unavailable';row.capped=!!k.recentBlogCapped}catch{row.blog=null;row.supplyStatus='unavailable'}
       calculate(row);
     }));
     validate.sort((a,b)=>b.score-a.score);
@@ -407,8 +414,8 @@ function gradeCls(g){if(g==='대표 후보')return'green';if(['확장 후보','�
 function renderAnalysis(){
   const rows=state.analysis,d=state.demand;if(!rows.length||!d)return;const top=d.rep||rows[0];
   const labelClass=d.cls==='green'?'green':d.cls==='yellow'?'yellow':'red';
-  $('analysisSummary').innerHTML='<div class="analysisHero"><div class="scoreBox"><strong>'+top.score+'</strong><span>검색수요 점수</span></div><div><h2>'+esc(d.label)+' · 대표 키워드 '+esc(top.kw)+'</h2><p>'+esc(d.reason)+'</p><div class="metrics"><span class="pill '+labelClass+'">'+esc(d.label)+'</span><span class="pill blue">원 신호 '+esc(d.signal)+'</span><span class="pill">핵심 대상 '+esc(d.core)+'</span><span class="pill">확장 '+d.expandedCount+'개</span><span class="pill">유효 검색어 '+d.depth+'개</span><span class="pill">강한 검색어 '+d.strong+'개</span><span class="pill">의도 '+d.intentCount+'종</span></div></div></div>';
-  $('analysisTable').innerHTML=rows.map((r,i)=>'<tr class="'+(state.workRow&&key(state.workRow.kw)===key(r.kw)?'pick':'')+'" onclick="pickAnalysis('+i+')"><td><b>'+esc(r.kw)+'</b></td><td><span class="pill '+gradeCls(r.grade)+'">'+esc(r.grade)+'</span></td><td>'+fmt(r.monthly)+'</td><td>'+fmt(r.blog)+(r.capped?'+':'')+'</td><td>'+(r.monthly?ratio(r).toFixed(2):'-')+'</td><td><b>'+(r.googleHits||0)+'회</b></td><td>'+esc(r.intent)+'</td><td><b>'+r.score+'</b></td><td class="reason">'+esc(r.reason)+'</td></tr>').join('');
+  $('analysisSummary').innerHTML='<div class="analysisHero"><div class="scoreBox"><strong>'+demandPoints(top)+'</strong><span>검색수요 점수</span></div><div><h2>'+esc(d.label)+' · 대표 키워드 '+esc(top.kw)+'</h2><p>'+esc(d.reason)+'</p><div class="metrics"><span class="pill '+labelClass+'">'+esc(d.label)+'</span><span class="pill blue">원 신호 '+esc(d.signal)+'</span><span class="pill">핵심 대상 '+esc(d.core)+'</span><span class="pill">확장 '+d.expandedCount+'개</span><span class="pill">유효 검색어 '+d.depth+'개</span><span class="pill">강한 검색어 '+d.strong+'개</span><span class="pill">의도 '+d.intentCount+'종</span></div></div></div>';
+  $('analysisTable').innerHTML=rows.map((r,i)=>'<tr class="'+(state.workRow&&key(state.workRow.kw)===key(r.kw)?'pick':'')+'" onclick="pickAnalysis('+i+')"><td><b>'+esc(r.kw)+'</b></td><td><span class="pill '+gradeCls(r.grade)+'">'+esc(r.grade)+'</span></td><td>'+volumeText(r)+'</td><td>'+blogText(r)+'</td><td>'+(verifiedRow(r)&&r.monthly?ratio(r).toFixed(2):'미검증')+'</td><td><b>'+(r.googleHits||0)+'회</b></td><td>'+esc(r.intent)+'</td><td><b>'+demandPoints(r)+'</b></td><td class="reason">'+esc(r.reason)+'</td></tr>').join('');
   $('suggestChips').innerHTML=state.suggestions.slice(0,60).map(s=>'<button class="chip" onclick="useSuggestion(\''+encodeURIComponent(s)+'\')">'+esc(s)+'</button>').join('')||'<span class="empty">확장 검색어 없음</span>';
   if($('expandedCount'))$('expandedCount').textContent=state.suggestions.length+'개';
 }
@@ -418,7 +425,7 @@ async function pickAnalysis(i){
 async function useSuggestion(enc){
   const kw=decodeURIComponent(enc);
   const found=state.analysis.find(r=>key(r.kw)===key(kw));
-  state.workRow=found||{kw,monthly:0,blog:0,score:0,grade:'확장 검색어',googleFit:['구글 후보','blue',0],intent:intentBucket(kw),googleHits:0};
+  state.workRow=found||{kw,monthly:0,blog:null,volumeStatus:'unavailable',supplyStatus:'not_requested',score:null,grade:'확장 검색어',googleFit:['구글 후보','blue',0],intent:intentBucket(kw),googleHits:0};
   await loadWriterData(kw);document.getElementById('writer').scrollIntoView({behavior:'smooth'});
 }
 
@@ -480,7 +487,7 @@ function buildPrompt(){
 +'## 검색수요 검증\n'
 +'- 월간 검색수 참고: '+fmt(row.monthly||0)+'회\n'
 +'- Google 자동완성 반복: '+(row.googleHits||0)+'회\n'
-+'- 최근 30일 블로그 발행: '+fmt(row.blog||0)+'건\n'
++'- 최근 30일 블로그 발행: '+blogText(row)+'\n'
 +'- 경쟁비율: '+(row.monthly?ratio(row).toFixed(2):'-')+'\n'
 +'- 검색수요 점수: '+(row.score||0)+'\n'
 +'- 검색의도: '+(row.intent||intentBucket(row.kw))+'\n\n'

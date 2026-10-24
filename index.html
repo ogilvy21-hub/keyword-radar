@@ -1402,7 +1402,7 @@ const SESSION_DEFS = {
     ending:{label:'결말·해석',coverage:['결말','결말 해석','핵심 복선','엔딩 이후']},
     episode:{label:'회차 이슈',coverage:['해당 회차 줄거리','핵심 장면','다음 회차 연결']},
     review:{label:'후기·평가',coverage:['후기','평점','관전 포인트','호불호']},
-    location:{label:'촬영지',coverage:['촬영지','촬영 장소','장소 정보']},
+    location:{label:'촬영지·장소',coverage:['촬영지','촬영 장소','숙소','식당·카페·시장·가게','실제 장소·주소','방문 가능 여부·주변 정보']},
     ost:{label:'OST·음악',coverage:['OST','삽입곡','가창자']},
     person:{label:'배우 개인',coverage:['프로필','나이','학력','필모그래피','현재 작품 배역']}
   },
@@ -1491,7 +1491,7 @@ function contentSession(kw){
   if(/결말해석|결말|엔딩|범인|정체|스포일러/.test(text))return'ending';
   if(/(?:^|\s)\d+\s*(?:회|화)(?:\s|$)|회차별|회차\s*(?:줄거리|리뷰|요약)/.test(text))return'episode';
   if(/관람평|평점|후기|리뷰/.test(text))return'review';
-  if(/촬영지|촬영장소/.test(text))return'location';
+  if(/촬영지|촬영장소|촬영장|촬영\s*숙소|촬영숙소|숙소|펜션|민박|호텔|식당|맛집|카페|시장|해변|바닷가|마을|떡집|가게|실제\s*장소|장소\s*어디|위치\s*어디/.test(text))return'location';
   if(/OST|ost|삽입곡|주제가/.test(text))return'ost';
   if(/출연진|등장인물|인물관계도|배역|캐릭터|캐스팅/.test(text))return'cast';
   if(/몇부작|OTT|ott|재방송|다시보기|편성표|방송시간|공개시간|방영일|공개일|시청률/.test(text))return'viewing';
@@ -1581,11 +1581,21 @@ function independentDemand(row,hubRow){
   if(monthly>=50&&Number(row.recommendationScore||0)>=70)return true;
   return false;
 }
+function prioritySpokeIntent(seed,cand,category,row){
+  // 영상 콘텐츠의 촬영지·숙소·식당·카페·시장 등은 검색 목적과 답의 구조가 독립적이다.
+  // 연관 검색어에 실제로 포착되면 일반 검색량 하한보다 우선해 별도 카드로 만든다.
+  if(categoryFamily(category)==='content'&&cand.key==='location'&&seed.key!=='location'){
+    return{priority:true,reason:'영상 콘텐츠 촬영지·장소는 방문·주소 탐색 의도가 분리되는 우선 독립 스포크'};
+  }
+  return null;
+}
 function classifySearchSession(mainKw,row,category,hubRow){
   const seed=detectSession(mainKw,category),cand=detectSession(row.kw,category);
   if(sameSearchSession(seed,cand))return{tag:'section',intentKey:seed.key,intentLabel:seed.label,coverage:seed.coverage,reason:'같은 검색 세션'};
+  const priority=prioritySpokeIntent(seed,cand,category,row);
+  if(priority)return{tag:'spoke',priority:true,intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:priority.reason};
   const lt=hasLongtail(row.kw);
-  if(independentDemand(row,hubRow))return{tag:'spoke',intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'검색 목적이 바뀌고 독립 수요 확인'};
+  if(independentDemand(row,hubRow))return{tag:'spoke',priority:false,intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'검색 목적이 바뀌고 독립 수요 확인'};
   if(lt)return{tag:'longtail',intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'다른 의도지만 독립 수요 약함'};
   return{tag:'hold',intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'다른 의도지만 현재 독립 글 수요 약함'};
 }
@@ -1608,7 +1618,7 @@ function buildCluster(hubKw,rows){
     if(c.tag==='longtail'){longtail.push(r.kw);continue;}
     if(c.tag==='hold'){held.push({kw:r.kw,reason:c.reason,intentLabel:c.intentLabel,monthly:Number(r.monthly||0)});continue;}
     if(c.tag==='spoke'){
-      if(!groups.has(c.intentKey))groups.set(c.intentKey,{intentKey:c.intentKey,intentLabel:c.intentLabel,coverage:c.coverage,rows:[]});
+      if(!groups.has(c.intentKey))groups.set(c.intentKey,{intentKey:c.intentKey,intentLabel:c.intentLabel,coverage:c.coverage,priority:!!c.priority,rows:[]}); else if(c.priority)groups.get(c.intentKey).priority=true;
       groups.get(c.intentKey).rows.push({row:r,classify:c});
     }
   }
@@ -1616,7 +1626,7 @@ function buildCluster(hubKw,rows){
   for(const group of groups.values()){
     group.rows.sort(bestGroupRow);
     const lead=group.rows[0].row;
-    spokes.push({axisKey:group.intentKey,axisLabel:group.intentLabel,intentKey:group.intentKey,intentLabel:group.intentLabel,coverage:group.coverage,kw:lead.kw,monthly:Number(lead.monthly||0),absorbed:group.rows.slice(1).map(x=>x.row.kw)});
+    spokes.push({axisKey:group.intentKey,axisLabel:group.intentLabel,intentKey:group.intentKey,intentLabel:group.intentLabel,coverage:group.coverage,priority:!!group.priority,kw:lead.kw,monthly:Number(lead.monthly||0),absorbed:group.rows.slice(1).map(x=>x.row.kw)});
   }
   spokes.sort((a,b)=>b.monthly-a.monthly);
   return{hub:hubKw,spokes:spokes.slice(0,6),absorbed:hubAbsorbed,hubAbsorbed,category,sections:hubAbsorbed,longtail,held,seedSession};
@@ -2055,6 +2065,7 @@ function planCardId(kind,kw){return kind+':'+normalizeKey(kw)}
 function planDefaultDecision(card){
   const assets=loadPublishedAssets();const existing=assets[normalizeKey(card.kw)];
   if(existing?.url)return '기존 글 갱신 검토';
+  if(card.priority)return '우선 독립 스포크';
   return card.kind==='hub'?'완결형':'독립 의도 후보';
 }
 function planCardFrom(kind,item,cluster,absorbed,saved){
@@ -2071,6 +2082,7 @@ function planCardFrom(kind,item,cluster,absorbed,saved){
     id,kind,kw,row,role:planRoleFor(kind,item,cluster),
     axisLabel:kind==='hub'?(cluster.seedSession?.label||'완결형'):(item.intentLabel||item.axisLabel||'독립 의도'),
     intentKey:kind==='hub'?(cluster.seedSession?.key||'general'):(item.intentKey||item.axisKey||'spoke'),
+    priority:kind==='hub'?false:!!item.priority,
     coverage,
     absorbed:ownedAbsorbed,
     titleTerms,
@@ -2080,7 +2092,7 @@ function planCardFrom(kind,item,cluster,absorbed,saved){
     status:prev.status||(asset.url?'발행 완료':'대기'),
     url:prev.url||asset.url||'',
     selected:prev.selected!==false,
-    decision:asset.url?'기존 글 갱신 검토':(prev.decision||planDefaultDecision({kind,kw}))
+    decision:asset.url?'기존 글 갱신 검토':(prev.decision||planDefaultDecision({kind,kw,priority:kind==='hub'?false:!!item.priority}))
   };
 }
 function buildPublishingPlan(cluster){
@@ -2092,7 +2104,7 @@ function buildPublishingPlan(cluster){
 function savePublishingPlan(){
   const cluster=state.currentCluster;if(!cluster||!state.planCards)return;
   const data={};
-  state.planCards.forEach(c=>{data[c.id]={absorbed:c.absorbed,hooks:c.hooks,chosenHooks:c.chosenHooks,finalTitle:c.finalTitle,status:c.status,url:c.url,selected:c.selected,decision:c.decision,intentKey:c.intentKey}});
+  state.planCards.forEach(c=>{data[c.id]={absorbed:c.absorbed,hooks:c.hooks,chosenHooks:c.chosenHooks,finalTitle:c.finalTitle,status:c.status,url:c.url,selected:c.selected,decision:c.decision,intentKey:c.intentKey,priority:c.priority}});
   try{localStorage.setItem(planStorageKey(cluster.hub),JSON.stringify(data))}catch(e){}
 }
 function getPlanCard(id){return (state.planCards||[]).find(c=>c.id===id)}

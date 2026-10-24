@@ -90,7 +90,11 @@
     .reason-text{ display:none; line-height:1.5; margin-top:6px; }
     .reason-text.expanded{ display:block; }
     .reason-toggle{ display:block; font-size:11px; font-weight:600; color:var(--shallow); cursor:pointer; background:none; border:none; padding:0; font-family:inherit; }
-    .detail-table table{ min-width:1200px; table-layout:fixed; }
+    .detail-table table{ min-width:1680px; table-layout:auto; }
+    .recommend-table th,.recommend-table td,.detail-table th,.detail-table td{ white-space:normal; overflow-wrap:anywhere; word-break:normal; line-height:1.55; vertical-align:top; min-width:80px; }
+    .detail-table th:nth-child(7),.detail-table td:nth-child(7){ min-width:155px; }
+    .detail-table th:nth-child(9),.detail-table td:nth-child(9){ min-width:135px; }
+    .recommend-table .pill,.detail-table .pill{ white-space:normal; overflow-wrap:anywhere; }
     .detail-table table th:last-child,.detail-table table td:last-child{ width:280px; }
 
     .pill{ display:inline-flex; align-items:center; padding:4px 9px; border-radius:8px; background:var(--paper-2); color:var(--ink-soft); font-size:10.5px; font-weight:600; white-space:nowrap; }

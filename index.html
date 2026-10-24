@@ -596,7 +596,7 @@ function demandText(row,part='monthly'){
  if(status==='exact'&&validCount(value))return format(value);
  return '미확인';
 }
-function scoreText(row){const v=opportunityValue(row);return v===null?'미확인':v.toLocaleString('ko-KR',{maximumFractionDigits:1})+(opportunityProvisional(row)?' (잠정)':'')}
+function scoreText(row,compact=false){const v=opportunityValue(row);return v===null?'미확인':v.toLocaleString('ko-KR',{maximumFractionDigits:1})+(!compact&&opportunityProvisional(row)?' (잠정)':'')}
 function cafeText(row){return row?.cafeStatus==='complete'&&validCount(row.cafe)?format(row.cafe)+'건':'측정 불가 (작성일 미제공)'}
 function hydrateContent(row,content){
  const allowed=['complete','partial','lower_bound','unavailable'];
@@ -1900,7 +1900,7 @@ function renderSelected(){
       ? '이 키워드는 실제 경험이 들어가면 AI 인용과 독자 신뢰에 유리합니다. 막힌 지점·실제 차이·주의점을 적어주세요.'
       : '공식·광고·AI가 말하지 않는 차이를 적으면 원고 차별점이 됩니다.';
   }
-  els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=scoreText(row); els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
+  els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=scoreText(row,true); els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
  if(!comparableOpportunity(row)||row.monthly<=0){
     els.judgementTitle.textContent = `${row.kw} — 데이터가 부족해 추천 여부를 판단할 수 없습니다`;
     els.judgementReason.textContent = row.reason;
@@ -2197,7 +2197,7 @@ async function analyze(){
       hookPending:{}, titleApplied:null, entityFilter:'',
       _baseRows:sorted, _baseRecommended:recommended, _baseRelatedKeywords:relatedKeywords,
       _baseSeedHooks:seedHooks, _baseSeedSampleTitles:seedSampleTitles, _baseSeedNewsSnippets:seedNewsSnippets };
-    els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?scoreText(recommended[0]):'보류'; els.intentShortText.textContent=recommended[0]?.grade || '-';
+    els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?scoreText(recommended[0],true):'보류'; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
     if(els.comboRow){ els.comboRow.style.display='flex'; }
     if(els.comboHint){ els.comboHint.style.display='block'; els.comboHint.textContent='동명이인·동일 키워드가 섞일 때 구분어를 넣으면 기존 후보 중 같은 대상을 뒷받침하는 후보만 남깁니다. 기존 검색량·발행량 수치는 그대로 유지합니다.'; }
@@ -2337,7 +2337,7 @@ async function applyEntityFilterV23(){
     state.selectedIndex=seedIdx>=0?seedIdx:0;
     els.totalKeywords.textContent=`${state.rows.length}개`;
     els.bestKeywordText.textContent=state.recommended[0]?.kw||'-';
-    els.bestScoreText.textContent=state.recommended[0]?.score||0;
+    els.bestScoreText.textContent=state.recommended[0]?scoreText(state.recommended[0],true):0;
     els.intentShortText.textContent=state.recommended[0]?.grade||'-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
     els.comboHint.textContent=`대상 필터 “${filter}” 적용 · 후보 ${baseRows.length}개 → ${state.rows.length}개 · 제외 ${Math.max(0,baseRows.length-state.rows.length)}개 · 검색량/발행량 수치는 원래 후보 값을 유지합니다.`;
@@ -2363,7 +2363,7 @@ function clearEntityFilterV23(){
   if(els.comboHint) els.comboHint.textContent='동명이인·동일 키워드가 섞일 때 구분어를 넣으면 기존 후보 중 같은 대상을 뒷받침하는 후보만 남깁니다. 기존 검색량·발행량 수치는 그대로 유지합니다.';
   els.totalKeywords.textContent=`${state.rows.length}개`;
   els.bestKeywordText.textContent=state.recommended[0]?.kw||'-';
-  els.bestScoreText.textContent=state.recommended[0]?.score||0;
+  els.bestScoreText.textContent=state.recommended[0]?scoreText(state.recommended[0],true):0;
   els.intentShortText.textContent=state.recommended[0]?.grade||'-';
   renderRecommendTable(); renderDetailTable(); renderSelected();
 }

@@ -341,34 +341,34 @@
   </div>
 
   <div class="decision">
-    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">수요/공급지수</div></div>
+    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">추천 점수</div></div>
     <div>
       <h1 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h1>
-      <p id="judgementReason">검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.</p>
+      <p id="judgementReason">검색 기회와 검색의도, 후속 질문 확장성, 행동성, 근거 신뢰도를 함께 평가합니다.</p>
     </div>
     <div class="strategy-list" id="strategyList"></div>
   </div>
 
   <div class="section-title">
     <span class="st-tick"></span>
-    <h3>검색량·발행량 기준 글감 TOP 6</h3>
+    <h3>검색기회·검색의도 기준 글감 TOP 6</h3>
     <span class="st-rule"></span>
     <span class="micro-hint">수요·발행량·의도 근거를 각각 확인</span>
   </div>
-  <p class="table-caption">네이버 월간 검색수와 최근30일 검색 결과에서 확인한 발행량을 비교합니다. 정렬은 월간 검색수 ÷ 확인 발행량(0건은 1건으로 비교) 순입니다. 수집 한도·일부 수집은 잠정 후보로 함께 표시하며 실제 경쟁이 더 높을 수 있습니다. 의도·정보구성 평가는 순위에 가산하지 않습니다.</p>
+  <p class="table-caption">추천 점수는 수요·공급 기회 45점, 검색의도 15점, 후속 질문 확장성 15점, 행동성 10점, 근거 신뢰도 10점, 답변 구조 5점을 합산합니다. 원래의 월간 검색수 ÷ 확인 발행량은 수요/공급지수로 따로 보존합니다.</p>
   <div class="table-wrap recommend-table">
     <table>
-      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>정보구성</th><th>답변구조</th><th>수요/공급지수</th></tr></thead>
+      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>정보구성</th><th>답변구조</th><th>추천 점수</th><th>수요/공급지수</th></tr></thead>
       <tbody id="keywordTable"></tbody>
     </table>
   </div>
 
   <details open style="margin-top:20px;">
     <summary><span class="fold-title">상세 후보 검증표</span> <span class="micro-hint">추천 근거를 바로 확인할 수 있습니다</span></summary>
-    <p class="table-caption">각 키워드의 검색량·최근30일 발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
+    <p class="table-caption">각 키워드의 검색량·최근30일 발행량과 검색의도 점수를 함께 비교합니다. 추천 점수와 원자료인 수요/공급지수를 분리해 확인할 수 있습니다.</p>
     <div class="table-wrap detail-table">
       <table>
-        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>답변구조</th><th>수요/공급지수</th><th>추천 이유</th></tr></thead>
+        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>답변구조</th><th>추천 점수</th><th>수요/공급지수</th><th>추천 이유</th></tr></thead>
         <tbody id="detailKeywordTable"></tbody>
       </table>
     </div>
@@ -846,7 +846,7 @@ function makeReason(row,score,intent){
  if(st!=='exact')return `검색량 ${demandText(row)}. 원문 검색량이 확인되지 않아 추천 점수를 보류합니다.`;
  if(opportunityProvisional(row))return `월간 검색수 ${demandText(row)}회 / 확인 발행량 ${contentStatus(row)}. 확인 발행량 기준 수요/공급지수 ${scoreText(row)}로 함께 비교합니다. 전체 발행량은 더 많을 수 있어 확정 저경쟁 추천과 구분합니다.`;
  if(ss!=='complete')return `월간 검색수 ${demandText(row)}회 / 최근30일 블로그 ${contentStatus(row)}. 전체 발행량을 확정하지 못해 추천 점수를 보류합니다. 카페 최근30일은 작성일 미제공으로 측정하지 않습니다.`;
- return `네이버 월간 검색수 ${demandText(row)}회 / 최근30일 확인 발행량 ${contentStatus(row)} / 비율 ${ratioText(row)}. ${row.grade}. 이 비율은 글 수와 검색 횟수의 참고 비교이며 검색 경쟁·노출·수익을 보장하지 않습니다. 선택어 의도 근거: ${intent.terms.join(', ')||'부족'}.`;
+ return `추천 ${recommendationText(row)}: 수요·공급 ${row.opportunityScore||0}/45, 검색의도 ${row.intentClarityScore||0}/15, 후속질문 ${row.followupScore||0}/15, 행동성 ${row.actionScore||0}/10, 근거 ${row.evidenceScore||0}/10, 답변구조 ${row.answerScore||0}/5. 네이버 월간 검색수 ${demandText(row)}회 / 최근30일 확인 발행량 ${contentStatus(row)} / 수요·공급지수 ${scoreText(row)}. 선택어 의도 근거: ${intent.terms.join(', ')||'부족'}.`;
 }
 
 const INTENTS = [
@@ -903,16 +903,50 @@ function includesAxisTerm(text, term){
 }
 function inferIntentFromEvidence(selectedKeyword,bundleRows){
  const selected=normalizeSpace(selectedKeyword||'');
- const ranked=INTENTS.map(intent=>{const terms=intent.terms.filter(t=>includesTerm(selected,t));return {...intent,terms,score:terms.length*3}}).sort((a,b)=>b.score-a.score);
+ const related=(bundleRows||[]).filter(row=>row?.kw&&normalizeKey(row.kw)!==normalizeKey(selected)&&sameTopic(selected,row.kw));
+ const ranked=INTENTS.map(intent=>{
+   const directTerms=intent.terms.filter(t=>includesTerm(selected,t));
+   const supportTerms=[...new Set(related.flatMap(row=>intent.terms.filter(t=>includesTerm(row.kw,t))))];
+   const supportingRows=related.filter(row=>intent.terms.some(t=>includesTerm(row.kw,t))).length;
+   const terms=[...new Set([...directTerms,...supportTerms])];
+   const score=directTerms.length*6+Math.min(6,supportTerms.length*2)+Math.min(3,supportingRows);
+   return {...intent,terms,directTerms,supportTerms,supportingRows,score};
+ }).sort((a,b)=>b.score-a.score||b.directTerms.length-a.directTerms.length);
  return ranked[0]?.score?ranked[0]:DEFAULT_INTENT;
 }
 function clarityScore(intent){
-  const count = Number(intent?.terms?.length || 0);
-  if(count>=4) return 35;
-  if(count===3) return 29;
-  if(count===2) return 22;
-  if(count===1) return 13;
-  return 0;
+  const direct=Number(intent?.directTerms?.length??intent?.terms?.length??0);
+  const support=Number(intent?.supportTerms?.length||0);
+  return Math.min(15,direct*7+Math.min(6,support*2));
+}
+function followupExtensionScore(row,bundleRows){
+  const evidence=(bundleRows||[]).filter(x=>x?.kw&&sameTopic(row.kw,x.kw));
+  const facets=new Set();
+  for(const item of evidence) for(const intent of INTENTS) for(const term of intent.terms) if(includesTerm(item.kw,term)) facets.add(normalizeKey(term));
+  const count=facets.size;
+  return count>=6?15:count>=4?12:count>=2?8:count===1?4:0;
+}
+function actionabilityScore(row,intent){
+  const kw=normalizeKey(row?.kw||'');
+  const actionWords=['신청','조회','방법','발급','예약','예매','구매','가격','비교','일정','기간','조건','대상','자격','서류','해결','오류','환불','취소','추천','후기','출연진','몇부작','프로필'];
+  const actionKeys=['policy','finance','howto','place','shopping','career','tech','law','auto','content','person'];
+  return Math.min(10,(actionKeys.includes(intent?.key)?4:0)+(actionWords.some(w=>kw.includes(normalizeKey(w)))?6:0));
+}
+function evidenceReliabilityScore(row){
+  let score=searchState(row)==='exact'?4:0;
+  score+=supplyState(row)==='complete'?4:['lower_bound','partial'].includes(supplyState(row))?2:0;
+  if(Number(row.relevance||0)>0)score+=2;
+  return Math.min(10,score);
+}
+function opportunityPoints(row,bundleRows){
+  const value=opportunityValue(row);if(value===null)return 0;
+  const max=Math.max(value,...(bundleRows||[]).map(opportunityValue).filter(v=>v!==null));
+  return max>0?Math.round(Math.log1p(value)/Math.log1p(max)*45):0;
+}
+function recommendationText(row){return Number.isFinite(row?.recommendationScore)?`${row.recommendationScore}점`:'보류'}
+function compareRecommendation(a,b){
+ const av=Number.isFinite(a?.recommendationScore)?a.recommendationScore:-1,bv=Number.isFinite(b?.recommendationScore)?b.recommendationScore:-1;
+ return bv-av||compareOpportunity(a,b);
 }
 function enrichScore(row, bundleRows){
   const intent = inferIntentFromEvidence(row.kw, bundleRows);
@@ -925,13 +959,19 @@ function enrichScore(row, bundleRows){
   const demandScore=Math.round(scoreMonthly(row.monthly)/15*25);
   const supplyScore=readyForRanking(row)?Math.round(scoreRatio(row)/40*35):null;
   const score=opportunityValue(row);
+  const opportunityScore=opportunityPoints(row,bundleRows);
+  const followupScore=followupExtensionScore(row,bundleRows);
+  const actionScore=actionabilityScore(row,intent);
+  const evidenceScore=evidenceReliabilityScore({...row,relevance:relScore});
+  const answerScore=Math.round(aiScore/100*5);
+  const recommendationScore=comparableOpportunity(row)?Math.min(100,opportunityScore+intentScore+followupScore+actionScore+evidenceScore+answerScore):null;
   const gFit = googleFitLabel(intent.key, row.kw);
-  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, relevance:relScore, demandScore, supplyScore, score };
+  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, followupScore, actionScore, evidenceScore, opportunityScore, answerScore, recommendationScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, relevance:relScore, demandScore, supplyScore, score };
   enriched.grade = classify(enriched);
   enriched.reason = makeReason(enriched, score, intent);
   return enriched;
 }
-function sortCandidates(rows){return [...rows].sort(compareOpportunity)}
+function sortCandidates(rows){return [...rows].sort(compareRecommendation)}
 function recoTier(row){return comparableOpportunity(row)&&row.monthly>=300&&Number(row.relevance||0)>0?1:0}
 function fillRecommended(sorted,want=6){return sortCandidates(sorted).filter(r=>recoTier(r)>0).slice(0,want)}
 function publishHint(row){
@@ -1684,7 +1724,7 @@ function renderIdle(){
   analysisRevision++;els.analyzeBtn.disabled=false;els.analyzeBtn.textContent='분석하기';
   state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null, titleApplied:null };
   els.totalKeywords.textContent='0개'; els.bestKeywordText.textContent='-'; els.bestScoreText.textContent='0'; els.intentShortText.textContent='대기';
-  els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
+  els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색 기회와 검색의도, 후속 질문 확장성, 행동성, 근거 신뢰도를 함께 평가합니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
@@ -1696,15 +1736,15 @@ function renderIdle(){
 }
 function renderRecommendTable(){
   const rows=state.recommended;
-  if(!rows.length){ els.keywordTable.innerHTML='<tr><td colspan="11"><div class="empty"><strong>추천 가능한 키워드가 부족합니다.</strong>원키워드와 API 연관검색어 묶음 기준으로 글감 설계를 만듭니다.</div></td></tr>'; return; }
+  if(!rows.length){ els.keywordTable.innerHTML='<tr><td colspan="12"><div class="empty"><strong>추천 가능한 키워드가 부족합니다.</strong>원키워드와 API 연관검색어 묶음 기준으로 글감 설계를 만듭니다.</div></td></tr>'; return; }
   const notice = state._noBlueOcean
-    ? `<tr><td colspan="11"><div class="empty" style="background:#fffbeb;color:#92400e;border-color:#fde68a;"><strong>검증을 마친 추천 후보가 없습니다.</strong> 검색량·발행량이 미확인 또는 최소 건수이거나 추천 기준에 미달해, 아래는 참고용입니다. 아깝다 싶은 후보는 '상세 후보 검증표'에서 직접 확인해 고르세요.</div></td></tr>`
+    ? `<tr><td colspan="12"><div class="empty" style="background:#fffbeb;color:#92400e;border-color:#fde68a;"><strong>검증을 마친 추천 후보가 없습니다.</strong> 검색량·발행량이 미확인 또는 최소 건수이거나 추천 기준에 미달해, 아래는 참고용입니다. 아깝다 싶은 후보는 '상세 후보 검증표'에서 직접 확인해 고르세요.</div></td></tr>`
     : '';
   els.keywordTable.innerHTML = notice + rows.map((row,i)=>{
     const hint = publishHint(row);
     const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
     const homonymBadge = Number(row.relevance||0)===0 ? ` <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>` : '';
-    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">수익성 검토 분야</span>':''}${hintBadge}${homonymBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${demandText(row)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'구성 근거 부족')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${scoreText(row)}</span></td></tr>`;
+    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">수익성 검토 분야</span>':''}${hintBadge}${homonymBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${demandText(row)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'구성 근거 부족')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.recommendationScore)}">${recommendationText(row)}</span></td><td>${scoreText(row)}</td></tr>`;
   }).join('');
   els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } renderRecommendTable(); renderSelected(); }));
 }
@@ -1724,8 +1764,8 @@ function shortSourceLabel(sourceType){
 }
 function renderDetailTable(){
   const rows=state.rows;
-  if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${demandText(row)}</td><td>${demandText(row,'pc')}</td><td>${demandText(row,'mo')}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(cafeText(row))}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${scoreText(row)}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="15" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
+  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${demandText(row)}</td><td>${demandText(row,'pc')}</td><td>${demandText(row,'mo')}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(cafeText(row))}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.recommendationScore)}">${recommendationText(row)}</span></td><td>${scoreText(row)}</td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
   els.detailKeywordTable.querySelectorAll('.reason-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const idx = btn.dataset.ridx;
     const textEl = els.detailKeywordTable.querySelector(`.reason-text[data-ridx="${idx}"]`);
@@ -1900,7 +1940,7 @@ function renderSelected(){
       ? '이 키워드는 실제 경험이 들어가면 AI 인용과 독자 신뢰에 유리합니다. 막힌 지점·실제 차이·주의점을 적어주세요.'
       : '공식·광고·AI가 말하지 않는 차이를 적으면 원고 차별점이 됩니다.';
   }
-  els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=scoreText(row,true); els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
+  els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=recommendationText(row); els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
  if(!comparableOpportunity(row)||row.monthly<=0){
     els.judgementTitle.textContent = `${row.kw} — 데이터가 부족해 추천 여부를 판단할 수 없습니다`;
     els.judgementReason.textContent = row.reason;
@@ -2197,7 +2237,7 @@ async function analyze(){
       hookPending:{}, titleApplied:null, entityFilter:'',
       _baseRows:sorted, _baseRecommended:recommended, _baseRelatedKeywords:relatedKeywords,
       _baseSeedHooks:seedHooks, _baseSeedSampleTitles:seedSampleTitles, _baseSeedNewsSnippets:seedNewsSnippets };
-    els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?scoreText(recommended[0],true):'보류'; els.intentShortText.textContent=recommended[0]?.grade || '-';
+    els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?recommendationText(recommended[0]):'보류'; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
     if(els.comboRow){ els.comboRow.style.display='flex'; }
     if(els.comboHint){ els.comboHint.style.display='block'; els.comboHint.textContent='동명이인·동일 키워드가 섞일 때 구분어를 넣으면 기존 후보 중 같은 대상을 뒷받침하는 후보만 남깁니다. 기존 검색량·발행량 수치는 그대로 유지합니다.'; }
@@ -2337,7 +2377,7 @@ async function applyEntityFilterV23(){
     state.selectedIndex=seedIdx>=0?seedIdx:0;
     els.totalKeywords.textContent=`${state.rows.length}개`;
     els.bestKeywordText.textContent=state.recommended[0]?.kw||'-';
-    els.bestScoreText.textContent=state.recommended[0]?scoreText(state.recommended[0],true):0;
+    els.bestScoreText.textContent=state.recommended[0]?recommendationText(state.recommended[0]):0;
     els.intentShortText.textContent=state.recommended[0]?.grade||'-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
     els.comboHint.textContent=`대상 필터 “${filter}” 적용 · 후보 ${baseRows.length}개 → ${state.rows.length}개 · 제외 ${Math.max(0,baseRows.length-state.rows.length)}개 · 검색량/발행량 수치는 원래 후보 값을 유지합니다.`;
@@ -2363,7 +2403,7 @@ function clearEntityFilterV23(){
   if(els.comboHint) els.comboHint.textContent='동명이인·동일 키워드가 섞일 때 구분어를 넣으면 기존 후보 중 같은 대상을 뒷받침하는 후보만 남깁니다. 기존 검색량·발행량 수치는 그대로 유지합니다.';
   els.totalKeywords.textContent=`${state.rows.length}개`;
   els.bestKeywordText.textContent=state.recommended[0]?.kw||'-';
-  els.bestScoreText.textContent=state.recommended[0]?scoreText(state.recommended[0],true):0;
+  els.bestScoreText.textContent=state.recommended[0]?recommendationText(state.recommended[0]):0;
   els.intentShortText.textContent=state.recommended[0]?.grade||'-';
   renderRecommendTable(); renderDetailTable(); renderSelected();
 }
@@ -3132,7 +3172,7 @@ if(els.comboBtn) els.comboBtn.addEventListener('click', applyEntityFilterV23);
 if(els.comboClearBtn) els.comboClearBtn.addEventListener('click', clearEntityFilterV23);
 if(els.comboInput) els.comboInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyEntityFilterV23(); } });
 els.copyPromptBtn.addEventListener('click',()=>copyText(els.draftPrompt.value, els.copyPromptBtn, '원고 프롬프트 복사'));
-els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${scoreText(row)}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
+els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n추천 점수: ${recommendationText(row)}\n수요/공급지수: ${scoreText(row)}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });
 [els.toneSelect,els.lengthSelect,els.outputSelect,els.tableCheck,els.faqCheck].forEach(el=>el.addEventListener('change', renderSelected));
 if(els.platformSelect) els.platformSelect.addEventListener('change',()=>{

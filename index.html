@@ -137,6 +137,39 @@
     .cl-line{ font-size:13px; margin-bottom:6px; }
     .cl-btn{ border:1px solid var(--ink); border-radius:6px; padding:6px 10px; background:transparent; font-size:11px; cursor:pointer; }
 
+    .plan-summary{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 14px; margin-bottom:12px; border:1px dashed var(--line); border-radius:4px; background:#fff; font-size:11.5px; color:var(--ink-soft); }
+    .plan-summary b{ color:var(--ink); }
+    .plan-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+    .plan-card{ border:1px solid var(--line); border-left:4px solid var(--shallow); border-radius:5px; background:#fff; padding:15px 16px; }
+    .plan-card.hub{ border-left-color:var(--guide); }
+    .plan-card.existing{ border-left-color:var(--clear); background:#fbfffd; }
+    .plan-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:10px; }
+    .plan-role{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .plan-role b{ font-size:13.5px; }
+    .plan-decision{ font-size:10px; font-weight:700; padding:4px 8px; border-radius:8px; background:var(--paper-2); color:var(--ink-soft); white-space:nowrap; }
+    .plan-decision.existing{ background:var(--clear-soft); color:var(--clear); }
+    .plan-keyword{ font-size:15px; font-weight:700; margin:3px 0 8px; overflow-wrap:anywhere; }
+    .plan-metrics{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+    .plan-metric{ font-size:10.5px; padding:4px 7px; border-radius:7px; background:var(--paper-2); color:var(--ink-soft); }
+    .plan-row{ display:grid; grid-template-columns:82px 1fr; gap:10px; align-items:start; margin-top:9px; font-size:11.5px; }
+    .plan-row>strong{ color:var(--ink-soft); font-size:10.5px; padding-top:3px; }
+    .plan-tags{ display:flex; flex-wrap:wrap; gap:5px; }
+    .plan-tag{ border:1px solid var(--line); background:var(--paper-2); color:var(--ink-soft); border-radius:8px; padding:4px 7px; font-size:10.5px; }
+    button.plan-tag{ cursor:pointer; }
+    button.plan-tag.on{ background:var(--shallow); color:#fff; border-color:var(--shallow); }
+    .plan-title{ width:100%; border:1px solid var(--line); border-radius:3px; background:#fff; padding:9px 10px; font-size:12.5px; color:var(--ink); }
+    .plan-actions{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+    .plan-actions button{ border:1px solid var(--ink); background:transparent; color:var(--ink); border-radius:3px; padding:8px 10px; font-size:11px; font-weight:600; cursor:pointer; }
+    .plan-actions button.primary{ background:var(--clear); color:#fff; border-color:var(--clear); }
+    .plan-actions button.hook{ border-color:var(--shallow); color:var(--shallow); }
+    .plan-foot{ display:grid; grid-template-columns:150px 1fr; gap:8px; margin-top:12px; padding-top:10px; border-top:1px dashed var(--line); }
+    .plan-foot select,.plan-foot input{ width:100%; border:1px solid var(--line); border-radius:3px; background:#fff; padding:7px 8px; font-size:10.5px; }
+    .plan-absorb-box{ margin-top:12px; padding:10px 12px; border:1px dashed var(--line); background:var(--paper-2); border-radius:4px; }
+    .plan-absorb-box b{ font-size:11px; }
+    .plan-absorb-box div{ margin-top:6px; font-size:11px; line-height:1.6; color:var(--ink-soft); }
+    .plan-extra{ margin-top:12px; padding:10px 12px; background:#fffdf5; border:1px solid #fde68a; border-radius:4px; font-size:11px; color:#92400e; line-height:1.6; }
+    @media(max-width:700px){ .plan-row{grid-template-columns:1fr}.plan-foot{grid-template-columns:1fr}.plan-head{flex-direction:column}.plan-decision{white-space:normal} }
+
     .chip-wrap{ display:flex; flex-wrap:wrap; gap:6px; }
     .chip{ padding:8px 12px; border-radius:12px; background:var(--flag-soft); border:1px solid var(--flag); color:var(--flag); font-size:12px; }
     .chip.hot{ background:var(--shallow); color:#fff; border-color:var(--shallow); }
@@ -320,7 +353,7 @@
     <div class="brand">
       <span class="eyebrow">200자 원고지 · KEYWORD MANUSCRIPT</span>
       <b>글감레이더</b>
-      <span>키워드 하나로 쓸 글감과 제목까지</span>
+      <span>키워드 하나로 발행 묶음 설계부터 원고·발행까지</span>
     </div>
     <div class="ms-count" id="msDate">작성일 -<br/>매 수 <b>001</b></div>
   </div>
@@ -340,7 +373,7 @@
     <div class="step active">STEP 2 · 연관·신조어 발굴</div>
     <div class="step active">STEP 3 · 경쟁 발행량 확인</div>
     <div class="step active">STEP 4 · 검증 상태 확인</div>
-    <div class="step active">STEP 5 · 허브·스포크·제목</div>
+    <div class="step active">STEP 5 · 발행 설계·제목</div>
     <div class="step">STEP 6 · 원고 검수</div>
     <div class="step">STEP 7 · 이미지 세탁</div>
     <div class="step">STEP 8 · 발행 준비</div>
@@ -388,13 +421,13 @@
 
   <div class="section-title" style="margin-top:64px;">
     <span class="st-tick"></span>
-    <h3 id="clusterTitleHeading">선택 키워드 기반 클러스터·제목</h3>
+    <h3 id="clusterTitleHeading">선택 키워드 발행 설계</h3>
     <span class="st-rule"></span>
     <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
   </div>
 
-  <details>
-    <summary>콘텐츠 클러스터 <span class="micro-hint">허브 1 + 스포크 5, 각 원고 프롬프트</span></summary>
+  <details open>
+    <summary>발행 설계 <span class="micro-hint">허브·독립글·흡수 키워드·후킹·제목·작업상태</span></summary>
     <div class="body"><div id="clusterBox"></div></div>
   </details>
 
@@ -1702,6 +1735,18 @@ function applyTitleToPrompt(){
   const locked = true; // the preview and the prompt use the same concrete title
   const draft = edited||generated;
   state.titleApplied = { main:ts.main, tails:[...tails], pattern, draft, locked };
+  if(state.activePlanTitleCardId){
+    const card=getPlanCard(state.activePlanTitleCardId);
+    if(card){
+      card.finalTitle=draft;
+      card.chosenHooks=[...ts.chosen];
+      savePublishingPlan();
+      state.activePlanTitleCardId=null;
+      const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];
+      if(row)renderCluster(row);
+    }
+    return;
+  }
   renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
   const applyEl=$('tbApply'); if(applyEl){ applyEl.textContent='프롬프트에 반영됨 ✓'; setTimeout(()=>{ applyEl.textContent='이 제목 적용 → 프롬프트'; },1400); }
@@ -1738,7 +1783,7 @@ function pillClass(value){ if(['우선 검토','검토 후보'].includes(value))
 function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'score low'; }
 function renderIdle(){
   analysisRevision++;els.analyzeBtn.disabled=false;els.analyzeBtn.textContent='분석하기';
-  state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null, titleApplied:null };
+  state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null, titleApplied:null, activePlanCard:null, activePlanTitleCardId:null };
   els.totalKeywords.textContent='0개'; els.bestKeywordText.textContent='-'; els.bestScoreText.textContent='0'; els.intentShortText.textContent='대기';
   els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색 기회와 검색의도, 후속 질문 확장성, 행동성, 근거 신뢰도를 함께 평가합니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
@@ -1811,71 +1856,243 @@ function ensureHooksFor(keyword){
     if(cur && normalizeSpace(cur.kw) === key) renderSelected();
   }).catch(()=>{ state.hookPending[key] = false; });
 }
+
+const PLAN_STATUS_OPTIONS=['대기','원고 작업','원고 완료','검수 완료','이미지 완료','초안 전송','발행 완료','보류'];
+function planStorageKey(hub){return 'keywordRadarPublishingPlan:v1:'+normalizeKey(hub)}
+function publishedAssetKey(){return 'keywordRadarPublishedAssets:v1'}
+function loadPlanSaved(hub){
+  try{return JSON.parse(localStorage.getItem(planStorageKey(hub))||'{}')}catch(e){return{}}
+}
+function loadPublishedAssets(){
+  try{return JSON.parse(localStorage.getItem(publishedAssetKey())||'{}')}catch(e){return{}}
+}
+function savePublishedAssets(obj){
+  try{localStorage.setItem(publishedAssetKey(),JSON.stringify(obj||{}))}catch(e){}
+}
+function findClusterRow(kw){
+  return (state.rows||[]).find(r=>normalizeKey(r.kw)===normalizeKey(kw))||null;
+}
+function planRoleFor(kind,item,cluster){
+  if(kind==='hub') return '대표 허브';
+  const kw=normalizeSpace(item?.kw||'');
+  const axis=normalizeSpace(item?.axisLabel||'');
+  const cat=cluster?.category?.key||'general';
+  if(['content','movie'].includes(cat)){
+    if(/재방송|다시보기|OTT|편성|방송시간|공개시간|방영일|공개일|몇부작|회차|시청률/.test(kw)||/구성·포맷/.test(axis)) return '시청 스포크';
+    if(/출연진|등장인물|인물관계도|라인업|캐스팅/.test(kw)) return '출연진 스포크';
+    if(/프로필|나이|학력|필모그래피|출연작|배우/.test(kw)&&!/출연진|등장인물/.test(kw)) return '배우 확장';
+    if(/시즌|결말|줄거리|원작|웹툰|파트[0-9]/.test(kw)||/서사·평가/.test(axis)) return '작품·시즌 스포크';
+    if(/촬영지|촬영장소/.test(kw)) return '촬영지 스포크';
+    if(/인물·구성원/.test(axis)) return '출연진·인물 스포크';
+  }
+  if(cat==='policy'){
+    if(/지역/.test(axis))return'지역 스포크';
+    if(/대상/.test(axis))return'대상별 스포크';
+    return '정책 스포크';
+  }
+  if(cat==='finance') return '금융 세부 스포크';
+  if(cat==='person') return '인물 확장';
+  return axis ? axis.replace(/축$/,'')+' 스포크' : '독립 스포크';
+}
+function planAxisKeys(kw){return new Set(detectAxes(kw).map(a=>a.key))}
+function distributeAbsorbed(cluster){
+  const result={hub:[],bySpoke:{}};
+  (cluster.spokes||[]).forEach((_,i)=>result.bySpoke[i]=[]);
+  for(const kw of (cluster.absorbed||[])){
+    const axes=planAxisKeys(kw);let best=-1,bestScore=0;
+    (cluster.spokes||[]).forEach((sp,i)=>{
+      const sa=planAxisKeys(sp.kw);let score=0;axes.forEach(a=>{if(sa.has(a))score++});
+      if(score>bestScore){bestScore=score;best=i}
+    });
+    if(best>=0&&bestScore>0) result.bySpoke[best].push(kw);
+    else result.hub.push(kw);
+  }
+  return result;
+}
+function planCardId(kind,kw){return kind+':'+normalizeKey(kw)}
+function planDefaultDecision(card){
+  const assets=loadPublishedAssets();const existing=assets[normalizeKey(card.kw)];
+  if(existing?.url)return '기존 글 갱신 검토';
+  return card.kind==='hub'?'대표 글':'독립 글 후보';
+}
+function planCardFrom(kind,item,cluster,absorbed,saved){
+  const kw=kind==='hub'?cluster.hub:item.kw;
+  const row=findClusterRow(kw);
+  const id=planCardId(kind,kw);
+  const prev=saved[id]||{};
+  const assets=loadPublishedAssets(), asset=assets[normalizeKey(kw)]||{};
+  const cachedHooks=(state.hooksByKw&&state.hooksByKw[normalizeSpace(kw)])||[];
+  return {
+    id,kind,kw,row,role:planRoleFor(kind,item,cluster),
+    axisLabel:kind==='hub'?'대표':(item.axisLabel||'세부 주제'),
+    absorbed:[...(prev.absorbed||absorbed||[])],
+    hooks:Array.isArray(prev.hooks)&&prev.hooks.length?prev.hooks:cachedHooks.slice(0,5),
+    chosenHooks:Array.isArray(prev.chosenHooks)?prev.chosenHooks:[],
+    finalTitle:prev.finalTitle||kw,
+    status:prev.status||(asset.url?'발행 완료':'대기'),
+    url:prev.url||asset.url||'',
+    selected:prev.selected!==false,
+    decision:asset.url?'기존 글 갱신 검토':(prev.decision||planDefaultDecision({kind,kw}))
+  };
+}
+function buildPublishingPlan(cluster){
+  const saved=loadPlanSaved(cluster.hub), dist=distributeAbsorbed(cluster);
+  const cards=[planCardFrom('hub',{kw:cluster.hub,axisLabel:'대표'},cluster,dist.hub,saved)];
+  (cluster.spokes||[]).forEach((sp,i)=>cards.push(planCardFrom('spoke',sp,cluster,dist.bySpoke[i]||[],saved)));
+  return cards;
+}
+function savePublishingPlan(){
+  const cluster=state.currentCluster;if(!cluster||!state.planCards)return;
+  const data={};
+  state.planCards.forEach(c=>{data[c.id]={absorbed:c.absorbed,hooks:c.hooks,chosenHooks:c.chosenHooks,finalTitle:c.finalTitle,status:c.status,url:c.url,selected:c.selected,decision:c.decision}});
+  try{localStorage.setItem(planStorageKey(cluster.hub),JSON.stringify(data))}catch(e){}
+}
+function getPlanCard(id){return (state.planCards||[]).find(c=>c.id===id)}
+function planMetricHtml(card){
+  const r=card.row;if(!r)return '<span class="plan-metric">검색 데이터 미확인</span>';
+  return '<span class="plan-metric">월검색 '+escapeHTML(demandText(r))+'</span>'
+    +'<span class="plan-metric">30일 발행 '+escapeHTML(contentStatus(r))+'</span>'
+    +'<span class="plan-metric">경쟁비율 '+escapeHTML(ratioText(r))+'</span>';
+}
+function planHookHtml(card){
+  if(!card.hooks?.length)return '<span class="plan-tag">후킹 미조회</span>';
+  return card.hooks.slice(0,5).map((h,i)=>{
+    const word=normalizeSpace(h.word||h.tail||h);
+    const on=card.chosenHooks.includes(normalizeKey(word));
+    return '<button class="plan-tag '+(on?'on':'')+'" data-plan-hook="'+escapeHTML(card.id)+'" data-hook-index="'+i+'">'+escapeHTML(word)+(h.count?' · '+format(h.count):'')+'</button>';
+  }).join('');
+}
+function planCardHtml(card){
+  const existing=!!card.url||card.decision==='기존 글 갱신 검토';
+  const absorb=card.absorbed?.length?card.absorbed.map(k=>'<span class="plan-tag">'+escapeHTML(k)+'</span>').join(''):'<span class="plan-tag">없음</span>';
+  const statusOpts=PLAN_STATUS_OPTIONS.map(v=>'<option '+(v===card.status?'selected':'')+'>'+v+'</option>').join('');
+  return '<div class="plan-card '+(card.kind==='hub'?'hub ':'')+(existing?'existing':'')+'" data-plan-card="'+escapeHTML(card.id)+'">'
+    +'<div class="plan-head"><div><div class="plan-role"><label><input type="checkbox" class="plan-select" data-card-id="'+escapeHTML(card.id)+'" '+(card.selected?'checked':'')+'> <b>'+escapeHTML(card.role)+'</b></label><span class="pill gray">'+escapeHTML(card.axisLabel)+'</span></div><div class="plan-keyword">'+escapeHTML(card.kw)+'</div></div>'
+    +'<span class="plan-decision '+(existing?'existing':'')+'">'+escapeHTML(card.decision)+'</span></div>'
+    +'<div class="plan-metrics">'+planMetricHtml(card)+'</div>'
+    +'<div class="plan-row"><strong>흡수 검색어</strong><div class="plan-tags">'+absorb+'</div></div>'
+    +'<div class="plan-row"><strong>현재 후킹</strong><div><div class="plan-tags plan-hooks">'+planHookHtml(card)+'</div><button class="plan-tag hook-load" data-card-id="'+escapeHTML(card.id)+'" style="margin-top:6px">후킹 찾기 / 새로고침</button></div></div>'
+    +'<div class="plan-row"><strong>최종 제목</strong><input class="plan-title" data-card-title="'+escapeHTML(card.id)+'" value="'+escapeHTML(card.finalTitle)+'" placeholder="최종 발행 제목"></div>'
+    +'<div class="plan-actions"><button class="hook" data-plan-titlebuilder="'+escapeHTML(card.id)+'">제목 조합기</button><button class="primary" data-plan-write="'+escapeHTML(card.id)+'">원고 만들기</button></div>'
+    +'<div class="plan-foot"><select data-plan-status="'+escapeHTML(card.id)+'">'+statusOpts+'</select><input data-plan-url="'+escapeHTML(card.id)+'" value="'+escapeHTML(card.url||'')+'" placeholder="발행 URL 저장 · 저장되면 다음 설계에서 기존 글로 인식"></div>'
+    +'</div>';
+}
 function renderCluster(hubRow){
-  if(!els.clusterBox) return;
-  const cluster = buildCluster(hubRow.kw, state.rows);
-  // [FIX] 옵션(문체·분량 등)이 바뀔 때마다 renderSelected -> renderCluster가 재호출되면서
-  // 체크된 스포크가 매번 초기화되던 버그 수정. 같은 허브 키워드로 다시 그릴 때는
-  // 기존 selectedSpokeIdx를 유지하고, 허브 자체가 바뀔 때만 초기화한다.
-  const hubKey = normalizeKey(hubRow.kw);
-  if(state._clusterHubKey !== hubKey || !state.selectedSpokeIdx){
-    state.selectedSpokeIdx = new Set();
-    state._clusterHubKey = hubKey;
-  }
-  state.currentCluster = cluster;
-  const catLabel = cluster.category ? cluster.category.label : '일반';
-  const hubHtml = `<div class="cluster-node hub"><div class="cl-line"><b>허브</b> <span>${escapeHTML(cluster.hub)}</span> <span class="pill gray" style="font-size:10px">${escapeHTML(catLabel)}</span></div>
-    <button class="pick-btn cl-btn" data-cluster="hub">이 허브 원고 프롬프트</button></div>`;
-  let spokeHtml = '';
-  if(cluster.spokes.length){
-   spokeHtml = cluster.spokes.map((s,i)=>`<div class="cluster-node spoke">
-      <div class="cl-line"><label style="cursor:pointer;"><input type="checkbox" class="spoke-check" data-idx="${i}" ${state.selectedSpokeIdx.has(i)?'checked':''} style="margin-right:6px;"><b>스포크 ${i+1}</b></label> <span class="pill gray">${escapeHTML(s.axisLabel)}</span> <span>${escapeHTML(s.kw)}</span> <em style="opacity:.5">${format(s.monthly)}</em></div>
-      <button class="pick-btn cl-btn" data-cluster="spoke" data-idx="${i}">이 스포크 원고 프롬프트</button>
-    </div>`).join('');
-  } else {
-    spokeHtml = `<div class="cluster-node single"><div class="cl-line" style="opacity:.7">독립 글감이 충분치 않습니다. 이 키워드는 <b>단독 원고</b>로 작성하세요. (속성·세부 정보는 허브 한 글에 모으는 게 유리합니다.)</div></div>`;
-  }
-  let longtailHtml = '';
-  if(cluster.longtail && cluster.longtail.length){
-    longtailHtml = `<div class="cluster-node" style="background:#fffdf5;border-color:#fde68a;">
-      <div class="cl-line" style="font-size:12px;color:#92400e;"><b>💰 수익형 롱테일</b> <span style="opacity:.7">독립 글감으로 따로 노려볼 키워드</span></div>
-      <div style="font-size:12px;color:#b45309;line-height:1.6;">${cluster.longtail.map(escapeHTML).join(' · ')}</div>
-    </div>`;
-  }
-   els.clusterBox.innerHTML = hubHtml + spokeHtml + longtailHtml;
- els.clusterBox.querySelectorAll('.cl-btn').forEach(btn=>btn.addEventListener('click',()=>{
-    generateClusterPrompt(btn.dataset.cluster, Number(btn.dataset.idx||0));
+  if(!els.clusterBox)return;
+  const cluster=buildCluster(hubRow.kw,state.rows);
+  state.currentCluster=cluster;
+  state._clusterHubKey=normalizeKey(hubRow.kw);
+  state.planCards=buildPublishingPlan(cluster);
+  const selected=state.planCards.filter(c=>c.selected).length;
+  const absorbCount=(cluster.absorbed||[]).length;
+  const existing=state.planCards.filter(c=>c.url).length;
+  const catLabel=cluster.category?.label||'일반';
+  const summary='<div class="plan-summary"><b>'+escapeHTML(catLabel)+' 발행 설계</b><span>추천 '+state.planCards.length+'편</span><span>선택 '+selected+'편</span><span>본문 흡수 '+absorbCount+'개</span>'+(existing?'<span>기존 발행글 '+existing+'편</span>':'')+'<span>※ 편수는 추천이며 직접 수정</span></div>';
+  const cards='<div class="plan-grid">'+state.planCards.map(planCardHtml).join('')+'</div>';
+  const extra=(cluster.longtail&&cluster.longtail.length)?'<div class="plan-extra"><b>추가 검토 · 수익형 롱테일</b><br>'+cluster.longtail.map(escapeHTML).join(' · ')+'<br><span style="opacity:.75">자동 발행 카드로 만들지 않고 독립 수요를 확인한 뒤 필요할 때 추가합니다.</span></div>':'';
+  els.clusterBox.innerHTML=summary+cards+extra;
+  bindPublishingPlanEvents();
+}
+function bindPublishingPlanEvents(){
+  if(!els.clusterBox)return;
+  els.clusterBox.querySelectorAll('.plan-select').forEach(el=>el.addEventListener('change',()=>{
+    const c=getPlanCard(el.dataset.cardId);if(c){c.selected=el.checked;savePublishingPlan();const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row)}
   }));
-  els.clusterBox.querySelectorAll('.spoke-check').forEach(cb=>cb.addEventListener('change', ()=>{
-    const idx = Number(cb.dataset.idx);
-    if(cb.checked) state.selectedSpokeIdx.add(idx); else state.selectedSpokeIdx.delete(idx);
+  els.clusterBox.querySelectorAll('[data-card-title]').forEach(el=>el.addEventListener('input',()=>{
+    const c=getPlanCard(el.dataset.cardTitle);if(c){c.finalTitle=el.value;savePublishingPlan()}
   }));
+  els.clusterBox.querySelectorAll('[data-plan-status]').forEach(el=>el.addEventListener('change',()=>{
+    const c=getPlanCard(el.dataset.planStatus);if(c){c.status=el.value;savePublishingPlan()}
+  }));
+  els.clusterBox.querySelectorAll('[data-plan-url]').forEach(el=>el.addEventListener('change',()=>{
+    savePlanUrl(el.dataset.planUrl,el.value)
+  }));
+  els.clusterBox.querySelectorAll('.hook-load').forEach(el=>el.addEventListener('click',()=>loadPlanHooks(el.dataset.cardId,true)));
+  els.clusterBox.querySelectorAll('[data-plan-hook]').forEach(el=>el.addEventListener('click',()=>togglePlanHook(el.dataset.planHook,Number(el.dataset.hookIndex))));
+  els.clusterBox.querySelectorAll('[data-plan-titlebuilder]').forEach(el=>el.addEventListener('click',()=>openPlanTitleBuilder(el.dataset.planTitlebuilder)));
+  els.clusterBox.querySelectorAll('[data-plan-write]').forEach(el=>el.addEventListener('click',()=>startPlanArticle(el.dataset.planWrite)));
+}
+function savePlanUrl(cardId,value){
+  const c=getPlanCard(cardId);if(!c)return;
+  c.url=normalizeSpace(value);
+  if(c.url){
+    c.status='발행 완료';c.decision='기존 글 갱신 검토';
+    const assets=loadPublishedAssets();assets[normalizeKey(c.kw)]={kw:c.kw,title:c.finalTitle,url:c.url,updatedAt:new Date().toISOString()};savePublishedAssets(assets);
+  }
+  savePublishingPlan();
+  const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row);
+}
+async function loadPlanHooks(cardId,rerender=true){
+  const c=getPlanCard(cardId);if(!c)return;
+  const cardEl=els.clusterBox?.querySelector('[data-plan-card="'+CSS.escape(cardId)+'"]');
+  const btn=cardEl?.querySelector('.hook-load');if(btn){btn.disabled=true;btn.textContent='후킹 찾는 중...'}
+  try{
+    const th=await fetchTitleHuntCached(c.kw);
+    c.hooks=(th.hooks||[]).slice(0,8);
+    if(!state.hooksByKw)state.hooksByKw={};state.hooksByKw[normalizeSpace(c.kw)]=c.hooks;
+    savePublishingPlan();
+  }catch(e){console.error(e)}
+  if(rerender){
+    const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row);
+  }
+}
+function togglePlanHook(cardId,index){
+  const c=getPlanCard(cardId);if(!c||!c.hooks?.[index])return;
+  const word=normalizeSpace(c.hooks[index].word||c.hooks[index].tail||c.hooks[index]);
+  const hk=normalizeKey(word),pos=c.chosenHooks.indexOf(hk);
+  if(pos>=0)c.chosenHooks.splice(pos,1);else c.chosenHooks.push(hk);
+  const tails=c.chosenHooks.map(k=>{const h=c.hooks.find(x=>normalizeKey(x.word||x.tail||x)===k);return normalizeSpace(h?.word||h?.tail||h||'')}).filter(Boolean);
+  c.finalTitle=generateTitleByPattern(c.kw,tails,detectTitlePattern(tails));
+  savePublishingPlan();
+  const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row);
+}
+async function openPlanTitleBuilder(cardId){
+  const c=getPlanCard(cardId);if(!c)return;
+  if(!c.hooks?.length)await loadPlanHooks(cardId,false);
+  state.activePlanTitleCardId=cardId;
+  renderTitleBuilder(c.kw,c.hooks||[]);
+  if(state.titleState){state.titleState.edited=c.finalTitle||'';drawTitleBuilder()}
+  const d=els.titleBuilder?.closest('details');if(d)d.open=true;
+  els.titleBuilder?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function planLinkTargets(card){
+  return (state.planCards||[]).filter(c=>c.id!==card.id&&c.selected).map(c=>c.kw);
+}
+async function startPlanArticle(cardId){
+  const c=getPlanCard(cardId);if(!c)return;
+  const previous=state.activePlanCard?.id;
+  if(previous&&previous!==c.id)resetPublishingWorkspace();
+  state.activePlanCard=c;
+  c.status='원고 작업';
+  if(!c.hooks?.length)await loadPlanHooks(cardId,false);
+  let sug={suggestions:[]};
+  try{sug=await fetchSuggestCached(c.kw)}catch(e){}
+  const suggested=(sug.suggestions||[]).filter(k=>normalizeKey(k)!==normalizeKey(c.kw));
+  const subKeywords=[...(c.absorbed||[]),...suggested.filter(k=>!(c.absorbed||[]).some(a=>normalizeKey(a)===normalizeKey(k)))].slice(0,16);
+  const chosen=c.chosenHooks?.length
+    ? (c.hooks||[]).filter(h=>c.chosenHooks.includes(normalizeKey(h.word||h.tail||h)))
+    : (c.hooks||[]).slice(0,5);
+  const base=buildSpokePrompt({
+    targetKw:c.kw,subKeywords,spokeHooks:chosen,isSingle:subKeywords.length<3,
+    linkTargets:planLinkTargets(c),hub:state.currentCluster?.hub||c.kw,kind:c.kind
+  });
+  const title=c.finalTitle||c.kw;
+  const insert='## 메인 키워드\n'+c.kw;
+  const absorbed=(c.absorbed||[]).length?'\n\n## 이 글에 흡수할 검색어\n'+c.absorbed.map(k=>'- '+k).join('\n'):'';
+  const locked='\n\n## 최종 제목 — 반드시 그대로 사용\n'+title+'\n\n※ 위 제목은 발행 설계 카드에서 확정한 제목이다. 제목을 다시 만들거나 다른 후보를 제시하지 마라.';
+  els.draftPrompt.value=base.replace(insert,insert+absorbed+locked);
+  state.titleApplied={main:c.kw,tails:[],pattern:'info',draft:title,locked:true};
+  publishWorkspaceKeyword=normalizeKey(c.kw);
+  savePublishingPlan();
+  updatePromptMeta();updatePublishKeyword();
+  const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row);
+  els.draftPrompt.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
-async function generateClusterPrompt(kind, idx){
-  const cluster = state.currentCluster;
-  if(!cluster) return;
-  const targetKw = kind==='hub' ? cluster.hub : (cluster.spokes[idx]?.kw);
-  if(!targetKw) return;
-  els.draftPrompt.value = `"${targetKw}" 관련 검색어와 발행 제목을 조사해 원고 프롬프트를 만드는 중...`;
-  let subKeywords = [], spokeHooks = [];
-  try {
-    const [sug, th] = await Promise.all([
-      fetchSuggestCached(targetKw),
-      fetchTitleHuntCached(targetKw),
-    ]);
-    subKeywords = (sug.suggestions || []).filter(k => normalizeKey(k)!==normalizeKey(targetKw)).slice(0, 12);
-    spokeHooks = (th.hooks || []).slice(0, 5);
-  } catch(e){ subKeywords = []; spokeHooks = []; }
-  const isSingle = subKeywords.length < 3;
-  // [v22.14] 허브는 "체크된 스포크"만 중복방지 대상으로, 스포크는 기존대로 형제글 전체를 내부링크 후보로
-  const siblings = kind==='hub'
-    ? cluster.spokes.filter((_,i)=> state.selectedSpokeIdx && state.selectedSpokeIdx.has(i)).map(s=>s.kw)
-    : cluster.spokes.filter((_,i)=> i!==idx).map(s=>s.kw);
-  const linkTargets = [kind==='spoke' ? cluster.hub : null, ...siblings].filter(Boolean);
-  els.draftPrompt.value = buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub:cluster.hub, kind });
-  updatePromptMeta();
-  els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
+async function generateClusterPrompt(kind,idx){
+  const cluster=state.currentCluster;if(!cluster)return;
+  const id=kind==='hub'?planCardId('hub',cluster.hub):planCardId('spoke',cluster.spokes[idx]?.kw||'');
+  if(id)return startPlanArticle(id);
 }
 
 function buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTargets, hub, kind }){
@@ -2453,7 +2670,7 @@ function selectedPublishRow(){
   return (rows || [])[state.selectedIndex] || (rows || [])[0] || null;
 }
 function selectedPublishKeyword(){
-  return normalizeSpace(selectedPublishRow()?.kw || state.seed || '');
+  return normalizeSpace(state.activePlanCard?.kw || selectedPublishRow()?.kw || state.seed || '');
 }
 function updatePublishKeyword(){
   if(els.publishKeyword) els.publishKeyword.textContent = `키워드 · ${selectedPublishKeyword() || '-'}`;
@@ -2609,6 +2826,10 @@ function eligiblePublishSections(){
 }
 function articleChanged(){
   updateArticleCount();
+  if(state.activePlanCard && (els.articleBox?.value||'').trim()){
+    state.activePlanCard.status='원고 완료';
+    savePublishingPlan();
+  }
   const valid=new Set(eligiblePublishSections().map(s=>s.key));
   publishImages.filter(x=>x.kind!=='hero'&&x.id!==publishHeroId).forEach(img=>{ if(img.section!=='unassigned'&&!valid.has(img.section)) img.section='unassigned'; });
   renderPublishImages(); renderPublishHero(); refreshPublishPreview(); updateImageButtons(); updatePublishKeyword();

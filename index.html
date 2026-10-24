@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>글감레이더 v23 | 패턴제목 + 발행작업실</title>
-  <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 구글 유입 적합도로 글감을 추천합니다." />
+  <title>글감레이더 v25 | 근거 확인 + 제목 + 발행작업실</title>
+  <meta name="description" content="네이버 검색광고 API에 네이버·구글 자동완성을 결합해 트렌드·신조어 키워드까지 발굴하고, 검색의도와 정보형 구성 적합도로 글감을 추천합니다." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -323,7 +323,7 @@
     <div class="step active">STEP 1 · 검색량 수집</div>
     <div class="step active">STEP 2 · 연관·신조어 발굴</div>
     <div class="step active">STEP 3 · 경쟁 발행량 확인</div>
-    <div class="step active">STEP 4 · 블루오션 선별</div>
+    <div class="step active">STEP 4 · 검증 상태 확인</div>
     <div class="step active">STEP 5 · 허브·스포크·제목</div>
     <div class="step">STEP 6 · 원고 검수</div>
     <div class="step">STEP 7 · 이미지 세탁</div>
@@ -337,7 +337,7 @@
   </div>
 
   <div class="decision">
-    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">글감점수</div></div>
+    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">검토점수</div></div>
     <div>
       <h1 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h1>
       <p id="judgementReason">검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.</p>
@@ -347,14 +347,14 @@
 
   <div class="section-title">
     <span class="st-tick"></span>
-    <h3>블루오션 글감 TOP 6</h3>
+    <h3>검증된 글감 후보 TOP 6</h3>
     <span class="st-rule"></span>
-    <span class="micro-hint">의도 명확 + 경쟁 적음 + AI 인용형 우선</span>
+    <span class="micro-hint">수요·발행량·의도 근거를 각각 확인</span>
   </div>
-  <p class="table-caption">검색 수요는 받쳐주면서 최근 30일 블로그 발행이 적고, 검색의도가 뚜렷하며 AI 브리핑이 인용하기 쉬운 답변형 후보를 우선 추천합니다.</p>
+  <p class="table-caption">네이버 월간 검색수와 최근30일 검색 결과에서 확인한 발행량을 비교합니다. 조회 실패·미조회·최소 건수는 추천 점수에서 제외하며, 점수는 실제 노출·수익·AI 인용을 예측하지 않습니다.</p>
   <div class="table-wrap recommend-table">
     <table>
-      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>구글적합</th><th>AI인용</th><th>점수</th></tr></thead>
+      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>정보구성</th><th>답변구조</th><th>점수</th></tr></thead>
       <tbody id="keywordTable"></tbody>
     </table>
   </div>
@@ -364,7 +364,7 @@
     <p class="table-caption">각 키워드의 검색량·최근30일 발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
     <div class="table-wrap detail-table">
       <table>
-        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>AI인용</th><th>점수</th><th>추천 이유</th></tr></thead>
+        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>답변구조</th><th>점수</th><th>추천 이유</th></tr></thead>
         <tbody id="detailKeywordTable"></tbody>
       </table>
     </div>
@@ -527,7 +527,7 @@
 
   <div class="action-row"><button class="green" id="copyKeywordsBtn">키워드 복사</button><button class="black" id="resetBtn">초기화</button></div>
 
-  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v24.1 · 30D SUPPLY → ARTICLE → CLEAN → JPG → PUBLISH</p>
+  <p style="font-size:11px; color:var(--ink-soft); margin-top:60px; border-top:1px solid var(--line); padding-top:18px;">글감레이더 v25 · 30D SUPPLY → ARTICLE → CLEAN → JPG → PUBLISH</p>
 </div>
 
 <script>
@@ -539,6 +539,7 @@ const els = {
   publishKeyword:$('publishKeyword'), imageStatus:$('imageStatus'), heroSlot:$('heroSlot'), heroDropzone:$('heroDropzone'), heroInput:$('heroInput'), dropzone:$('dropzone'), fileInput:$('fileInput'), imageList:$('imageList'), clearImagesBtn:$('clearImagesBtn'), downloadAllBtn:$('downloadAllBtn'), publishPreview:$('publishPreview'), publishStatus:$('publishStatus'), publishPlatformHint:$('publishPlatformHint'), publishPlatformName:$('publishPlatformName'), publishAdapterDesc:$('publishAdapterDesc'), copyPublishTitleBtn:$('copyPublishTitleBtn'), copyPublishBodyBtn:$('copyPublishBodyBtn'), sendTistoryAutoBtn:$('sendTistoryAutoBtn')
 };
 
+let analysisRevision=0;
 let state = { seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null };
 const apiCache = new Map();
 
@@ -564,47 +565,74 @@ function parseNumber(v){
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   const s = String(v ?? '').replace(/,/g,'').trim();
   if (!s) return 0;
-  if (s.startsWith('<')) return 10;
+  if (s.startsWith('<')) return 0; // threshold values are represented by volumeStatus, never exact counts
   const n = Number(s.replace(/[^0-9.]/g,''));
   return Number.isFinite(n) ? n : 0;
 }
 function pick(obj, keys){ for (const k of keys){ if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k]; } return undefined; }
 function format(n){ return Number(n || 0).toLocaleString('ko-KR'); }
-function ratioValue(row){
-  if(row?.contentSkipped) return 999999;
-  const monthly=Number(row.monthly||0);
-  if(monthly<=0) return 999999;
-  return Number(row.totalContent||0)/monthly;
+// KW_RELIABILITY_BEGIN
+function validCount(value){return typeof value==='number'&&Number.isFinite(value)&&value>=0}
+function searchState(row){return row?.volumeStatus||(row?.raw&&validCount(row.monthly)?'exact':'unavailable')}
+function supplyState(row){return row?.supplyStatus||(row?.contentSkipped?'not_requested':row?.contentCapped?'lower_bound':'unavailable')}
+function readyForRanking(row){return searchState(row)==='exact'&&supplyState(row)==='complete'&&validCount(row.monthly)&&validCount(row.totalContent)}
+function demandText(row,part='monthly'){
+ const value=part==='pc'?row?.pc:part==='mo'?row?.mo:row?.monthly;
+ const status=part==='pc'?row?.pcStatus:part==='mo'?row?.mobileStatus:searchState(row);
+ if(status==='low_volume')return part==='monthly'&&validCount(row?.monthlyUpperBound)?`≤${format(row.monthlyUpperBound)} (소량)`:'<10 (소량)';
+ if(status==='exact'&&validCount(value))return format(value);
+ return '미확인';
 }
+function scoreText(row){return validCount(row?.score)?String(row.score):'보류'}
+function cafeText(row){return row?.cafeStatus==='complete'&&validCount(row.cafe)?format(row.cafe)+'건':'측정 불가 (작성일 미제공)'}
+function hydrateContent(row,content){
+ const allowed=['complete','partial','lower_bound','unavailable'];
+ const status=allowed.includes(content?.blogStatus)?content.blogStatus:'unavailable';
+ return {...row,blog:validCount(content?.recentBlogTotal)?content.recentBlogTotal:null,
+  cafe:null,totalContent:validCount(content?.recentBlogTotal)?content.recentBlogTotal:null,
+  supplyStatus:status,cafeStatus:'unsupported_date',contentCapped:status==='lower_bound',
+  cafeCapped:false,contentWindowDays:30,contentMethod:content?.method||'unavailable',
+  contentError:content?._error||'',allTimeBlogTotal:content?.allTimeBlogTotal??null};
+}
+const TOPIC_FACETS=/프로필|필모그래피|대표곡|출연진|등장인물|몇부작|줄거리|결말|재방송|다시보기|나이|학력|고향|경력|소속|본명|연봉|재산|신청방법|신청기간|신청|조회|대상|조건|기준|지급일|사용처|금액|가격|후기|방법|일정|결과|준비물|뜻|관계|예매|예약|20\d{2}|\d+년/g;
+function topicCores(text){return normalizeSpace(text).replace(TOPIC_FACETS,' ').split(/[^0-9a-zA-Z가-힣]+/).filter(x=>x.length>=2&&!/^(배우|가수|선수|감독|정치인|정보|정리|총정리)$/.test(x))}
+function sameTopic(main,candidate){
+ const a=normalizeKey(main),b=normalizeKey(candidate);if(!a||!b)return false;if(a===b)return true;
+ const core=topicCores(main),other=topicCores(candidate);if(!core.length)return false;
+ return core.every(x=>{const n=normalizeKey(x);if(n.length>=4)return b.includes(n);return other.some(y=>normalizeKey(y)===n||normalizeKey(y).startsWith(n)&&/^(감독|선수|배우|가수)$/.test(normalizeKey(y).slice(n.length)))});
+}
+function titleMaterialsSameTopic(main,candidate){
+ // Generic information queries can share a root but name different people. Respect explicit discriminators.
+ if(!sameTopic(main,candidate))return false;
+ if(state.entityFilter&&hasEntityDomainConflictV24(candidate,state.entityFilter))return false;
+ return true;
+}
+// KW_RELIABILITY_END
+
+function ratioValue(row){if(!['complete','lower_bound','partial'].includes(supplyState(row))||searchState(row)!=='exact'||!validCount(row.totalContent)||!validCount(row.monthly)||row.monthly<=0)return Infinity;return row.totalContent/row.monthly}
 function ratioText(row){
-  if(row?.contentSkipped) return '발행량 미검증';
-  const monthly=Number(row.monthly||0);
-  if(monthly<=0) return '-';
-  const r=ratioValue(row);
-  const suffix=row?.contentCapped?' 이상':'';
-  if(r<1){
-    const pct=r*100;
-    const digits=pct<0.1?2:1;
-    return `${pct.toFixed(digits)}%${suffix}`;
-  }
-  return `${r.toFixed(1)}배${suffix}`;
+ const r=ratioValue(row);if(!Number.isFinite(r))return '미검증';
+ const label=r<1?`${(r*100).toFixed(r<.001?2:1)}%`:`${r.toFixed(1)}배`;
+ return label+(supplyState(row)==='lower_bound'?' 이상 (하한)':supplyState(row)==='partial'?' 이상 (일부 수집)':'');
 }
 function countStatus(value,capped){
   return capped ? `${format(value)}건 이상` : `${format(value)}건`;
 }
 function contentStatus(row){
-  if(row?.contentSkipped) return '발행량 미검증';
-  return countStatus(row.totalContent,row.contentCapped);
+ const status=supplyState(row);
+ if(status==='not_requested')return '미조회';
+ if(status==='unavailable')return '미확인';
+ if(!validCount(row.totalContent))return '미확인';
+ return countStatus(row.totalContent,status==='lower_bound'||status==='partial')+(status==='partial'?' (일부 수집)':'');
 }
 function uniqueByKeyword(rows){ const seen=new Set(); return (rows||[]).filter(row=>{ const k=normalizeKey(row.kw); if(!k || seen.has(k)) return false; seen.add(k); return true; }); }
 
 function getKeywordFromApiItem(item){ return normalizeSpace(item?.relKeyword || item?.keyword || item?.kw || item?.word || item?.query || item?.name || item?.text || ''); }
 function rowFromSearchAdItem(item, sourceType){
-  const kw = getKeywordFromApiItem(item);
-  const pc = parseNumber(pick(item, ['monthlyPcQcCnt','monthlyPc','pc','pcSearch','pcCount']));
-  const mo = parseNumber(pick(item, ['monthlyMobileQcCnt','monthlyMobile','mo','mobile','mobileSearch','mobileCount']));
-  const monthly = parseNumber(pick(item, ['monthlyTotal','totalSearch','searchVolume','searchCount','total'])) || pc + mo;
-  return { kw, pc, mo, monthly, blog:0, cafe:0, totalContent:0, ad:String(pick(item, ['compIdx','competition','ad']) || '-'), sourceType, raw:item };
+ const kw=getKeywordFromApiItem(item),status=item.volumeStatus||'unavailable';
+ return {kw,pc:validCount(item.monthlyPc)?item.monthlyPc:null,mo:validCount(item.monthlyMobile)?item.monthlyMobile:null,
+ monthly:validCount(item.monthlyTotal)?item.monthlyTotal:null,volumeStatus:status,pcStatus:item.pcStatus||status,mobileStatus:item.mobileStatus||status,
+ monthlyUpperBound:item.monthlyUpperBound??null,blog:null,cafe:null,totalContent:null,supplyStatus:'not_requested',ad:item.competition||'-',sourceType,raw:item};
 }
 function extractKeywordList(payload){
   if (!payload || typeof payload !== 'object') return [];
@@ -628,17 +656,8 @@ function findExactItem(list, keyword){
 // 이미 구해준 정답을 버리고 monthly=0인 fallback으로 잘못 빠지는 버그였다.
 // (analyze()의 exactRow, probeSeedSuffix(), addComboKeyword() 3곳 모두 이 함수로 교체)
 function rowFromExactPayload(payload, seedKw, sourceType){
-  if (!payload || !payload.relKeyword) return null;
-  return {
-    kw: normalizeSpace(seedKw),
-    pc: parseNumber(payload.monthlyPc),
-    mo: parseNumber(payload.monthlyMobile),
-    monthly: parseNumber(payload.monthlyTotal),
-    blog:0, cafe:0, totalContent:0,
-    ad: payload.competition || '-',
-    sourceType,
-    raw: payload
-  };
+ if(!payload||payload.exactMatched===false||!payload.relKeyword||normalizeKey(payload.relKeyword)!==normalizeKey(seedKw))return null;
+ return {...rowFromSearchAdItem(payload,sourceType),kw:normalizeSpace(seedKw)};
 }
 
 async function fetchJSON(url, _retry){
@@ -656,50 +675,25 @@ async function fetchJSON(url, _retry){
   if (!res.ok) throw new Error(data?.error || data?.message || `${res.status} API 오류`);
   return data;
 }
-async function fetchSearchAd(keyword){ return fetchJSON(`/api/searchad?keyword=${encodeURIComponent(keyword)}`); }
-async function fetchContent(keyword){ return fetchJSON(`/api/keyword?keyword=${encodeURIComponent(keyword)}`); }
+async function fetchSearchAd(keyword){ return fetchJSON(`/api/searchad?keyword=${encodeURIComponent(keyword)}&v=reliability-20261024`); }
+async function fetchContent(keyword){ return fetchJSON(`/api/keyword?keyword=${encodeURIComponent(keyword)}&v=reliability-20261024`); }
 // [v18] 네이버 검색 API로 발행 제목 모아 후킹 키워드 추출. 실패해도 빈 결과(본체 보호).
 async function fetchTitleHunt(keyword){
-  try { return await fetchJSON(`/api/titlehunt?keyword=${encodeURIComponent(keyword)}`); }
+  try { const p=await fetchJSON(`/api/titlehunt?keyword=${encodeURIComponent(keyword)}&v=reliability-20261024`);return p._usedRawFallback?{hooks:[],sampleTitles:[],newsSnippets:[],_error:'맥락 근거 부족'}:p; }
   catch(err){ console.error('titlehunt fetch error:', err.message); return { hooks:[], sampleTitles:[] }; }
 }
-const titleHuntCache = new Map();
-async function fetchTitleHuntCached(keyword){
-  const key = `titlehunt:${normalizeSpace(keyword)}`;
-  if(titleHuntCache.has(key)) return titleHuntCache.get(key);
-  const promise = fetchTitleHunt(keyword);
-  titleHuntCache.set(key, promise);
-  return promise;
+const titleHuntCache=new Map(),suggestCache=new Map(),searchAdCache=new Map();
+function memoEvidence(cache,key,loader,ttl){
+ const previous=cache.get(key);if(previous&&Date.now()-previous.at<ttl)return previous.promise;
+ const entry={at:Date.now()};
+ entry.promise=Promise.resolve().then(loader).then(value=>{if(value?._error||value?.blogStatus==='partial'||value?.blogStatus==='unavailable'){if(cache.get(key)===entry)cache.delete(key)}return value},error=>{if(cache.get(key)===entry)cache.delete(key);throw error});
+ cache.set(key,entry);return entry.promise;
 }
-// 네이버+구글 자동완성. 실패해도 빈 결과 반환(본체 보호).
-async function fetchSuggest(keyword){
-  try { return await fetchJSON(`/api/suggest?keyword=${encodeURIComponent(keyword)}&source=both`); }
-  catch(err){ console.error('suggest fetch error:', err.message); return { suggestions:[], detailed:[] }; }
-}
-const suggestCache = new Map();
-async function fetchSuggestCached(keyword){
-  const key = `suggest:${normalizeSpace(keyword)}`;
-  if(suggestCache.has(key)) return suggestCache.get(key);
-  const promise = fetchSuggest(keyword);
-  suggestCache.set(key, promise);
-  return promise;
-}
-// 자동완성 키워드의 검색량을 검색광고 API로 재조회 (없으면 0). 캐시 사용.
-const searchAdCache = new Map();
-async function fetchSearchAdCached(keyword){
-  const key = `searchad:${normalizeSpace(keyword)}`;
-  if(searchAdCache.has(key)) return searchAdCache.get(key);
-  const promise = fetchSearchAd(keyword).catch(err => ({ _error:err.message }));
-  searchAdCache.set(key, promise);
-  return promise;
-}
-async function fetchContentCached(keyword){
-  const key = `content:${normalizeSpace(keyword)}`;
-  if (apiCache.has(key)) return apiCache.get(key);
-  const promise = fetchContent(keyword).catch(err => ({ recentBlogTotal:0, recentCafeTotal:0, recentBlogCapped:false, recentCafeCapped:false, _error:err.message }));
-  apiCache.set(key, promise);
-  return promise;
-}
+async function fetchTitleHuntCached(keyword){return memoEvidence(titleHuntCache,normalizeSpace(keyword),()=>fetchTitleHunt(keyword),10*60*1000)}
+async function fetchSuggest(keyword){try{return await fetchJSON(`/api/suggest?keyword=${encodeURIComponent(keyword)}&source=both`)}catch(e){return {suggestions:[],detailed:[],_error:e.message}}}
+async function fetchSuggestCached(keyword){return memoEvidence(suggestCache,normalizeSpace(keyword),()=>fetchSuggest(keyword),20*60*1000)}
+async function fetchSearchAdCached(keyword){try{return await memoEvidence(searchAdCache,normalizeSpace(keyword),()=>fetchSearchAd(keyword),6*60*60*1000)}catch(e){return {_error:e.message}}}
+async function fetchContentCached(keyword){try{return await memoEvidence(apiCache,normalizeSpace(keyword),()=>fetchContent(keyword),60*60*1000)}catch(e){return {recentBlogTotal:null,blogStatus:'unavailable',cafeStatus:'unsupported_date',_error:e.message}}}
 async function mapLimit(items, limit, mapper){
   const results = new Array(items.length);
   let cursor = 0;
@@ -737,7 +731,7 @@ function scoreContent(total){
 }
 // 경쟁비율(발행량÷검색량)이 주력 정렬 기준. 최대 40점으로 강화.
 function scoreRatio(row){
-  if(row?.contentSkipped) return 0;
+  if(!readyForRanking(row)) return 0;
   const monthly = Number(row.monthly||0);
   const content = Number(row.totalContent||0);
   if(monthly<=0) return 0;
@@ -782,7 +776,7 @@ function isHighCpc(intentKey, kw){
   return CPC_WORDS.some(w => compact.includes(normalizeKey(w)));
 }
 
-// 구글 유입 적합도: 정보성(방법·정책·금융·이슈·해결) 의도일수록 구글에서 트래픽이 잘 터짐
+// 정보형 구성 적합도: 문서 구성에 대한 단어 규칙이며 Google 성과 측정이 아니다.
 const GOOGLE_FRIENDLY_KEYS = ['howto','policy','finance','issue','recipe','career','health','education','tech','season','law','auto','parenting','sports'];
 const GOOGLE_WORDS = ['방법','하는법','신청','조건','차이','비교','원인','해결','후기','효능','뜻','종류','순서','정리','준비물','기준'];
 function googleBonus(intentKey, kw){
@@ -792,14 +786,9 @@ function googleBonus(intentKey, kw){
   if(GOOGLE_WORDS.some(w => compact.includes(normalizeKey(w)))) bonus += 5;
   return bonus;
 }
-function googleFitLabel(intentKey, kw){
-  const b = googleBonus(intentKey, kw);
-  if(b >= 10) return { label:'구글 강세', cls:'green' };
-  if(b >= 5) return { label:'구글 양호', cls:'yellow' };
-  return { label:'네이버형', cls:'gray' };
-}
+function googleFitLabel(intentKey,kw){const b=googleBonus(intentKey,kw);return b>=10?{label:'정보형 구성 적합',cls:'green'}:b>=5?{label:'정보형 구성 가능',cls:'yellow'}:{label:'구성 근거 부족',cls:'gray'}}
 
-// [v22.1] AI 브리핑 인용 적합도: 질문에 바로 답하고 표·리스트·사례·공식출처로 구조화하기 쉬운 키워드에 가점.
+// [v22.1] 답변 구조화 적합도: 질문에 바로 답하고 표·리스트·사례·공식출처로 구조화하기 쉬운 키워드에 가점.
 function aiCitationScore(row, intent){
   let score = 0;
   const kw = normalizeKey(row?.kw || '');
@@ -818,12 +807,8 @@ function aiCitationScore(row, intent){
 
   return Math.min(100, score);
 }
-function aiCitationLabel(score){
-  if(score >= 75) return { label:'AI 인용 강함', cls:'green' };
-  if(score >= 50) return { label:'AI 인용 가능', cls:'yellow' };
-  if(score >= 25) return { label:'구조 보강 필요', cls:'gray' };
-  return { label:'AI 인용 약함', cls:'red' };
-}
+function aiCitationLabel(score){return score>=75?{label:'답변 구조화 용이',cls:'green'}:score>=50?{label:'답변 구조화 가능',cls:'yellow'}:{label:'구조 설계 필요',cls:'gray'}}
+
 function needsExperience(row, intent){
   const kw = normalizeKey(row?.kw || '');
   const expWords = ['신청','조회','오류','안됨','환불','취소','후기','가격','예약','주차','사용법','레시피','부결','반려','실패','비교'];
@@ -832,28 +817,27 @@ function needsExperience(row, intent){
 }
 
 function classify(row){
-  const m=Number(row.monthly||0), c=Number(row.totalContent||0), r=ratioValue(row), clarity=Number(row.intentClarityScore||0);
-  // [v20] 블루오션 기준: 경쟁비율 1.0(발행량=검색량)이 분기점. 그 이하라야 검색 수요가 발행을 앞선다.
-  if(m>=500 && r<0.5 && clarity>=10) return '즉시 글감';   // 발행이 검색의 절반 미만 = 확실한 블루오션
-  if(m>=300 && r<1.0) return '우선 후보';                   // 발행<검색
-  if(m>=300 && r<2.0) return '차순위 글감';                 // 발행이 검색의 2배 미만 — 경쟁 있음
-  if(m>0) return '관찰키워드';
-  return 'API 수치 부족';
+ if(searchState(row)!=='exact')return searchState(row)==='low_volume'?'소량 검색·관찰':'검색량 미확인';
+ if(!validCount(row.monthly)||row.monthly<=0)return '수요 부족';
+ if(['lower_bound','partial'].includes(supplyState(row)))return '추가 수집 필요';
+ if(!readyForRanking(row))return '발행량 미확인';
+ if(Number(row.relevance||0)===0)return '관련도 확인';
+ const r=ratioValue(row);
+ if(row.monthly>=500&&r<.5&&Number(row.intentClarityScore||0)>=10)return '우선 검토';
+ if(row.monthly>=300&&r<1)return '검토 후보';
+ if(r>=1)return '경쟁 높음';
+ return '관찰키워드';
 }
-function makeReason(row, score, intent){
-  const cpc = isHighCpc(intent?.key, row.kw) ? ' 고단가 틈새 키워드라 수익 가치가 높습니다.' : '';
-  const gFit = googleFitLabel(intent?.key, row.kw);
-  const gtext = gFit.cls==='green' ? ' 정보성 의도가 뚜렷해 구글 유입이 잘 터지는 유형입니다.' : (gFit.cls==='yellow' ? ' 구글 유입 가능성이 있는 정보성 키워드입니다.' : '');
-  const evidence = intent?.terms?.length ? ` 의도근거는 ${intent.terms.join(', ')}입니다.` : ' 의도근거가 약해 원키워드 설계로만 참고합니다.';
-  // [FIX 2026-08-06] 원키워드와 글자가 전혀 안 겹치는 후보(자동완성이 이름 비슷한 다른
-  // 대상으로 '교정 제안'했을 가능성)는 이유 문장 끝에 경고를 붙인다. 필터링은 하지 않고
-  // 판단은 사용자에게 맡긴다.
-  const homonymWarn = (Number(row.relevance||0) === 0) ? ' ⚠ 이 키워드는 원키워드와 겹치는 글자가 전혀 없어 관련도가 낮게 계산됐습니다 — 동명이인이거나 다른 주제일 수도, 표현만 다른 같은 주제일 수도 있으니 실제로 확인해보세요.' : '';
-  if(row.monthly>0) return `월간 검색수 ${format(row.monthly)}회 대비 최근 30일 블로그 발행 ${contentStatus(row)}건, 경쟁비율 ${ratioText(row)}입니다. 검색 수요 대비 글이 ${ratioValue(row)<0.5?'매우 적어 블루오션으로':(ratioValue(row)<1.0?'적은 편으로':'다소 많은 편으로')} 보고 ${row.grade || '후보'}에 배치했습니다.${cpc}${gtext}${evidence}${homonymWarn}`;
-  return `${row.sourceType}에는 포함됐지만 검색량 수치가 부족합니다. 추천 후보가 부족할 때 연관검색어 묶음으로 참고합니다.${homonymWarn}`;
+function makeReason(row,score,intent){
+ const st=searchState(row),ss=supplyState(row);
+ if(st!=='exact')return `검색량 ${demandText(row)}. 원문 검색량이 확인되지 않아 추천 점수를 보류합니다.`;
+ if(ss!=='complete')return `월간 검색수 ${demandText(row)}회 / 최근30일 블로그 ${contentStatus(row)}. 전체 발행량을 확정하지 못해 추천 점수를 보류합니다. 카페 최근30일은 작성일 미제공으로 측정하지 않습니다.`;
+ return `네이버 월간 검색수 ${demandText(row)}회 / 최근30일 확인 발행량 ${contentStatus(row)} / 비율 ${ratioText(row)}. ${row.grade}. 이 비율은 글 수와 검색 횟수의 참고 비교이며 검색 경쟁·노출·수익을 보장하지 않습니다. 선택어 의도 근거: ${intent.terms.join(', ')||'부족'}.`;
 }
 
 const INTENTS = [
+  {key:'relationship',label:'관계·발언 배경',terms:['은인','발언','해명','친분','관계']},
+  {key:'person',label:'인물 프로필',terms:['프로필','본명','학력','고향']},
   { key:'policy', label:'정책·지원금', terms:['환급','환급금','환급일','신청','대상','조건','지급일','사용처','기준','서류','조회','지원금','보조금','장려금','수당','바우처','받는 방법','신청방법','지원','혜택','감면','정책','복지','국가','정부','지자체','신청자격','자격'] },
   { key:'content', label:'방송·콘텐츠', terms:['드라마','영화','예능','넷플릭스','티빙','웨이브','디즈니','쿠팡플레이','OTT','ott','출연진','등장인물','몇부작','재방송','다시보기','원작','웹툰','줄거리','결말','시청률','회차','인물관계도','공개일','방영일','방송','채널','시즌','예고편','뮤지컬','콘서트'] },
   { key:'finance', label:'금융·대출', terms:['대출','전세대출','버팀목','금리','한도','상환','부결','은행','청약','예금','적금','보험','카드','연금','펀드','투자','상속','세금','이자','계산기','수수료','환율','주식','코인','비트코인','연말정산','소득공제','퇴직금'] },
@@ -903,19 +887,10 @@ function includesAxisTerm(text, term){
   if(raw.includes(term)) return true;
   return compact.includes(termCompact);
 }
-function inferIntentFromEvidence(selectedKeyword, bundleRows){
-  const selected = normalizeSpace(selectedKeyword || '');
-  const bundleText = (bundleRows||[]).map(r=>r.kw).join(' ');
-  const scored = INTENTS.map(intent=>{
-    const selectedMatched = intent.terms.filter(term => includesTerm(selected, term));
-    const bundleMatched = intent.terms.filter(term => includesTerm(bundleText, term));
-    const matched = [...new Set([...selectedMatched, ...bundleMatched])];
-    const score = selectedMatched.length * 3 + bundleMatched.length;
-    return { ...intent, score, terms:matched };
-  }).sort((a,b)=>b.score-a.score);
-  const best = scored[0];
-  if(best && best.score >= 1) return { key:best.key, label:best.label, score:best.score, terms:best.terms };
-  return DEFAULT_INTENT;
+function inferIntentFromEvidence(selectedKeyword,bundleRows){
+ const selected=normalizeSpace(selectedKeyword||'');
+ const ranked=INTENTS.map(intent=>{const terms=intent.terms.filter(t=>includesTerm(selected,t));return {...intent,terms,score:terms.length*3}}).sort((a,b)=>b.score-a.score);
+ return ranked[0]?.score?ranked[0]:DEFAULT_INTENT;
 }
 function clarityScore(intent){
   const count = Number(intent?.terms?.length || 0);
@@ -928,37 +903,33 @@ function clarityScore(intent){
 function enrichScore(row, bundleRows){
   const intent = inferIntentFromEvidence(row.kw, bundleRows);
   const intentScore = clarityScore(intent);
-  const cpcBonus = highCpcBonus(intent.key, row.kw);
-  const gBonus = googleBonus(intent.key, row.kw);
+  
+  
   const aiScore = aiCitationScore(row, intent);
   const aiFit = aiCitationLabel(aiScore);
-  const contentScore = row?.contentSkipped ? 0 : scoreContent(row.totalContent);
-  // [FIX 2026-08-06] 원키워드와 글자가 하나도 안 겹치는 후보(동명이인/다른 주제일 가능성)를
-  // 걸러내기 위해 relevanceScore를 따로 저장해둔다. 접미어·조합 보강은 항상 seed를 포함하므로
-  // 0이 될 수 없고, 자동완성이 "교정 제안"한 완전히 다른 이름/키워드만 0이 된다.
-  const relScore = relevanceScore(row, state.seed);
-  const score = Math.max(1, Math.min(100, Math.round(
-    scoreMonthly(row.monthly) + contentScore + scoreRatio(row) + intentScore + relScore + cpcBonus + gBonus + Math.round(aiScore * 0.08)
-  )));
+  const relScore = sameTopic(state.seed,row.kw)?relevanceScore(row,state.seed):0;
+  const demandScore=Math.round(scoreMonthly(row.monthly)/15*25);
+  const supplyScore=readyForRanking(row)?Math.round(scoreRatio(row)/40*35):null;
+  const score=readyForRanking(row)?Math.round(demandScore+supplyScore+intentScore/35*25+relScore/10*15):null;
   const gFit = googleFitLabel(intent.key, row.kw);
-  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, relevance:relScore, score };
+  const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, relevance:relScore, demandScore, supplyScore, score };
   enriched.grade = classify(enriched);
   enriched.reason = makeReason(enriched, score, intent);
   return enriched;
 }
 function sortCandidates(rows){
-  const gradeRank = { '즉시 글감':5, '우선 후보':4, '차순위 글감':3, '관찰키워드':2, 'API 수치 부족':1 };
+  const gradeRank = {'우선 검토':6,'검토 후보':5,'관찰키워드':4,'경쟁 높음':3,'추가 수집 필요':2,'발행량 미확인':1};
   return [...rows].sort((a,b)=>{
     if((gradeRank[b.grade]||0)!==(gradeRank[a.grade]||0)) return (gradeRank[b.grade]||0)-(gradeRank[a.grade]||0);
     if(Number(b.score||0)!==Number(a.score||0)) return Number(b.score||0)-Number(a.score||0);
     if(Number(b.intentClarityScore||0)!==Number(a.intentClarityScore||0)) return Number(b.intentClarityScore||0)-Number(a.intentClarityScore||0);
-    if(Number(a.ratio||999999)!==Number(b.ratio||999999)) return Number(a.ratio||999999)-Number(b.ratio||999999);
+    if(Number(a.ratio??Infinity)!==Number(b.ratio??Infinity)) return Number(a.ratio??Infinity)-Number(b.ratio??Infinity);
     if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
     return 0;
   });
 }
 function recoTier(row){
-  if(row?.contentSkipped) return 0;
+  if(!readyForRanking(row)) return 0;
   if(Number(row?.relevance||0)===0) return 0;
   const m=Number(row.monthly||0), r=ratioValue(row);
   if(m<300) return 0;
@@ -1177,7 +1148,7 @@ function newsFactBlock(newsSnippets){
 스니펫 없음. **웹검색 도구를 쓸 수 있으면 이 키워드를 직접 검색해서 사실을 확인하고 써라 — 아무것도 안 찾아보고 바로 "확인 필요"로 넘어가지 마라.** 검색이 아예 불가능한 환경(순수 텍스트 생성만 가능)일 때만, 시점에 따라 바뀌는 사실(캐스팅·날짜·수치·현재 순위 등)은 지어내지 말고 "확인 필요"로 처리하라. 오래전부터 알려진 배경지식·이미 끝난 과거 기록은 검색 없이도 써도 된다.`;
   }
   const items = list.slice(0,5).map((s,i)=>
-    `${i+1}. "${escapeHTML(s.description)}" — 출처: ${escapeHTML(s.source || '매체명 미상')}${s.pubDate ? ` (${escapeHTML(s.pubDate.slice(0,16))})` : ''}`
+    `${i+1}. ${s.title||'제목 미상'} — ${s.description||''}${s.url?'\n원문: '+s.url:''}${s.freshness==='older'?' (과거 배경 자료)':''} — 출처: ${escapeHTML(s.source || '매체명 미상')}${s.pubDate ? ` (${escapeHTML(s.pubDate.slice(0,16))})` : ''}`
   ).join('\n');
   return `
 
@@ -1227,11 +1198,8 @@ ${targets.map(k=>`- ${k}`).join('\n')}`;
 }
 
 function competitionStrategy(row){
-  const r = ratioValue(row);
-  if(r < 0.5) return `이 키워드는 경쟁비율 ${ratioText(row)}로, 검색 수요 대비 발행된 글이 매우 적은 블루오션이다. 깊이 있고 완결성 있게 작성해 이 주제를 선점해라. 기본만 잘 다뤄도 상위 노출 가능성이 높으니, 한 번에 제대로 써서 오래가는 글을 만들어라.`;
-  if(r < 1.0) return `이 키워드는 경쟁비율 ${ratioText(row)}로, 검색 수요가 발행량보다 많아 해볼 만한 편이다. 검색 의도를 정확히 짚고 세부 질문까지 답하는 완결성으로 차별화해라.`;
-  if(r < 2.0) return `이 키워드는 경쟁비율 ${ratioText(row)}로, 검색량은 받쳐주지만 이미 발행된 글도 많다. 단독으로 승부하기보다 경쟁이 덜한 세부 키워드(연관어)를 제목·소제목에 결합하고, 기존 글들이 놓친 최신 정보·구체적 사례·비교로 차별화해야 묻히지 않는다.`;
-  return `이 키워드는 경쟁비율 ${ratioText(row)}로 이미 글이 매우 많다. 단독 키워드로는 상위 노출이 어려우니, 연관키워드에서 검색 수요가 있으면서 경쟁이 덜한 세부 주제로 쪼개 그쪽을 메인으로 잡는 편이 낫다. 그대로 쓸 경우 남들이 안 다룬 틈새 질문이나 최신 변경점을 파고들어라.`;
+ if(!readyForRanking(row))return `검색량/발행량 상태가 ${row.grade}이므로 경쟁 강도를 단정하지 않는다. 수집된 최소 수치나 실패를 전체 발행량으로 쓰지 말고, 글의 검색 질문과 공식 근거를 중심으로 설계한다.`;
+ return `네이버 월간 검색수 대비 최근30일 확인 발행량의 참고 비율은 ${ratioText(row)}이다. 이 비율만으로 블루오션·상위 노출·수익을 단정하지 않는다. 같은 대상의 세부 질문을 명확히 답하고 최신 출처·실제 사례로 차별화한다.`;
 }
 
 const CATEGORIES = [
@@ -1257,8 +1225,9 @@ const CATEGORIES = [
     terms:['축제','관광','가볼만한곳','맛집','숙소','펜션','주차','입장료','초대가수','벚꽃','단풍','야간개장','계곡'] },
   { key:'life', label:'생활·민원', mode:'merge',
     terms:['여권','비자','비짓재팬','보육료','버스정보','준비물','발급','갱신','재발급','등록방법'] },
+  {key:'issue',label:'사건·진행 상황',mode:'merge',terms:['사건','논란','수사','구속','판결','무죄','의혹','참사']},
   { key:'person', label:'인물·프로필', mode:'single',
-    terms:['프로필','학력','고향','와이프','배우자','병명','사건','논란','국적','출생지','본명','경력','지지율','나무위키'] },
+    terms:['프로필','학력','고향','와이프','배우자','국적','출생지','본명','경력','지지율','나무위키'] },
   { key:'product', label:'제품·리뷰', mode:'merge',
     terms:['리콜','독소','후기','내돈내산','드라이버','사용법','단점','비교'] },
   { key:'season', label:'시즌·명절', mode:'season',
@@ -1271,7 +1240,7 @@ const CATEGORIES = [
 const BEAUTY_BRANDS = ['나스','NARS','롬앤','클리오','에뛰드','맥','MAC','디올','샤넬','입생로랑','3CE','페리페라','어뮤즈','힌스','데이지크'];
 function detectCategory(mainKw, relatedRows){
   const main = normalizeSpace(mainKw);
-  const relText = (relatedRows||[]).map(r=>r.kw).join(' ');
+  const relText = ''; // candidates do not establish the category of the selected query
   for(const b of BEAUTY_BRANDS){ if(main.startsWith(b)) return CATEGORIES.find(c=>c.key==='beauty'); }
   let best = null, bestScore = 0;
   for(const cat of CATEGORIES){
@@ -1351,7 +1320,7 @@ function classifyRelatedV22(mainKw, row, category){
     return { tag:'spoke', axis:UNIVERSAL_AXES[strongSpoke]?.label || '세부 주제', axes, reason:`독립 검색 의도가 있는 ${UNIVERSAL_AXES[strongSpoke]?.label || strongSpoke}` };
   }
   if(strongSpoke && monthly >= 200 && r < 1.0){
-    return { tag:'spoke', axis:UNIVERSAL_AXES[strongSpoke]?.label || '세부 주제', axes, reason:'검색량은 낮지만 경쟁비율이 좋아 스포크 후보' };
+    return { tag:'spoke', axis:UNIVERSAL_AXES[strongSpoke]?.label || '세부 주제', axes, reason:'검색량은 낮지만 확인한 발행량 비율을 참고하는 스포크 후보' };
   }
   if(sectionAxis){
     return { tag:'section', axes, reason:`허브 안에서 설명할 ${UNIVERSAL_AXES[sectionAxis]?.label || sectionAxis}` };
@@ -1418,7 +1387,7 @@ function classifyRelatedHybrid(mainKw, row, category){
 
 function buildCluster(hubKw, rows){
   const hubKey = normalizeKey(hubKw);
-  const others = (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey);
+  const others = (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey&&sameTopic(hubKw,r.kw));
   const category = detectCategory(hubKw, others);
   const spokesRaw=[], sections=[], longtail=[], absorbed=[];
   for(const r of others){
@@ -1433,24 +1402,26 @@ function buildCluster(hubKw, rows){
   return { hub:hubKw, spokes, absorbed, category, sections, longtail };
 }
 
-function titleRatio(row){ const m=Number(row.monthly||0); if(m<=0) return Infinity; return Number(row.totalContent||0)/m; }
-function titleHookTail(relKw, mainKw){
-  const rel=normalizeKey(relKw), main=normalizeKey(mainKw);
-  let i=0; while(i<rel.length && i<main.length && rel[i]===main[i]) i++;
-  if(i<2) return normalizeSpace(relKw);
-  const tail=rel.slice(i);
-  return tail || normalizeSpace(relKw);
+function titleRatio(row){return readyForRanking(row)&&row.monthly>0?row.totalContent/row.monthly:Infinity}
+function titleHookTail(relKw,mainKw){
+ const raw=normalizeSpace(relKw),main=normalizeKey(mainKw);let out='',found=false;
+ for(let start=0;start<raw.length;start++){
+  let i=start,j=0;while(i<raw.length&&j<main.length){if(/\s/.test(raw[i])){i++;continue}if(normalizeKey(raw[i])!==main[j])break;i++;j++}
+  if(j===main.length){out=normalizeSpace(raw.slice(0,start)+' '+raw.slice(i));found=true;break}
+ }
+ if(!found||normalizeKey(out).length<2||/^(디시|더쿠|갤러리)$/.test(out))return '';
+ return out;
 }
 function buildTitleMaterial(seedKw, relatedRows){
   const main=normalizeSpace(seedKw);
-  const sorted=[...(relatedRows||[])].filter(r=>r&&normalizeSpace(r.kw)&&normalizeKey(r.kw)!==normalizeKey(main))
+  const sorted=[...(relatedRows||[])].filter(r=>r&&normalizeSpace(r.kw)&&normalizeKey(r.kw)!==normalizeKey(main)&&titleMaterialsSameTopic(main,r.kw)&&searchState(r)==='exact'&&r.monthly>0)
     .sort((a,b)=>{ const ra=titleRatio(a),rb=titleRatio(b); if(ra!==rb) return ra-rb; return Number(b.monthly||0)-Number(a.monthly||0); });
   const hooks=[]; const seen=new Set([normalizeKey(main)]);
   for(const r of sorted){
     const tail=titleHookTail(r.kw,main); const tk=normalizeKey(tail);
     if(!tk||seen.has(tk)) continue; seen.add(tk);
     const total=Number(r.totalContent||0);
-    hooks.push({ tail, full:normalizeSpace(r.kw), monthly:Number(r.monthly||0), totalContent:total, ratio:titleRatio(r), dim: total>=3000 });
+    hooks.push({ tail, full:normalizeSpace(r.kw), monthly:Number(r.monthly||0), totalContent:r.totalContent, supplyStatus:supplyState(r), ratio:titleRatio(r), dim: total>=3000 });
   }
   return { main, hooks };
 }
@@ -1466,21 +1437,31 @@ function pickUsefulTails(tails, removeWords = []){
 
 // ===== [v22.11] 패턴별 접미어를 전부 없애고 통일. 접미어("기준"/"관계부터 정리"/"언제?" 등)가
 // 패턴마다 하드코딩돼 있어서 발견할 때마다 고쳐야 했던 문제를 근본적으로 없앤다.
-// 패턴 라벨(언제형/신청형 등)은 UI 표시·자동 감지용으로만 남기고, 실제 조합 로직은 전부 동일하다.
+// 선택한 발행 목적에 맞춰 실제 제목 문구를 조합한다.
 function uniformTitleMake({ main, tails }){
   const useful = pickUsefulTails(tails);
   return `${main}${useful.length ? `, ${useful.join('·')}` : ''}`;
 }
+function purposeTitle(key,{main,tails}){
+ const useful=pickUsefulTails(tails).filter(t=>!normalizeKey(main).includes(normalizeKey(t)));
+ if(!useful.length)return main;
+ const joined=useful.join('·');
+ const endings={when:`${joined} 언제 확인할까?`,apply:`${joined} 확인 순서`,target:`${joined} ${/기준|조건/.test(joined)?'정리':'기준 정리'}`,money:`${joined} 확인할 내용`,watch:`${joined} 시청 안내`,people:`${joined} 알아보기`,howto:`${joined} 방법 정리`,compare:`${joined} 비교 포인트`,info:joined};
+ // Avoid duplicating a question/method word already supplied by the reader.
+ if(key==='when'&&/언제|몇시/.test(joined))return `${main} | ${joined}?`;
+ if(key==='howto'&&/방법|하는법|사용법/.test(joined))return `${main} | ${joined}`;
+ return `${main} | ${endings[key]||joined}`;
+}
 const TITLE_PATTERNS = {
-  when:    { label:'언제형', terms:['언제','지급일','환급일','기간','일정','날짜','공개일','방영일','시험일정','신청기간','마감일','중복','말복','개막','폐막'], make: uniformTitleMake },
-  apply:   { label:'신청형', terms:['신청','신청방법','접수','발급','등록','가입','조회','확인','예매','예약'], make: uniformTitleMake },
-  target:  { label:'대상형', terms:['대상','대상자','조건','자격','기준','신청자격'], make: uniformTitleMake },
-  money:   { label:'금액형', terms:['금액','환급금','지원금','한도','이자','금리','혜택','가격','비용','할인','할인율'], make: uniformTitleMake },
-  watch:   { label:'보기형', terms:['OTT','ott','재방송','다시보기','편성표','보러가기','공개일','방송시간','중계'], make: uniformTitleMake },
-  people:  { label:'인물형', terms:['출연진','등장인물','인물관계도','참가자','심사위원','라인업','명단','프로필','나이'], make: uniformTitleMake },
-  howto:   { label:'방법형', terms:['방법','사용법','레시피','만드는법','끓이는법','오류','해결','준비물','계산','따지는법'], make: uniformTitleMake },
-  compare: { label:'비교형', terms:['차이','비교','vs','VS','장단점','추천','순위','대신'], make: uniformTitleMake },
-  info:    { label:'정보형', terms:['뜻','기본정보','정보','정리','총정리','핵심'], make: uniformTitleMake }
+  when:    { label:'언제형', terms:['언제','지급일','환급일','기간','일정','날짜','공개일','방영일','시험일정','신청기간','마감일','중복','말복','개막','폐막'], make: args=>purposeTitle('when',args) },
+  apply:   { label:'신청형', terms:['신청','신청방법','접수','발급','등록','가입','조회','확인','예매','예약'], make: args=>purposeTitle('apply',args) },
+  target:  { label:'대상형', terms:['대상','대상자','조건','자격','기준','신청자격'], make: args=>purposeTitle('target',args) },
+  money:   { label:'금액형', terms:['금액','환급금','지원금','한도','이자','금리','혜택','가격','비용','할인','할인율'], make: args=>purposeTitle('money',args) },
+  watch:   { label:'보기형', terms:['OTT','ott','재방송','다시보기','편성표','보러가기','공개일','방송시간','중계'], make: args=>purposeTitle('watch',args) },
+  people:  { label:'인물형', terms:['출연진','등장인물','인물관계도','참가자','심사위원','라인업','명단','프로필','나이'], make: args=>purposeTitle('people',args) },
+  howto:   { label:'방법형', terms:['방법','사용법','레시피','만드는법','끓이는법','오류','해결','준비물','계산','따지는법'], make: args=>purposeTitle('howto',args) },
+  compare: { label:'비교형', terms:['차이','비교','vs','VS','장단점','추천','순위','대신'], make: args=>purposeTitle('compare',args) },
+  info:    { label:'정보형', terms:['뜻','기본정보','정보','정리','총정리','핵심'], make: args=>purposeTitle('info',args) }
 };
 
 function detectTitlePattern(tails){
@@ -1510,7 +1491,7 @@ function renderTitleBuilder(seedKw, blogHooks){
   const relHooks = mat.hooks.map(h=>({ ...h, kind:'rel' }));
   const mainKey = normalizeKey(mat.main);
   const relTailKeys = new Set(relHooks.map(h=>normalizeKey(h.tail)));
-  const blogList = Array.isArray(blogHooks) ? blogHooks : [];
+  const blogList = Array.isArray(blogHooks)?blogHooks.filter(h=>h.word&&normalizeKey(h.word).length>=2):[];
   const blogConv = [];
   for(const b of blogList){
     const w = normalizeSpace(b.word||'');
@@ -1537,7 +1518,7 @@ function drawTitleBuilder(){
     const used = ts.chosen.includes(key);
     return `<button class="tb-chip ${h.dim?'dim':''} ${used?'used':''}" data-tk="${escapeHTML(key)}">
       <span class="tb-ct">${escapeHTML(h.tail)}</span>
-      <span class="tb-cm">검색 ${format(h.monthly)} · 발행 ${format(h.totalContent)}${h.dim?' · 발행多':''}</span>
+      <span class="tb-cm">검색 ${format(h.monthly)} · 발행 ${contentStatus(h)}${h.dim?' · 발행多':''}</span>
     </button>`;
   };
   const blogChip = ({h,i})=>{
@@ -1545,14 +1526,14 @@ function drawTitleBuilder(){
     const used = ts.chosen.includes(key);
     return `<button class="tb-chip tb-chip-blog ${used?'used':''}" data-tk="${escapeHTML(key)}">
       <span class="tb-ct">${escapeHTML(h.tail)}</span>
-      <span class="tb-cm">블로그 제목 ${format(h.count)}회</span>
+      <span class="tb-cm">발행 제목 ${format(h.count)}회</span>
     </button>`;
   };
   const relHtml = relHooks.length
     ? `<div class="tb-mini">연관 검색어 <span>· 검색 많고 발행 적은 순 · 발행 3000+ 흐림</span></div><div class="tb-chips">${relHooks.map(relChip).join('')}</div>`
     : `<div class="tb-mini">연관 검색어 <span>· 자동완성</span></div><div class="tb-empty">연관 검색어가 없습니다. 아래 블로그 제목 후킹으로 조합하거나 직접 편집하세요.</div>`;
   const blogHtml = blogHooks.length
-    ? `<div class="tb-mini" style="margin-top:14px">블로그 제목 후킹 <span>· 상위 블로그가 제목에 쓴 단어(검증된 후킹)</span></div><div class="tb-chips">${blogHooks.map(blogChip).join('')}</div>`
+    ? `<div class="tb-mini" style="margin-top:14px">블로그 제목 후킹 <span>· 발행 제목에서 관찰한 표현 · 사실 미확인</span></div><div class="tb-chips">${blogHooks.map(blogChip).join('')}</div>`
     : '';
   // [v22.11] 우선순위 재정렬(splitTailsByPriority) 제거 — 클릭한 순서를 그대로 유지한다.
   const tails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
@@ -1581,7 +1562,7 @@ function drawTitleBuilder(){
       <button class="tb-clear" id="tbClear">초기화</button>
       <button class="tb-apply" id="tbApply">이 제목 적용 → 프롬프트</button>
     </div>
-    <p class="tb-hint">미리보기는 재료 나열(참고용)입니다. 아래 편집창에 제목을 직접 입력하면 그 제목을 최종 제목으로 그대로 사용하고, 입력하지 않으면 AI가 선택한 재료를 자연스러운 한 문장으로 조합합니다.</p>`;
+    <p class="tb-hint">선택한 패턴으로 실제 제목을 조합합니다. 직접 편집할 수 있으며, 적용 버튼을 누르면 이 제목이 프롬프트에 그대로 고정됩니다. 관찰된 후킹 표현의 금액·관계·현재 사실은 원문과 확인하세요.</p>`;
   els.titleBuilder.querySelectorAll('.tb-chip[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   els.titleBuilder.querySelectorAll('.tb-pin b[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   const patternEl = $('tbPattern');
@@ -1660,8 +1641,9 @@ function applyTitleToPrompt(){
   const tails = chipTails;
   const pattern = ts.pattern || detectTitlePattern(tails);
   const generated = generateTitleByPattern(ts.main, tails, pattern);
-  const locked = !!edited;
-  const draft = locked ? normalizeEditedTitleMainKeywordV26(edited, ts.main) : generated;
+  const locked = true; // the preview and the prompt use the same concrete title
+  const draft = edited?normalizeEditedTitleMainKeywordV26(edited,ts.main):generated;
+  if(!normalizeKey(draft).includes(normalizeKey(ts.main))){alert('최종 제목에는 메인 키워드를 유지해주세요.');return;}
   state.titleApplied = { main:ts.main, tails:[...tails], pattern, draft, locked };
   renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1674,7 +1656,7 @@ function appliedTitleBlock(){
     return `## 최종 제목 — 반드시 그대로 사용
 ${ta.draft}
 
-※ 위 제목은 작성자가 직접 편집해 확정한 제목이다. 제목을 다시 만들거나 다른 후보를 제시하지 말고 그대로 사용한다.
+※ 위 제목은 제목 조합기에서 확정한 제목이다. 제목을 다시 만들거나 다른 후보를 제시하지 말고 그대로 사용한다.
 ※ 메인키워드 "${ta.main}"를 제목 앞에 다시 덧붙이지 마라. 띄어쓰기만 다른 동일 표현도 같은 키워드로 보고 한 번만 표기한다.`;
   }
   const patternLabel = TITLE_PATTERNS[ta.pattern]?.label || '정보형';
@@ -1695,16 +1677,17 @@ ${ta.draft}
 - 제목은 완결된 명사구 또는 자연스러운 질문형으로 끝낸다. "~하세요/합니다" 같은 서술형 꼬리는 금지.
 - 고른 후킹어의 의미는 살리되 읽기 불편할 정도로 반복하지 마라.`;
 }
-function pillClass(value){ if(['즉시 글감','우선 후보'].includes(value)) return 'pill green'; if(['차순위 글감','관찰키워드'].includes(value)) return 'pill yellow'; if(['API 수치 부족'].includes(value)) return 'pill red'; return 'pill gray'; }
+function pillClass(value){ if(['우선 검토','검토 후보'].includes(value)) return 'pill green'; if(['경쟁 높음','관찰키워드','추가 수집 필요'].includes(value)) return 'pill yellow'; if(['API 수치 부족'].includes(value)) return 'pill red'; return 'pill gray'; }
 function scoreClass(score){ return score>=75?'score':score>=45?'score mid':'score low'; }
 function renderIdle(){
+  analysisRevision++;els.analyzeBtn.disabled=false;els.analyzeBtn.textContent='분석하기';
   state={ seed:'', rows:[], recommended:[], relatedKeywords:[], selectedIndex:0, intent:null, titleApplied:null };
   els.totalKeywords.textContent='0개'; els.bestKeywordText.textContent='-'; els.bestScoreText.textContent='0'; els.intentShortText.textContent='대기';
   els.judgementTitle.textContent='키워드를 입력하면 글감 판단이 표시됩니다.'; els.judgementReason.textContent='검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.'; els.strategyList.innerHTML='';
   els.keywordTable.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 추천 글감이 표시됩니다.</td></tr>';
   els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">키워드를 입력하면 상세 후보 검증표가 표시됩니다.</td></tr>';
   els.selectedHint.textContent='키워드를 선택하세요'; if(els.clusterBox) els.clusterBox.innerHTML=''; if(els.titleBuilder) els.titleBuilder.innerHTML=''; els.titleList.innerHTML='';
-  els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','AI 인용 적합도','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value=''; updatePromptMeta();
+  els.sideKeyword.textContent='-'; els.sideBadge.textContent='대기'; els.sideScore.textContent='0'; els.sideReason.textContent='키워드를 분석하면 추천 이유가 표시됩니다.'; els.sideMetrics.innerHTML=['월간 검색수','PC 검색수','MO 검색수','블로그 발행수','카페 발행수','경쟁비율','답변 구조화 적합도','광고 경쟁도'].map(k=>`<div><span>${k}</span><b>-</b></div>`).join(''); els.draftPrompt.value=''; updatePromptMeta();
   if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
   if(els.comboRow){ els.comboRow.style.display='none'; } if(els.comboHint){ els.comboHint.style.display='none'; } if(els.comboInput){ els.comboInput.value=''; } if(els.comboClearBtn){ els.comboClearBtn.style.display='none'; }
   publishWorkspaceKeyword='';
@@ -1714,13 +1697,13 @@ function renderRecommendTable(){
   const rows=state.recommended;
   if(!rows.length){ els.keywordTable.innerHTML='<tr><td colspan="11"><div class="empty"><strong>추천 가능한 키워드가 부족합니다.</strong>원키워드와 API 연관검색어 묶음 기준으로 글감 설계를 만듭니다.</div></td></tr>'; return; }
   const notice = state._noBlueOcean
-    ? `<tr><td colspan="11"><div class="empty" style="background:#fffbeb;color:#92400e;border-color:#fde68a;"><strong>이 주제엔 명확한 블루오션 키워드가 없습니다.</strong> 검색 수요 대비 발행량이 많은 키워드뿐이라, 아래는 참고용입니다. 아깝다 싶은 후보는 '상세 후보 검증표'에서 직접 확인해 고르세요.</div></td></tr>`
+    ? `<tr><td colspan="11"><div class="empty" style="background:#fffbeb;color:#92400e;border-color:#fde68a;"><strong>검증을 마친 추천 후보가 없습니다.</strong> 검색량·발행량이 미확인 또는 최소 건수이거나 추천 기준에 미달해, 아래는 참고용입니다. 아깝다 싶은 후보는 '상세 후보 검증표'에서 직접 확인해 고르세요.</div></td></tr>`
     : '';
   els.keywordTable.innerHTML = notice + rows.map((row,i)=>{
     const hint = publishHint(row);
     const hintBadge = hint ? ` <span class="pill yellow" title="${escapeHTML(hint)}">발행多</span>` : '';
     const homonymBadge = Number(row.relevance||0)===0 ? ` <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>` : '';
-    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">고단가</span>':''}${hintBadge}${homonymBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'네이버형')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td></tr>`;
+    return `<tr class="${i===state.selectedIndex?'selected':''}"><td>${escapeHTML(row.kw)}${row.highCpc?' <span class="pill cpc">수익성 검토 분야</span>':''}${hintBadge}${homonymBadge}</td><td><button class="pick-btn" data-index="${i}">선택</button></td><td><span class="${pillClass(row.grade)}">${escapeHTML(row.grade)}</span></td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${demandText(row)}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.googleFitCls||'gray'}">${escapeHTML(row.googleFit||'구성 근거 부족')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${scoreText(row)}</span></td></tr>`;
   }).join('');
   els.keywordTable.querySelectorAll('.pick-btn').forEach(btn=>btn.addEventListener('click',()=>{ state.selectedIndex=Number(btn.dataset.index); state.titleApplied=null; if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; } renderRecommendTable(); renderSelected(); }));
 }
@@ -1741,7 +1724,7 @@ function shortSourceLabel(sourceType){
 function renderDetailTable(){
   const rows=state.rows;
   if(!rows.length){ els.detailKeywordTable.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:#64748b;">상세 후보 데이터가 없습니다.</td></tr>'; return; }
-  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${format(row.monthly)}</td><td>${format(row.pc)}</td><td>${format(row.mo)}</td><td>${escapeHTML(countStatus(row.blog,row.contentCapped))}</td><td>${escapeHTML(countStatus(row.cafe,row.cafeCapped))}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${row.score}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
+  els.detailKeywordTable.innerHTML = rows.map((row,i)=>`<tr><td>${escapeHTML(row.kw)}${Number(row.relevance||0)===0?' <span class="pill yellow" title="원키워드와 글자가 겹치지 않아 관련도가 낮게 계산됐습니다. 동명이인일 수도, 표현만 다른 같은 주제일 수도 있으니 직접 확인하세요.">관련도 낮음</span>':''}</td><td><span class="pill gray" title="${escapeHTML(row.sourceType)}">${escapeHTML(shortSourceLabel(row.sourceType))}</span></td><td>${demandText(row)}</td><td>${demandText(row,'pc')}</td><td>${demandText(row,'mo')}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(cafeText(row))}</td><td>${escapeHTML(contentStatus(row))}</td><td>${escapeHTML(ratioText(row))}</td><td>${escapeHTML(row.ad)}</td><td><span class="pill gray">${escapeHTML(row.intentEvidence||'일반정보')}</span></td><td><span class="pill ${row.aiCitationCls||'gray'}">${escapeHTML(row.aiCitationLabel||'구조 보강 필요')}</span></td><td><span class="${scoreClass(row.score)}">${scoreText(row)}</span></td><td class="reason-cell"><button class="reason-toggle" data-ridx="${i}">더보기</button><span class="reason-text" data-ridx="${i}">${escapeHTML(row.reason)}</span></td></tr>`).join('');
   els.detailKeywordTable.querySelectorAll('.reason-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const idx = btn.dataset.ridx;
     const textEl = els.detailKeywordTable.querySelector(`.reason-text[data-ridx="${idx}"]`);
@@ -1843,7 +1826,7 @@ function buildSpokePrompt({ targetKw, subKeywords, spokeHooks, isSingle, linkTar
   const sectionSrc = subKeywords.length ? subKeywords.join(', ') : '(연관 검색어가 적어 핵심 정보 위주로 구성)';
   const hooks = (spokeHooks || []).map(h => h.word);
   const titleHint = hooks.length
-    ? `메인 키워드에 아래 '검증된 후킹'을 결합하라. 이는 실제 발행된 블로그 제목에서 자주 쓰인, 상위 노출을 노려 고른 키워드다.\n  검증된 후킹: ${hooks.join(', ')}`
+    ? `메인 키워드에 아래 '관찰된 제목 표현'을 결합하라. 이는 발행 제목에서 관찰된 표현이며 사실 확인이나 성과 검증을 뜻하지 않는다. 같은 대상인지 확인하고 본문 근거가 있는 표현만 사용하라.\n  관찰된 제목 표현: ${hooks.join(', ')}`
     : `네이버에서 이 키워드로 검색해 상위 블로그 제목에 반복되는 후킹 키워드를 찾아 활용하라.`;
   const linkBlock = linkTargets.length
     ? `\n## 내부링크 (원고 하단 또는 본문 자연스러운 위치)\n아래 키워드를 다루는 다른 글로 내부링크를 걸어라(앵커텍스트=키워드). 이들은 같은 주제 묶음의 형제 글이다:\n${linkTargets.map(k=>`- ${k}`).join('\n')}\n`
@@ -1909,16 +1892,16 @@ function renderSelected(){
       ? '이 키워드는 실제 경험이 들어가면 AI 인용과 독자 신뢰에 유리합니다. 막힌 지점·실제 차이·주의점을 적어주세요.'
       : '공식·광고·AI가 말하지 않는 차이를 적으면 원고 차별점이 됩니다.';
   }
-  els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=row.score; els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
- if(row.grade === 'API 수치 부족'){
+  els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=scoreText(row); els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
+ if(!readyForRanking(row)||row.monthly<=0){
     els.judgementTitle.textContent = `${row.kw} — 데이터가 부족해 추천 여부를 판단할 수 없습니다`;
-    els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회로 실질 검색 수요가 확인되지 않았${row.totalContent>=10000?`고, 발행량은 이미 ${format(row.totalContent)}건으로 매우 많아 블루오션으로 보기 어렵습니다`:'습니다'}. 다른 추천 후보가 없어 참고용으로만 보여드립니다 — 이 키워드로 꼭 쓰시려면 직접 최신 이슈·화제성을 확인해보세요.`;
+    els.judgementReason.textContent = row.reason;
   } else {
     const particle = /[가-힣]$/.test(row.grade) && (row.grade.charCodeAt(row.grade.length-1)-0xAC00)%28!==0 && (row.grade.charCodeAt(row.grade.length-1)-0xAC00)%28!==8 ? '으로' : '로';
-    els.judgementTitle.textContent = `${row.kw}, ${row.grade}${particle} 추천합니다`;
-    els.judgementReason.textContent = `월간 검색수 ${format(row.monthly)}회, 최근 30일 블로그 발행 ${contentStatus(row)}건, 경쟁비율 ${ratioText(row)}입니다. 같은 30일 시간축의 검색 수요와 블로그 공급량을 비교합니다.`;
+    els.judgementTitle.textContent = `${row.kw} — ${row.grade}`;
+    els.judgementReason.textContent = `월간 검색수 ${demandText(row)}회, 최근 30일 블로그 발행 ${contentStatus(row)}, 경쟁비율 ${ratioText(row)}입니다. 네이버의 두 수치를 참고 비교하며, 전체 검색 경쟁을 측정한 값은 아닙니다.`;
   }
-  els.strategyList.innerHTML = ['경쟁비율은 최근 30일 블로그 발행량을 월간 검색수와 비교합니다.','도입부와 각 소제목 첫 문단은 질문에 바로 답해야 AI 인용에 유리합니다.','표·체크리스트·실제 경험을 넣어 사람이 믿고 AI가 가져가기 쉬운 글로 만드세요.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
+  els.strategyList.innerHTML = ['검색량은 네이버 기준입니다. Google 검색 수요를 대신 측정하지 않습니다.','발행량 비율은 검색 노출 경쟁의 직접 측정값이 아닙니다.','표·출처·실제 경험을 갖춘 답변 구조는 독자 이해를 돕지만 AI 인용을 보장하지 않습니다.'].map(x=>`<div class="strategy-item">${escapeHTML(x)}</div>`).join('');
   renderCluster(row);
   renderTitleBuilder(row.kw, curHooks);
   const top3 = curHooks.slice(0,3);
@@ -1937,9 +1920,9 @@ function renderSelected(){
   els.titleList.innerHTML = (chipBlock || headHtml || restHtml)
     ? (chipBlock + headHtml + restHtml)
     : `<div class="tb-empty">아직 수집된 발행 제목이 없습니다. (네이버 검색 API 연결 시 표시됩니다)</div>`;
-  els.sideMetrics.innerHTML = [['월간 검색수',format(row.monthly)],['PC 검색수',format(row.pc)],['MO 검색수',format(row.mo)],['블로그 발행수',format(row.blog)],['카페 발행수',format(row.cafe)],['경쟁비율',ratioText(row)],['구글 유입 적합도',row.googleFit||'네이버형'],['AI 인용 적합도',row.aiCitationLabel||'구조 보강 필요'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
-  const promptRelated = state.relatedKeywords.join(', ');
-  const hasRelated = state.relatedKeywords.length > 0;
+  els.sideMetrics.innerHTML = [['월간 검색수',demandText(row)],['PC 검색수',demandText(row,'pc')],['MO 검색수',demandText(row,'mo')],['블로그 발행수',contentStatus(row)],['카페 발행수',cafeText(row)],['경쟁비율',ratioText(row)],['정보형 구성 적합도',row.googleFit||'구성 근거 부족'],['답변 구조화 적합도',row.aiCitationLabel||'구조 보강 필요'],['광고 경쟁도',row.ad]].map(([a,b])=>`<div><span>${escapeHTML(a)}</span><b>${escapeHTML(b)}</b></div>`).join('');
+  const promptRelated = state.relatedKeywords.filter(k=>sameTopic(row.kw,k)).join(', ');
+  const hasRelated = !!promptRelated;
   const fewRelated = state.relatedKeywords.length > 0 && state.relatedKeywords.length < 3;
   els.draftPrompt.value = `# 블로그 원고 작성 의뢰
 
@@ -1948,16 +1931,16 @@ ${row.kw}
 ${state.entityFilter ? `\n## 대상 구분 필터\n${state.entityFilter}\n※ 이 단어는 제목에 강제로 붙이는 서브키워드가 아니다. 동명이인·동일 키워드 중 이번 글이 다룰 대상을 식별하는 내부 조건으로만 사용한다. 검색 결과·연관어·뉴스에서 이 대상과 다른 인물·작품·업체·장소는 조용히 제외한다.\n` : ''}
 ${state.titleApplied ? '\n'+appliedTitleBlock()+'\n' : ''}
 ## 데이터 (네이버 API 기준)
-- 월간 검색수: ${format(row.monthly)}회 (PC ${format(row.pc)} / 모바일 ${format(row.mo)})
-- 최근 30일 발행량: 블로그 ${contentStatus(row)}건 / 카페 ${row.cafeCapped?'≥':''}${format(row.cafe)}건
+- 월간 검색수: ${demandText(row)}회 (PC ${demandText(row,'pc')} / 모바일 ${demandText(row,'mo')})
+- 최근 30일 발행량: 블로그 ${contentStatus(row)} / 카페 ${cafeText(row)}
 - 경쟁비율(최근 30일 블로그 발행÷월간 검색수): ${ratioText(row)}
 - 자동 분류 의도(참고용): ${intent.label}
-- 구글 유입 적합도: ${row.googleFit||'네이버형'}
-- AI 브리핑 인용 적합도: ${row.aiCitationLabel||'구조 보강 필요'} (${row.aiCitationScore||0}점)
+- 정보형 구성 적합도: ${row.googleFit||'구성 근거 부족'}
+- 답변 구조화 적합도: ${row.aiCitationLabel||'구조 보강 필요'} (${row.aiCitationScore||0}점)
 
 ## 실제 검색 연관키워드 (네이버·구글 자동완성)
 ${hasRelated ? promptRelated + `
-※ 위 연관키워드는 사람들이 실제로 검색한 표현이다. 검색자의 숨은 고민을 읽는 핵심 단서이니 적극 활용해라.
+※ 위 표현은 검색광고 연관어·자동완성에서 관찰한 후보이며, 실제 검색량은 개별 확인된 수치만 사용한다. 검색자의 숨은 고민을 읽는 핵심 단서이니 적극 활용해라.
 ※ 단, 이 목록은 글자가 겹치는 검색어를 기계적으로 모은 것이라 메인 키워드와 전혀 다른 대상·의미(동명이인, 일반명사의 원래 뜻, 다른 작품·다른 분야 등)를 가리키는 연관어도 섞여 있을 수 있다. 그런 연관어를 발견해도 "~와 헷갈리는 검색" 같은 별도 섹션·목차 항목을 만들어 설명하거나 해명하지 마라 — 이 글의 검색 의도와 무관하므로 조용히 무시하고 본문·목차 어디에도 언급하지 마라. 글 전체는 메인 키워드가 실제로 가리키는 대상 하나에만 집중해라.` : `(연관키워드 없음 — 최신 이슈성 키워드이거나 검색 데이터가 적은 경우다.)
 ※ 연관키워드가 없으니, 이 키워드를 검색하는 사람의 유형·상황·궁금증을 너가 직접 3가지로 구체적으로 추정한 뒤(예: 누가·언제·왜 이 검색을 하는가), 그 추정을 근거로 의도와 목차를 설계해라. 막연히 일반론으로 채우지 말고, 추정한 검색자 시나리오에 답하는 글을 써라.`}
 
@@ -2082,6 +2065,7 @@ async function probeSeedSuffix(seed, suffix, sourceLabel){
 async function analyze(){
   const seed=normalizeSpace(els.keywordInput.value);
   if(!seed){ renderIdle(); return; }
+  const revision=++analysisRevision;
   els.analyzeBtn.disabled=true; els.analyzeBtn.textContent='분석 중...';
   if(els.expInput){ els.expInput.value=''; els.expInput.placeholder=EXP_PLACEHOLDER_DEFAULT; }
   state.seed = seed;
@@ -2095,19 +2079,20 @@ async function analyze(){
       fetchSuggestCached(seed),
       fetchTitleHuntCached(seed)
     ]);
+    if(revision!==analysisRevision)return;
     const list = extractKeywordList(adPayload);
     // [FIX 2026-08-17] searchad.js는 이미 잘리지 않은 전체 keywordList에서 exact match를 찾아
     // payload 최상위(relKeyword/monthlyTotal/competition)에 담아 돌려준다. 예전엔 여기서
     // list(=payload.related, 20개로 잘림)를 findExactItem으로 다시 뒤졌는데, 원키워드가
     // 네이버 원본 keywordList에서 상위 20위 밖이면 서버가 이미 구해준 정답을 버리고
     // monthly=0인 fallback으로 잘못 빠지는 버그였다. 이제 payload 최상위 필드를 직접 쓴다.
-    const exactRow = rowFromExactPayload(adPayload, seed, '원 키워드') || { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback', raw:null };
-    const relatedRows = uniqueByKeyword(list.map(item=>rowFromSearchAdItem(item, 'API 연관키워드')).filter(row=>normalizeKey(row.kw)!==normalizeKey(seed)));
+    const exactRow = rowFromExactPayload(adPayload, seed, '원 키워드') || { kw:seed, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:'원키워드 fallback',volumeStatus:'not_found',supplyStatus:'not_requested', raw:null };
+    const relatedRows = uniqueByKeyword(list.map(item=>rowFromSearchAdItem(item, 'API 연관키워드')).filter(row=>normalizeKey(row.kw)!==normalizeKey(seed)&&sameTopic(seed,row.kw)));
 
     const adKeys = new Set([exactRow, ...relatedRows].map(r=>normalizeKey(r.kw)));
     const newSuggestKws = (suggestData.detailed || (suggestData.suggestions||[]).map(s=>({keyword:s,source:'suggest'})))
       .map(d => ({ kw:normalizeSpace(d.keyword), src:d.source }))
-      .filter(d => d.kw && !adKeys.has(normalizeKey(d.kw)))
+      .filter(d => d.kw && sameTopic(seed,d.kw) && !adKeys.has(normalizeKey(d.kw)))
       .slice(0, 10);
 
     // 자동완성 보강은 최대 10개만 검증하고 3개씩 병렬 처리한다.
@@ -2121,7 +2106,7 @@ async function analyze(){
         const r = rowFromExactPayload(p, d.kw, sourceLabel);
         if(r) return r;
       } catch(e){ /* 검색량 못 받아도 키워드는 살림 */ }
-      return { kw:d.kw, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:sourceLabel, raw:null };
+      return { kw:d.kw, pc:0, mo:0, monthly:0, blog:0, cafe:0, totalContent:0, ad:'-', sourceType:sourceLabel,volumeStatus:'unavailable',supplyStatus:'not_requested', raw:null };
     });
 
     let baseRows = uniqueByKeyword([exactRow, ...relatedRows, ...suggestRows]).slice(0, 70);
@@ -2165,6 +2150,7 @@ async function analyze(){
     ]);
     baseRows = uniqueByKeyword([...baseRows, ...probeRows.filter(Boolean), ...hookProbeRows.filter(Boolean)]);
 
+    if(revision!==analysisRevision)return;
     const CONTENT_LOOKUP_LIMIT = 12;
     const byDemand = [...baseRows].sort((a,b)=>Number(b.monthly||0)-Number(a.monthly||0));
     const lookupSet = new Set(byDemand.slice(0, CONTENT_LOOKUP_LIMIT).map(r=>normalizeKey(r.kw)));
@@ -2172,21 +2158,12 @@ async function analyze(){
     els.analyzeBtn.textContent='최근 30일 발행량 계산 중...';
     const hydrated = await mapLimit(baseRows, 3, async row => {
       if(!lookupSet.has(normalizeKey(row.kw))){
-        return { ...row, blog:0, cafe:0, totalContent:0, contentSkipped:true, contentWindowDays:30 };
+        return {...row,blog:null,cafe:null,totalContent:null,contentSkipped:true,supplyStatus:'not_requested',cafeStatus:'unsupported_date',contentWindowDays:30};
       }
       const content = await fetchContentCached(row.kw);
-      const blog = parseNumber(content.recentBlogTotal ?? 0);
-      const cafe = parseNumber(content.recentCafeTotal ?? 0);
-      return {
-        ...row, blog, cafe, totalContent:blog,
-        contentCapped:!!content.recentBlogCapped,
-        cafeCapped:!!content.recentCafeCapped,
-        contentWindowDays:Number(content.windowDays||30),
-        allTimeBlogTotal:parseNumber(content.allTimeBlogTotal||0),
-        allTimeCafeTotal:parseNumber(content.allTimeCafeTotal||0),
-        contentMethod:content.method||'recent30d'
-      };
+      return hydrateContent(row,content);
     });
+    if(revision!==analysisRevision)return;
     const enrichedRaw = uniqueByKeyword(hydrated).map(row=>enrichScore(row, hydrated));
     const sorted = sortCandidates(enrichedRaw);
     let recommended = fillRecommended(sorted, 6);
@@ -2205,7 +2182,7 @@ async function analyze(){
       hookPending:{}, titleApplied:null, entityFilter:'',
       _baseRows:sorted, _baseRecommended:recommended, _baseRelatedKeywords:relatedKeywords,
       _baseSeedHooks:seedHooks, _baseSeedSampleTitles:seedSampleTitles, _baseSeedNewsSnippets:seedNewsSnippets };
-    els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?.score || 0; els.intentShortText.textContent=recommended[0]?.grade || '-';
+    els.totalKeywords.textContent=`${sorted.length}개`; els.bestKeywordText.textContent=recommended[0]?.kw || '-'; els.bestScoreText.textContent=recommended[0]?scoreText(recommended[0]):'보류'; els.intentShortText.textContent=recommended[0]?.grade || '-';
     renderRecommendTable(); renderDetailTable(); renderSelected();
     if(els.comboRow){ els.comboRow.style.display='flex'; }
     if(els.comboHint){ els.comboHint.style.display='block'; els.comboHint.textContent='동명이인·동일 키워드가 섞일 때 구분어를 넣으면 기존 후보 중 같은 대상을 뒷받침하는 후보만 남깁니다. 기존 검색량·발행량 수치는 그대로 유지합니다.'; }
@@ -2217,10 +2194,11 @@ async function analyze(){
       contentLookups:lookupSet.size
     });
   } catch(err){
+    if(revision!==analysisRevision)return;
     console.error(err);
     els.judgementTitle.textContent='분석 중 오류가 발생했습니다.';
     els.judgementReason.textContent=err.message || 'API 응답을 확인하세요.';
-  } finally { els.analyzeBtn.disabled=false; els.analyzeBtn.textContent='분석하기'; }
+  } finally { if(revision===analysisRevision){els.analyzeBtn.disabled=false; els.analyzeBtn.textContent='분석하기';} }
 }
 function copyText(text, btn, label){ navigator.clipboard.writeText(text || '').then(()=>{ btn.textContent='복사 완료'; setTimeout(()=>btn.textContent=label,1200); }).catch(()=>{ btn.textContent='복사 실패'; setTimeout(()=>btn.textContent=label,1200); }); }
 
@@ -3139,7 +3117,7 @@ if(els.comboBtn) els.comboBtn.addEventListener('click', applyEntityFilterV23);
 if(els.comboClearBtn) els.comboClearBtn.addEventListener('click', clearEntityFilterV23);
 if(els.comboInput) els.comboInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyEntityFilterV23(); } });
 els.copyPromptBtn.addEventListener('click',()=>copyText(els.draftPrompt.value, els.copyPromptBtn, '원고 프롬프트 복사'));
-els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${row.score}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
+els.copyKeywordsBtn.addEventListener('click',()=>{ const row=(state.recommended||[])[state.selectedIndex] || (state.rows||[])[0]; if(!row) return; copyText(`선택 키워드: ${row.kw}\nAPI 연관키워드: ${(state.relatedKeywords||[]).join(', ')}\n점수: ${scoreText(row)}\n판단: ${row.grade}`, els.copyKeywordsBtn, '키워드 복사'); });
 els.resetBtn.addEventListener('click',()=>{ els.keywordInput.value=''; renderIdle(); });
 [els.toneSelect,els.lengthSelect,els.outputSelect,els.tableCheck,els.faqCheck].forEach(el=>el.addEventListener('change', renderSelected));
 if(els.platformSelect) els.platformSelect.addEventListener('change',()=>{
@@ -3166,3 +3144,4 @@ window.addEventListener('load', ()=>{ if(els.expInput) els.expInput.value=''; up
 </script>
 </body>
 </html>
+

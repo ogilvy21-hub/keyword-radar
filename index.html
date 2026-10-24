@@ -583,7 +583,7 @@ function readyForRanking(row){return searchState(row)==='exact'&&supplyState(row
 function demandText(row,part='monthly'){
  const value=part==='pc'?row?.pc:part==='mo'?row?.mo:row?.monthly;
  const status=part==='pc'?row?.pcStatus:part==='mo'?row?.mobileStatus:searchState(row);
- if(status==='low_volume')return part==='monthly'&&validCount(row?.monthlyUpperBound)?`≤${format(row.monthlyUpperBound)} (소량)`:'<10 (소량)';
+ if(status==='low_volume')return part==='monthly'?'소량 검색 (정확값 미제공)':'10회 미만';
  if(status==='exact'&&validCount(value))return format(value);
  return '미확인';
 }

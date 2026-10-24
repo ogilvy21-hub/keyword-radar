@@ -63,7 +63,7 @@
 
     .decision{ display:grid; grid-template-columns:150px 1fr; gap:32px; align-items:start; margin-bottom:20px; }
     .big-score-mark{ border:1px solid var(--ink); background:var(--clear-soft); border-radius:4px; padding:18px 10px; text-align:center; }
-    .big-score-mark .v{ font-size:44px; font-weight:600; line-height:1; }
+    .big-score-mark .v{ font-size:clamp(24px,3vw,38px); font-weight:600; line-height:1; white-space:nowrap; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
     .big-score-mark .l{ font-size:11px; color:var(--ink-soft); margin-top:6px; }
     .decision h1{ font-size:26px; font-weight:600; margin:0 0 10px; letter-spacing:-.3px; }
     .decision p{ font-size:14px; color:var(--ink-soft); margin:0 0 16px; max-width:60ch; }
@@ -94,6 +94,18 @@
     .recommend-table th,.recommend-table td,.detail-table th,.detail-table td{ white-space:normal; overflow-wrap:anywhere; word-break:normal; line-height:1.55; vertical-align:top; min-width:80px; }
     .detail-table th:nth-child(7),.detail-table td:nth-child(7){ min-width:155px; }
     .detail-table th:nth-child(9),.detail-table td:nth-child(9){ min-width:135px; }
+    .detail-table th:nth-child(3),.detail-table td:nth-child(3),
+    .detail-table th:nth-child(4),.detail-table td:nth-child(4),
+    .detail-table th:nth-child(5),.detail-table td:nth-child(5),
+    .detail-table th:nth-child(6),.detail-table td:nth-child(6),
+    .detail-table th:nth-child(8),.detail-table td:nth-child(8),
+    .detail-table th:nth-child(13),.detail-table td:nth-child(13),
+    .detail-table th:nth-child(14),.detail-table td:nth-child(14){ min-width:112px; white-space:nowrap; overflow-wrap:normal; word-break:keep-all; font-variant-numeric:tabular-nums; }
+    .recommend-table th:nth-child(5),.recommend-table td:nth-child(5),
+    .recommend-table th:nth-child(6),.recommend-table td:nth-child(6),
+    .recommend-table th:nth-child(7),.recommend-table td:nth-child(7),
+    .recommend-table th:nth-child(11),.recommend-table td:nth-child(11),
+    .recommend-table th:nth-child(12),.recommend-table td:nth-child(12){ min-width:112px; white-space:nowrap; overflow-wrap:normal; word-break:keep-all; font-variant-numeric:tabular-nums; }
     .recommend-table .pill,.detail-table .pill{ white-space:normal; overflow-wrap:anywhere; }
     .detail-table table th:last-child,.detail-table table td:last-child{ width:280px; }
 

@@ -46,7 +46,8 @@ function parsePostDate(v) {
   if (s.length !== 8) return null;
   const y = Number(s.slice(0,4)), m = Number(s.slice(4,6)), d = Number(s.slice(6,8));
   if (!y || !m || !d) return null;
-  return new Date(Date.UTC(y, m - 1, d));
+  const date=new Date(Date.UTC(y,m-1,d));
+  return date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d?date:null;
 }
 
 async function fetchWithTimeout(url, headers) {
@@ -84,7 +85,8 @@ async function fetchNaverPage(type, keyword, clientId, clientSecret, start, retr
         console.error(type + ' API ' + res.status + ': ' + body);
         return null;
       }
-      return await res.json();
+      const data=await res.json();
+      return Array.isArray(data.items)&&data.total!=null&&Number.isFinite(Number(data.total))?data:null;
     } catch (err) {
       if (attempt >= retries) {
         console.error(type + ' fetch error:', err.message);
@@ -97,12 +99,13 @@ async function fetchNaverPage(type, keyword, clientId, clientSecret, start, retr
 }
 
 async function countRecent(type, keyword, clientId, clientSecret) {
-  const now = new Date();
+  const now = new Date(Date.now()+9*60*60*1000);
   const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   cutoff.setUTCDate(cutoff.getUTCDate() - (WINDOW_DAYS - 1));
 
   const seen = new Set();
   let count = 0;
+  let failed=false,unknownDates=0;
   let allTimeTotal = 0;
   let pages = 0;
   let reachedOld = false;
@@ -111,7 +114,7 @@ async function countRecent(type, keyword, clientId, clientSecret) {
   for (let page = 0; page < MAX_PAGES; page++) {
     const start = 1 + page * DISPLAY;
     const data = await fetchNaverPage(type, keyword, clientId, clientSecret, start);
-    if (!data) break;
+    if (!data) {failed=true;break;}
     pages += 1;
     if (page === 0) allTimeTotal = Number(data.total) || 0;
 
@@ -122,7 +125,7 @@ async function countRecent(type, keyword, clientId, clientSecret) {
     let hasOld = false;
     for (const item of items) {
       const dt = parsePostDate(item.postdate);
-      if (!dt) continue;
+      if (!dt || dt>now) {unknownDates++;continue;}
       if (dt < cutoff) {
         hasOld = true;
         continue;
@@ -145,7 +148,8 @@ async function countRecent(type, keyword, clientId, clientSecret) {
   }
 
   const capped = !reachedOld && pages >= MAX_PAGES && lastPageFullAndRecent;
-  return { count, capped, allTimeTotal, pages };
+  const status=failed?(pages?'partial':'unavailable'):unknownDates?'partial':capped?'lower_bound':'complete';
+  return { count:status==='unavailable'?null:count, capped, allTimeTotal, pages, status, unknownDates };
 }
 
 export default async function handler(req, res) {
@@ -158,26 +162,31 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'NAVER_CLIENT_ID or NAVER_CLIENT_SECRET is missing' });
   }
 
-  const [blog, cafe] = await Promise.all([
-    countRecent('blog', keyword, clientId, clientSecret),
-    countRecent('cafe', keyword, clientId, clientSecret),
-  ]);
+  const blog = await countRecent('blog', keyword, clientId, clientSecret);
+  // Cafe Search has no postdate field. A 30-day count cannot be inferred from sort=date.
 
   // 최근 30일 발행량은 매 요청마다 1~10개의 네이버 검색 페이지를 훑을 수 있다.
   // 1시간 CDN 캐시로 반복 분석 비용과 대기 시간을 줄이되, 일중 변화는 계속 반영한다.
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
+  res.setHeader('Cache-Control',['complete','lower_bound'].includes(blog.status)?'s-maxage=3600, stale-while-revalidate=7200':'no-store');
 
-  return res.status(200).json({
+  return res.status(blog.status==='unavailable'?503:200).json({
     keyword,
     windowDays: WINDOW_DAYS,
     recentBlogTotal: blog.count,
-    recentCafeTotal: cafe.count,
+    recentCafeTotal: null,
+    blogStatus: blog.status,
+    cafeStatus: 'unsupported_date',
+    statusVersion: 'reliability-20261024',
     recentBlogCapped: blog.capped,
-    recentCafeCapped: cafe.capped,
+    recentCafeCapped: false,
     allTimeBlogTotal: blog.allTimeTotal,
-    allTimeCafeTotal: cafe.allTimeTotal,
+    allTimeCafeTotal: null,
     blogPagesScanned: blog.pages,
-    cafePagesScanned: cafe.pages,
+    cafePagesScanned: 0,
+    unknownDates: blog.unknownDates,
     method: 'recent30d_strict_token_match',
   });
 }
+
+
+export { countRecent, itemMatchesKeyword, parsePostDate };

@@ -656,6 +656,9 @@ const TOPIC_FACETS=/프로필|필모그래피|대표곡|출연진|등장인물|�
 function topicCores(text){return normalizeSpace(text).replace(TOPIC_FACETS,' ').split(/[^0-9a-zA-Z가-힣]+/).filter(x=>x.length>=2&&!/^(배우|가수|선수|감독|정치인|정보|정리|총정리)$/.test(x))}
 function sameTopic(main,candidate){
  const a=normalizeKey(main),b=normalizeKey(candidate);if(!a||!b)return false;if(a===b)return true;
+ // 사용자가 고른 메인키워드가 후보 앞에 그대로 붙는 형태는 강한 동일주제 신호다.
+ // 짧은 작품명·브랜드명에서도 "메인키워드+인물/장소/새 의도"가 잘리지 않게 한다.
+ if(a.length>=2&&b.startsWith(a)&&b.length>a.length)return true;
  const core=topicCores(main),other=topicCores(candidate);if(!core.length)return false;
  return core.every(x=>{const n=normalizeKey(x);if(n.length>=4)return b.includes(n);return other.some(y=>normalizeKey(y)===n||normalizeKey(y).startsWith(n)&&/^(감독|선수|배우|가수)$/.test(normalizeKey(y).slice(n.length)))});
 }

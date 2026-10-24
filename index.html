@@ -421,13 +421,13 @@
 
   <div class="section-title" style="margin-top:64px;">
     <span class="st-tick"></span>
-    <h3 id="clusterTitleHeading">선택 키워드 발행 설계</h3>
+    <h3 id="clusterTitleHeading">선택 키워드 검색의도·발행 설계</h3>
     <span class="st-rule"></span>
     <span class="micro-hint" id="selectedHint">키워드를 선택하세요</span>
   </div>
 
   <details open>
-    <summary>발행 설계 <span class="micro-hint">허브·독립글·흡수 키워드·후킹·제목·작업상태</span></summary>
+    <summary>발행 설계 <span class="micro-hint">완결형 대표글 + 검색 목적이 다른 의도형 글 · 후킹·제목·작업상태</span></summary>
     <div class="body"><div id="clusterBox"></div></div>
   </details>
 
@@ -2004,7 +2004,7 @@ function ensureHooksFor(keyword){
 }
 
 const PLAN_STATUS_OPTIONS=['대기','원고 작업','원고 완료','검수 완료','이미지 완료','초안 전송','발행 완료','보류'];
-function planStorageKey(hub){return 'keywordRadarPublishingPlan:v1:'+normalizeKey(hub)}
+function planStorageKey(hub){return 'keywordRadarPublishingPlan:v2:'+normalizeKey(hub)}
 function publishedAssetKey(){return 'keywordRadarPublishedAssets:v1'}
 function loadPlanSaved(hub){
   try{return JSON.parse(localStorage.getItem(planStorageKey(hub))||'{}')}catch(e){return{}}
@@ -2018,48 +2018,44 @@ function savePublishedAssets(obj){
 function findClusterRow(kw){
   return (state.rows||[]).find(r=>normalizeKey(r.kw)===normalizeKey(kw))||null;
 }
+
 function planRoleFor(kind,item,cluster){
-  if(kind==='hub') return '대표 허브';
-  const kw=normalizeSpace(item?.kw||'');
-  const axis=normalizeSpace(item?.axisLabel||'');
-  const cat=cluster?.category?.key||'general';
-  if(['content','movie'].includes(cat)){
-    if(/재방송|다시보기|OTT|편성|방송시간|공개시간|방영일|공개일|몇부작|회차|시청률/.test(kw)||/구성·포맷/.test(axis)) return '시청 스포크';
-    if(/출연진|등장인물|인물관계도|라인업|캐스팅/.test(kw)) return '출연진 스포크';
-    if(/프로필|나이|학력|필모그래피|출연작|배우/.test(kw)&&!/출연진|등장인물/.test(kw)) return '배우 확장';
-    if(/시즌|결말|줄거리|원작|웹툰|파트[0-9]/.test(kw)||/서사·평가/.test(axis)) return '작품·시즌 스포크';
-    if(/촬영지|촬영장소/.test(kw)) return '촬영지 스포크';
-    if(/인물·구성원/.test(axis)) return '출연진·인물 스포크';
-  }
-  if(cat==='policy'){
-    if(/지역/.test(axis))return'지역 스포크';
-    if(/대상/.test(axis))return'대상별 스포크';
-    return '정책 스포크';
-  }
-  if(cat==='finance') return '금융 세부 스포크';
-  if(cat==='person') return '인물 확장';
-  return axis ? axis.replace(/축$/,'')+' 스포크' : '독립 스포크';
+  if(kind==='hub')return'완결형 대표글';
+  return '의도형 · '+normalizeSpace(item?.intentLabel||item?.axisLabel||'독립 검색의도');
 }
 function planAxisKeys(kw){return new Set(detectAxes(kw).map(a=>a.key))}
 function distributeAbsorbed(cluster){
-  const result={hub:[],bySpoke:{}};
-  (cluster.spokes||[]).forEach((_,i)=>result.bySpoke[i]=[]);
-  for(const kw of (cluster.absorbed||[])){
-    const axes=planAxisKeys(kw);let best=-1,bestScore=0;
-    (cluster.spokes||[]).forEach((sp,i)=>{
-      const sa=planAxisKeys(sp.kw);let score=0;axes.forEach(a=>{if(sa.has(a))score++});
-      if(score>bestScore){bestScore=score;best=i}
-    });
-    if(best>=0&&bestScore>0) result.bySpoke[best].push(kw);
-    else result.hub.push(kw);
-  }
+  const result={hub:[...(cluster.hubAbsorbed||cluster.absorbed||[])],bySpoke:{}};
+  (cluster.spokes||[]).forEach((sp,i)=>result.bySpoke[i]=[...(sp.absorbed||[])]);
   return result;
 }
+function planTitleTerms(core,absorbed,max=3){
+  const candidates=(absorbed||[]).map(kw=>{
+    const row=findClusterRow(kw);
+    const tail=titleHookTail(kw,core);
+    return{tail:normalizeSpace(tail),monthly:row&&searchState(row)==='exact'?Number(row.monthly||0):0};
+  }).filter(x=>x.tail&&normalizeKey(x.tail)!==normalizeKey(core));
+  candidates.sort((a,b)=>b.monthly-a.monthly||a.tail.length-b.tail.length);
+  const out=[],seen=new Set();
+  for(const c of candidates){
+    const k=normalizeKey(c.tail);if(!k||seen.has(k))continue;
+    if(out.some(x=>normalizeKey(x).includes(k)||k.includes(normalizeKey(x))))continue;
+    seen.add(k);out.push(c.tail);if(out.length>=max)break;
+  }
+  return out;
+}
+function composePlanTitle(core,terms,hooks){
+  const parts=[normalizeSpace(core),...(terms||[]).map(normalizeSpace),...(hooks||[]).map(normalizeSpace)].filter(Boolean);
+  const out=[],seen=new Set();
+  for(const p of parts){const k=normalizeKey(p);if(!k||seen.has(k))continue;seen.add(k);out.push(p);}
+  return out.join(' ');
+}
+
 function planCardId(kind,kw){return kind+':'+normalizeKey(kw)}
 function planDefaultDecision(card){
   const assets=loadPublishedAssets();const existing=assets[normalizeKey(card.kw)];
   if(existing?.url)return '기존 글 갱신 검토';
-  return card.kind==='hub'?'대표 글':'독립 글 후보';
+  return card.kind==='hub'?'완결형':'독립 의도 후보';
 }
 function planCardFrom(kind,item,cluster,absorbed,saved){
   const kw=kind==='hub'?cluster.hub:item.kw;
@@ -2068,13 +2064,19 @@ function planCardFrom(kind,item,cluster,absorbed,saved){
   const prev=saved[id]||{};
   const assets=loadPublishedAssets(), asset=assets[normalizeKey(kw)]||{};
   const cachedHooks=(state.hooksByKw&&state.hooksByKw[normalizeSpace(kw)])||[];
+  const ownedAbsorbed=[...(prev.absorbed||absorbed||[])];
+  const coverage=kind==='hub'?(cluster.seedSession?.coverage||[]):([...(item.coverage||[])]);
+  const titleTerms=planTitleTerms(kw,ownedAbsorbed,kind==='hub'?4:2);
   return {
     id,kind,kw,row,role:planRoleFor(kind,item,cluster),
-    axisLabel:kind==='hub'?'대표':(item.axisLabel||'세부 주제'),
-    absorbed:[...(prev.absorbed||absorbed||[])],
+    axisLabel:kind==='hub'?(cluster.seedSession?.label||'완결형'):(item.intentLabel||item.axisLabel||'독립 의도'),
+    intentKey:kind==='hub'?(cluster.seedSession?.key||'general'):(item.intentKey||item.axisKey||'spoke'),
+    coverage,
+    absorbed:ownedAbsorbed,
+    titleTerms,
     hooks:Array.isArray(prev.hooks)&&prev.hooks.length?prev.hooks:cachedHooks.slice(0,5),
     chosenHooks:Array.isArray(prev.chosenHooks)?prev.chosenHooks:[],
-    finalTitle:prev.finalTitle||kw,
+    finalTitle:prev.finalTitle||composePlanTitle(kw,titleTerms,[]),
     status:prev.status||(asset.url?'발행 완료':'대기'),
     url:prev.url||asset.url||'',
     selected:prev.selected!==false,
@@ -2090,7 +2092,7 @@ function buildPublishingPlan(cluster){
 function savePublishingPlan(){
   const cluster=state.currentCluster;if(!cluster||!state.planCards)return;
   const data={};
-  state.planCards.forEach(c=>{data[c.id]={absorbed:c.absorbed,hooks:c.hooks,chosenHooks:c.chosenHooks,finalTitle:c.finalTitle,status:c.status,url:c.url,selected:c.selected,decision:c.decision}});
+  state.planCards.forEach(c=>{data[c.id]={absorbed:c.absorbed,hooks:c.hooks,chosenHooks:c.chosenHooks,finalTitle:c.finalTitle,status:c.status,url:c.url,selected:c.selected,decision:c.decision,intentKey:c.intentKey}});
   try{localStorage.setItem(planStorageKey(cluster.hub),JSON.stringify(data))}catch(e){}
 }
 function getPlanCard(id){return (state.planCards||[]).find(c=>c.id===id)}
@@ -2111,12 +2113,14 @@ function planHookHtml(card){
 function planCardHtml(card){
   const existing=!!card.url||card.decision==='기존 글 갱신 검토';
   const absorb=card.absorbed?.length?card.absorbed.map(k=>'<span class="plan-tag">'+escapeHTML(k)+'</span>').join(''):'<span class="plan-tag">없음</span>';
+  const coverage=card.coverage?.length?card.coverage.map(k=>'<span class="plan-tag">'+escapeHTML(k)+'</span>').join(''):'<span class="plan-tag">핵심 검색의도 중심</span>';
   const statusOpts=PLAN_STATUS_OPTIONS.map(v=>'<option '+(v===card.status?'selected':'')+'>'+v+'</option>').join('');
   return '<div class="plan-card '+(card.kind==='hub'?'hub ':'')+(existing?'existing':'')+'" data-plan-card="'+escapeHTML(card.id)+'">'
     +'<div class="plan-head"><div><div class="plan-role"><label><input type="checkbox" class="plan-select" data-card-id="'+escapeHTML(card.id)+'" '+(card.selected?'checked':'')+'> <b>'+escapeHTML(card.role)+'</b></label><span class="pill gray">'+escapeHTML(card.axisLabel)+'</span></div><div class="plan-keyword">'+escapeHTML(card.kw)+'</div></div>'
     +'<span class="plan-decision '+(existing?'existing':'')+'">'+escapeHTML(card.decision)+'</span></div>'
     +'<div class="plan-metrics">'+planMetricHtml(card)+'</div>'
-    +'<div class="plan-row"><strong>흡수 검색어</strong><div class="plan-tags">'+absorb+'</div></div>'
+    +'<div class="plan-row"><strong>담당 정보</strong><div class="plan-tags">'+coverage+'</div></div>'
+    +'<div class="plan-row"><strong>같은 세션</strong><div class="plan-tags">'+absorb+'</div></div>'
     +'<div class="plan-row"><strong>현재 후킹</strong><div><div class="plan-tags plan-hooks">'+planHookHtml(card)+'</div><button class="plan-tag hook-load" data-card-id="'+escapeHTML(card.id)+'" style="margin-top:6px">후킹 찾기 / 새로고침</button></div></div>'
     +'<div class="plan-row"><strong>최종 제목</strong><input class="plan-title" data-card-title="'+escapeHTML(card.id)+'" value="'+escapeHTML(card.finalTitle)+'" placeholder="최종 발행 제목"></div>'
     +'<div class="plan-actions"><button class="hook" data-plan-titlebuilder="'+escapeHTML(card.id)+'">제목 조합기</button><button class="primary" data-plan-write="'+escapeHTML(card.id)+'">원고 만들기</button></div>'
@@ -2130,13 +2134,14 @@ function renderCluster(hubRow){
   state._clusterHubKey=normalizeKey(hubRow.kw);
   state.planCards=buildPublishingPlan(cluster);
   const selected=state.planCards.filter(c=>c.selected).length;
-  const absorbCount=(cluster.absorbed||[]).length;
+  const absorbCount=(cluster.hubAbsorbed||cluster.absorbed||[]).length+(cluster.spokes||[]).reduce((n,x)=>n+(x.absorbed?.length||0),0);
   const existing=state.planCards.filter(c=>c.url).length;
   const catLabel=cluster.category?.label||'일반';
-  const summary='<div class="plan-summary"><b>'+escapeHTML(catLabel)+' 발행 설계</b><span>추천 '+state.planCards.length+'편</span><span>선택 '+selected+'편</span><span>본문 흡수 '+absorbCount+'개</span>'+(existing?'<span>기존 발행글 '+existing+'편</span>':'')+'<span>※ 편수는 추천이며 직접 수정</span></div>';
+  const summary='<div class="plan-summary"><b>'+escapeHTML(catLabel)+' · '+escapeHTML(cluster.seedSession?.label||'완결형')+'</b><span>완결형 1편</span><span>독립 의도 '+Math.max(0,state.planCards.length-1)+'편</span><span>같은 세션 흡수 '+absorbCount+'개</span>'+(cluster.held?.length?'<span>보류 '+cluster.held.length+'개</span>':'')+(existing?'<span>기존 발행글 '+existing+'편</span>':'')+'<span>검색 목적이 바뀌는 지점만 분리</span></div>';
   const cards='<div class="plan-grid">'+state.planCards.map(planCardHtml).join('')+'</div>';
-  const extra=(cluster.longtail&&cluster.longtail.length)?'<div class="plan-extra"><b>추가 검토 · 수익형 롱테일</b><br>'+cluster.longtail.map(escapeHTML).join(' · ')+'<br><span style="opacity:.75">자동 발행 카드로 만들지 않고 독립 수요를 확인한 뒤 필요할 때 추가합니다.</span></div>':'';
-  els.clusterBox.innerHTML=summary+cards+extra;
+  const held=(cluster.held&&cluster.held.length)?'<div class="plan-absorb-box"><b>보류 · 검색 목적은 다르지만 아직 독립 글로 만들지 않음</b><div>'+cluster.held.map(x=>escapeHTML(x.kw)+' <span style="opacity:.65">('+escapeHTML(x.intentLabel)+')</span>').join(' · ')+'</div></div>':'';
+  const extra=(cluster.longtail&&cluster.longtail.length)?'<div class="plan-extra"><b>추가 검토 · 롱테일</b><br>'+cluster.longtail.map(escapeHTML).join(' · ')+'<br><span style="opacity:.75">대표글에 억지로 섞지 않고 독립 수요가 커질 때 다시 판단합니다.</span></div>':'';
+  els.clusterBox.innerHTML=summary+cards+held+extra;
   bindPublishingPlanEvents();
 }
 function bindPublishingPlanEvents(){
@@ -2188,7 +2193,7 @@ function togglePlanHook(cardId,index){
   const hk=normalizeKey(word),pos=c.chosenHooks.indexOf(hk);
   if(pos>=0)c.chosenHooks.splice(pos,1);else c.chosenHooks.push(hk);
   const tails=c.chosenHooks.map(k=>{const h=c.hooks.find(x=>normalizeKey(x.word||x.tail||x)===k);return normalizeSpace(h?.word||h?.tail||h||'')}).filter(Boolean);
-  c.finalTitle=generateTitleByPattern(c.kw,tails,detectTitlePattern(tails));
+  c.finalTitle=composePlanTitle(c.kw,c.titleTerms||[],tails);
   savePublishingPlan();
   const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row);
 }

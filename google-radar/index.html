@@ -279,7 +279,7 @@ const INTENTS=[
 function inferIntent(kw){for(const [name,terms] of INTENTS){const hit=terms.filter(t=>kw.includes(t));if(hit.length)return{name,terms:hit}}return{name:'general',terms:[]}}
 function googleFit(row){
   const intent=inferIntent(row.kw),info=['policy','finance','issue','howto','sports','health'].includes(intent.name);
-  let b=info?7:0;if(GOOGLE_WORDS.some(w=>row.kw.includes(w)))b+=5;if(b>=10)return['구글 강세','green',b];if(b>=5)return['구글 양호','yellow',b];return['일반형','',b]
+  let b=info?7:0;if(GOOGLE_WORDS.some(w=>row.kw.includes(w)))b+=5;if(b>=10)return['정보형 구성 적합','green',b];if(b>=5)return['정보형 구성 가능','yellow',b];return['일반형','',b]
 }
 const INTENT_BUCKETS=[
   ['프로필',['프로필','나이','학력','고향','키','가족','남편','아내','배우자','인스타','필모그래피','출연작']],
@@ -485,7 +485,7 @@ function buildPrompt(){
 +'## 메인 키워드 (검색수요 검증 후 선택)\n'+row.kw+'\n\n'
 +'## 최종 제목 — 반드시 그대로 사용\n'+title+'\n\n'
 +'## 검색수요 검증\n'
-+'- 월간 검색수 참고: '+fmt(row.monthly||0)+'회\n'
++'- 월간 검색수 참고: '+volumeText(row)+'\n'
 +'- Google 자동완성 반복: '+(row.googleHits||0)+'회\n'
 +'- 최근 30일 블로그 발행: '+blogText(row)+'\n'
 +'- 경쟁비율: '+(row.monthly?ratio(row).toFixed(2):'-')+'\n'

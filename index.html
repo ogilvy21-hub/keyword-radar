@@ -2240,17 +2240,16 @@ function planHookHtml(card){
 function planCardHtml(card){
   const existing=!!card.url||card.decision==='기존 글 갱신 검토';
   const absorb=card.absorbed?.length?card.absorbed.map(k=>'<span class="plan-tag">'+escapeHTML(k)+'</span>').join(''):'<span class="plan-tag">없음</span>';
-  const coverage=card.coverage?.length?card.coverage.map(k=>'<span class="plan-tag">'+escapeHTML(k)+'</span>').join(''):'<span class="plan-tag">핵심 검색의도 중심</span>';
-  const evidence=(card.evidence||[]).length?card.evidence.map(k=>'<span class="plan-tag">'+escapeHTML(k)+'</span>').join(''):'<span class="plan-tag">기본 규칙</span>';
+  const coverageText=card.coverage?.length?card.coverage.map(escapeHTML).join(' · '):'핵심 검색의도 중심';
+  const evidenceText=(card.evidence||[]).length?card.evidence.map(escapeHTML).join(' · '):'기본 규칙';
   const statusOpts=PLAN_STATUS_OPTIONS.map(v=>'<option '+(v===card.status?'selected':'')+'>'+v+'</option>').join('');
   return '<div class="plan-card '+(card.kind==='hub'?'hub ':'')+(existing?'existing':'')+'" data-plan-card="'+escapeHTML(card.id)+'">'
     +'<div class="plan-head"><div><div class="plan-role"><label><input type="checkbox" class="plan-select" data-card-id="'+escapeHTML(card.id)+'" '+(card.selected?'checked':'')+'> <b>'+escapeHTML(card.role)+'</b></label><span class="pill gray">'+escapeHTML(card.axisLabel)+'</span></div><div class="plan-keyword">'+escapeHTML(card.kw)+'</div></div>'
     +'<span class="plan-decision '+(existing?'existing':'')+'">'+escapeHTML(card.decision)+'</span></div>'
     +'<div class="plan-metrics">'+planMetricHtml(card)+'</div>'
-    +'<div class="plan-row"><strong>담당 정보</strong><div class="plan-tags">'+coverage+'</div></div>'
-    +'<div class="plan-row"><strong>판단 근거</strong><div><div style="margin-bottom:5px;font-size:12px;opacity:.72">'+escapeHTML(card.reason||'')+'</div><div class="plan-tags">'+evidence+'</div></div></div>'
-    +'<div class="plan-row"><strong>같은 세션</strong><div class="plan-tags">'+absorb+'</div></div>'
     +'<div class="plan-row"><strong>현재 후킹</strong><div><div class="plan-tags plan-hooks">'+planHookHtml(card)+'</div><button class="plan-tag hook-load" data-card-id="'+escapeHTML(card.id)+'" style="margin-top:6px">후킹 찾기 / 새로고침</button></div></div>'
+    +'<div class="plan-row"><strong>같은 세션</strong><div class="plan-tags">'+absorb+'</div></div>'
+    +'<details class="plan-rationale" style="margin:2px 0 10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:#475569">설계 근거 보기</summary><div style="padding-top:8px;font-size:12px;line-height:1.65;color:#64748b"><div><b style="color:#475569">담당 정보</b> · '+coverageText+'</div><div style="margin-top:4px"><b style="color:#475569">판단</b> · '+escapeHTML(card.reason||'')+'</div><div style="margin-top:4px"><b style="color:#475569">근거</b> · '+evidenceText+'</div></div></details>'
     +'<div class="plan-row"><strong>최종 제목</strong><input class="plan-title" data-card-title="'+escapeHTML(card.id)+'" value="'+escapeHTML(card.finalTitle)+'" placeholder="최종 발행 제목"></div>'
     +'<div class="plan-actions"><button class="hook" data-plan-titlebuilder="'+escapeHTML(card.id)+'">제목 조합기</button><button class="primary" data-plan-write="'+escapeHTML(card.id)+'">원고 만들기</button></div>'
     +'<div class="plan-foot"><select data-plan-status="'+escapeHTML(card.id)+'">'+statusOpts+'</select><input data-plan-url="'+escapeHTML(card.id)+'" value="'+escapeHTML(card.url||'')+'" placeholder="발행 URL 저장 · 저장되면 다음 설계에서 기존 글로 인식"></div>'

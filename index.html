@@ -341,7 +341,7 @@
   </div>
 
   <div class="decision">
-    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">검토점수</div></div>
+    <div class="big-score-mark"><div class="v num" id="bestScoreText">0</div><div class="l">수요/공급지수</div></div>
     <div>
       <h1 id="judgementTitle">키워드를 입력하면 글감 판단이 표시됩니다.</h1>
       <p id="judgementReason">검색량 대비 최근 30일 블로그 발행이 적은 후보를 위로 올려 보여줍니다.</p>
@@ -351,14 +351,14 @@
 
   <div class="section-title">
     <span class="st-tick"></span>
-    <h3>검증된 글감 후보 TOP 6</h3>
+    <h3>검색량·발행량 기준 글감 TOP 6</h3>
     <span class="st-rule"></span>
     <span class="micro-hint">수요·발행량·의도 근거를 각각 확인</span>
   </div>
-  <p class="table-caption">네이버 월간 검색수와 최근30일 검색 결과에서 확인한 발행량을 비교합니다. 조회 실패·미조회·최소 건수는 추천 점수에서 제외하며, 점수는 실제 노출·수익·AI 인용을 예측하지 않습니다.</p>
+  <p class="table-caption">네이버 월간 검색수와 최근30일 검색 결과에서 확인한 발행량을 비교합니다. 정렬은 월간 검색수 ÷ 확인 발행량(0건은 1건으로 비교) 순입니다. 수집 한도·일부 수집은 잠정 후보로 함께 표시하며 실제 경쟁이 더 높을 수 있습니다. 의도·정보구성 평가는 순위에 가산하지 않습니다.</p>
   <div class="table-wrap recommend-table">
     <table>
-      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>정보구성</th><th>답변구조</th><th>점수</th></tr></thead>
+      <thead><tr><th>추천 글감</th><th>선택</th><th>판단</th><th>출처</th><th>월간 검색수</th><th>최근30일 블로그</th><th>경쟁비율</th><th>의도근거</th><th>정보구성</th><th>답변구조</th><th>수요/공급지수</th></tr></thead>
       <tbody id="keywordTable"></tbody>
     </table>
   </div>
@@ -368,7 +368,7 @@
     <p class="table-caption">각 키워드의 검색량·최근30일 발행량·경쟁비율을 한눈에 비교해, 왜 이 순서로 추천했는지 직접 확인할 수 있는 표입니다.</p>
     <div class="table-wrap detail-table">
       <table>
-        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>답변구조</th><th>점수</th><th>추천 이유</th></tr></thead>
+        <thead><tr><th>키워드</th><th>출처</th><th>월간 검색수</th><th>PC</th><th>MO</th><th>블로그 30일</th><th>카페 30일</th><th>경쟁발행(블로그)</th><th>경쟁비율</th><th>광고</th><th>의도근거</th><th>답변구조</th><th>수요/공급지수</th><th>추천 이유</th></tr></thead>
         <tbody id="detailKeywordTable"></tbody>
       </table>
     </div>
@@ -580,6 +580,15 @@ function validCount(value){return typeof value==='number'&&Number.isFinite(value
 function searchState(row){return row?.volumeStatus||(row?.raw&&validCount(row.monthly)?'exact':'unavailable')}
 function supplyState(row){return row?.supplyStatus||(row?.contentSkipped?'not_requested':row?.contentCapped?'lower_bound':'unavailable')}
 function readyForRanking(row){return searchState(row)==='exact'&&supplyState(row)==='complete'&&validCount(row.monthly)&&validCount(row.totalContent)}
+// Recommendation compares measured demand/supply only. Completeness is a label, not a hidden rank bonus.
+function comparableOpportunity(row){return searchState(row)==='exact'&&row.monthly>0&&validCount(row.totalContent)&&['complete','lower_bound','partial'].includes(supplyState(row))}
+function opportunityValue(row){return comparableOpportunity(row)?row.monthly/Math.max(1,row.totalContent):null}
+function opportunityProvisional(row){return comparableOpportunity(row)&&supplyState(row)!=='complete'}
+function compareOpportunity(a,b){
+ const av=opportunityValue(a),bv=opportunityValue(b);
+ if(av===null||bv===null)return av===bv?Number(b.monthly||0)-Number(a.monthly||0):av===null?1:-1;
+ return bv-av||b.monthly-a.monthly||a.totalContent-b.totalContent;
+}
 function demandText(row,part='monthly'){
  const value=part==='pc'?row?.pc:part==='mo'?row?.mo:row?.monthly;
  const status=part==='pc'?row?.pcStatus:part==='mo'?row?.mobileStatus:searchState(row);
@@ -587,7 +596,7 @@ function demandText(row,part='monthly'){
  if(status==='exact'&&validCount(value))return format(value);
  return '미확인';
 }
-function scoreText(row){return validCount(row?.score)?String(row.score):'보류'}
+function scoreText(row){const v=opportunityValue(row);return v===null?'미확인':v.toLocaleString('ko-KR',{maximumFractionDigits:1})+(opportunityProvisional(row)?' (잠정)':'')}
 function cafeText(row){return row?.cafeStatus==='complete'&&validCount(row.cafe)?format(row.cafe)+'건':'측정 불가 (작성일 미제공)'}
 function hydrateContent(row,content){
  const allowed=['complete','partial','lower_bound','unavailable'];
@@ -823,11 +832,11 @@ function needsExperience(row, intent){
 function classify(row){
  if(searchState(row)!=='exact')return searchState(row)==='low_volume'?'소량 검색·관찰':'검색량 미확인';
  if(!validCount(row.monthly)||row.monthly<=0)return '수요 부족';
- if(['lower_bound','partial'].includes(supplyState(row)))return '추가 수집 필요';
+ if(opportunityProvisional(row))return '잠정 후보';
  if(!readyForRanking(row))return '발행량 미확인';
  if(Number(row.relevance||0)===0)return '관련도 확인';
  const r=ratioValue(row);
- if(row.monthly>=500&&r<.5&&Number(row.intentClarityScore||0)>=10)return '우선 검토';
+ if(row.monthly>=500&&r<.5)return '우선 검토';
  if(row.monthly>=300&&r<1)return '검토 후보';
  if(r>=1)return '경쟁 높음';
  return '관찰키워드';
@@ -835,6 +844,7 @@ function classify(row){
 function makeReason(row,score,intent){
  const st=searchState(row),ss=supplyState(row);
  if(st!=='exact')return `검색량 ${demandText(row)}. 원문 검색량이 확인되지 않아 추천 점수를 보류합니다.`;
+ if(opportunityProvisional(row))return `월간 검색수 ${demandText(row)}회 / 확인 발행량 ${contentStatus(row)}. 확인 발행량 기준 수요/공급지수 ${scoreText(row)}로 함께 비교합니다. 전체 발행량은 더 많을 수 있어 확정 저경쟁 추천과 구분합니다.`;
  if(ss!=='complete')return `월간 검색수 ${demandText(row)}회 / 최근30일 블로그 ${contentStatus(row)}. 전체 발행량을 확정하지 못해 추천 점수를 보류합니다. 카페 최근30일은 작성일 미제공으로 측정하지 않습니다.`;
  return `네이버 월간 검색수 ${demandText(row)}회 / 최근30일 확인 발행량 ${contentStatus(row)} / 비율 ${ratioText(row)}. ${row.grade}. 이 비율은 글 수와 검색 횟수의 참고 비교이며 검색 경쟁·노출·수익을 보장하지 않습니다. 선택어 의도 근거: ${intent.terms.join(', ')||'부족'}.`;
 }
@@ -914,45 +924,16 @@ function enrichScore(row, bundleRows){
   const relScore = sameTopic(state.seed,row.kw)?relevanceScore(row,state.seed):0;
   const demandScore=Math.round(scoreMonthly(row.monthly)/15*25);
   const supplyScore=readyForRanking(row)?Math.round(scoreRatio(row)/40*35):null;
-  const score=readyForRanking(row)?Math.round(demandScore+supplyScore+intentScore/35*25+relScore/10*15):null;
+  const score=opportunityValue(row);
   const gFit = googleFitLabel(intent.key, row.kw);
   const enriched = { ...row, ratio:ratioValue(row), intentEvidence:intent.label, intentKey:intent.key, intentTerms:intent.terms, intentClarityScore:intentScore, highCpc:isHighCpc(intent.key, row.kw), googleFit:gFit.label, googleFitCls:gFit.cls, aiCitationScore:aiScore, aiCitationLabel:aiFit.label, aiCitationCls:aiFit.cls, relevance:relScore, demandScore, supplyScore, score };
   enriched.grade = classify(enriched);
   enriched.reason = makeReason(enriched, score, intent);
   return enriched;
 }
-function sortCandidates(rows){
-  const gradeRank = {'우선 검토':6,'검토 후보':5,'관찰키워드':4,'경쟁 높음':3,'추가 수집 필요':2,'발행량 미확인':1};
-  return [...rows].sort((a,b)=>{
-    if((gradeRank[b.grade]||0)!==(gradeRank[a.grade]||0)) return (gradeRank[b.grade]||0)-(gradeRank[a.grade]||0);
-    if(Number(b.score||0)!==Number(a.score||0)) return Number(b.score||0)-Number(a.score||0);
-    if(Number(b.intentClarityScore||0)!==Number(a.intentClarityScore||0)) return Number(b.intentClarityScore||0)-Number(a.intentClarityScore||0);
-    if(Number(a.ratio??Infinity)!==Number(b.ratio??Infinity)) return Number(a.ratio??Infinity)-Number(b.ratio??Infinity);
-    if(Number(b.monthly||0)!==Number(a.monthly||0)) return Number(b.monthly||0)-Number(a.monthly||0);
-    return 0;
-  });
-}
-function recoTier(row){
-  if(!readyForRanking(row)) return 0;
-  if(Number(row?.relevance||0)===0) return 0;
-  const m=Number(row.monthly||0), r=ratioValue(row);
-  if(m<300) return 0;
-  if(r<0.5) return 1;
-  if(r<1.0) return 2;
-  if(m>=30000 && r<2.0) return 3;
-  return 0;
-}
-function fillRecommended(sorted, want=6){
-  const out=[];
-  for(const tier of [1,2,3]){
-    for(const row of sorted){
-      if(out.length>=want) break;
-      if(recoTier(row)===tier) out.push(row);
-    }
-    if(out.length>=want) break;
-  }
-  return out;
-}
+function sortCandidates(rows){return [...rows].sort(compareOpportunity)}
+function recoTier(row){return comparableOpportunity(row)&&row.monthly>=300&&Number(row.relevance||0)>0?1:0}
+function fillRecommended(sorted,want=6){return sortCandidates(sorted).filter(r=>recoTier(r)>0).slice(0,want)}
 function publishHint(row){
   return Number(row.totalContent||0) >= 3000 ? '발행 많음 · 연도·변형 키워드로 차별화 추천' : '';
 }
@@ -1513,6 +1494,13 @@ function renderTitleBuilder(seedKw, blogHooks){
   }
   drawTitleBuilder();
 }
+function searchQualityAdvice(title,main){
+ const notes=[];if(!normalizeKey(title).includes(normalizeKey(main)))notes.push('선택한 검색어가 제목에 없습니다. 의도적으로 바꾼 제목인지 확인하세요.');
+ if(title.length>55)notes.push('제목이 깁니다. 핵심 검색 정보 1~2개와 클릭할 이유가 드러나는지 확인하세요.');
+ const words=normalizeSpace(title).split(/[^0-9a-zA-Z가-힣]+/).filter(w=>w.length>=2);if(new Set(words).size<words.length)notes.push('제목에 반복된 단어가 있습니다.');
+ notes.push('제목의 약속과 본문 답 일치 · 실제 근거와 원문 링크 · 직접 경험은 있을 때만 · 무관한 키워드 나열 제외');return notes.join(' / ');
+}
+function updateSearchQualityReview(){const el=$('searchQualityReview'),ts=state.titleState;if(el&&ts)el.textContent='네이버·Google 원고 점검 (추천 순위와 별개): '+searchQualityAdvice(ts.edited||generateTitleByPattern(ts.main,ts.chosen.map(k=>ts.hooks.find(h=>normalizeKey(h.tail)===k)?.tail).filter(Boolean),ts.pattern),ts.main)}
 function drawTitleBuilder(){
   const ts = state.titleState; if(!ts || !els.titleBuilder) return;
   const relHooks = ts.hooks.map((h,i)=>({h,i})).filter(x=>x.h.kind!=='blog');
@@ -1549,13 +1537,15 @@ function drawTitleBuilder(){
     return h ? `<span class="tb-pin">${escapeHTML(h.tail)} <b data-tk="${escapeHTML(key)}">×</b></span>` : '';
   }).join('');
   els.titleBuilder.innerHTML = `
-    <div class="tb-mini">메인키워드 <span>· 고정</span></div>
-    <span class="tb-main">${escapeHTML(ts.main)} <span class="tb-tag">고정</span></span>
+    <div class="tb-mini">메인 키워드 <span>· 분석 후보에서 자유롭게 선택</span></div>
+    <select class="tb-edit" id="tbMainSelect">${(state.rows||[]).map(r=>`<option value="${escapeHTML(r.kw)}" ${normalizeKey(r.kw)===normalizeKey(ts.main)?'selected':''}>${escapeHTML(r.kw)} · 월검색 ${demandText(r)} / 발행 ${escapeHTML(contentStatus(r))}</option>`).join('')}</select>
+    <input class="tb-edit" id="tbMainCustom" placeholder="다른 메인 키워드 입력">
+    <button class="tb-clear" id="tbMainAnalyze">이 키워드로 새로 분석</button>
     ${relHtml}
     ${blogHtml}
     <div class="tb-mini">발행 패턴 <span>· 자동 추천, 필요하면 변경</span></div>
     <select class="tb-edit" id="tbPattern">${patternOptions}</select>
-    <div class="tb-mini">조합한 제목</div>
+    <div class="tb-mini">조합한 제목</div><div id="searchQualityReview" class="info" aria-live="polite"></div>
     <div class="tb-chosen">${pins}</div>
     <div class="tb-preview">
       <div class="ms-title-strip"><div class="ms-title-line" id="tbPreview">${escapeHTML(preview)}</div></div>
@@ -1566,15 +1556,18 @@ function drawTitleBuilder(){
       <button class="tb-clear" id="tbClear">초기화</button>
       <button class="tb-apply" id="tbApply">이 제목 적용 → 프롬프트</button>
     </div>
-    <p class="tb-hint">선택한 패턴으로 실제 제목을 조합합니다. 직접 편집할 수 있으며, 적용 버튼을 누르면 이 제목이 프롬프트에 그대로 고정됩니다. 관찰된 후킹 표현의 금액·관계·현재 사실은 원문과 확인하세요.</p>`;
+    <p class="tb-hint">메인 키워드는 후보에서 바꾸거나 새로 분석할 수 있습니다. 제목은 자유롭게 편집할 수 있으며, 적용 버튼을 누르면 이 제목이 프롬프트에 그대로 고정됩니다. 관찰된 후킹 표현의 금액·관계·현재 사실은 원문과 확인하세요.</p>`;
   els.titleBuilder.querySelectorAll('.tb-chip[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
   els.titleBuilder.querySelectorAll('.tb-pin b[data-tk]').forEach(b=>b.addEventListener('click',()=>toggleTitleHook(b.dataset.tk)));
+  $('tbMainSelect')?.addEventListener('change',e=>selectMainKeyword(e.target.value));
+  $('tbMainAnalyze')?.addEventListener('click',()=>{const kw=normalizeSpace($('tbMainCustom').value);if(kw){els.keywordInput.value=kw;analyze()}});
   const patternEl = $('tbPattern');
   if(patternEl) patternEl.addEventListener('change', e=>{ state.titleState.pattern = e.target.value; updateManuscriptPreview(); });
   const editEl = $('tbEdit');
-  if(editEl) editEl.addEventListener('input', e=>{ state.titleState.edited = e.target.value; });
+  if(editEl) editEl.addEventListener('input', e=>{ state.titleState.edited = e.target.value;updateSearchQualityReview(); });
   const clearEl = $('tbClear'); if(clearEl) clearEl.addEventListener('click', ()=>{ ts.chosen=[]; ts.edited=''; state.titleApplied=null; drawTitleBuilder(); renderSelected(); });
   const applyEl = $('tbApply'); if(applyEl) applyEl.addEventListener('click', applyTitleToPrompt);
+  updateSearchQualityReview();
 }
 // [FIX 2026-08-17] 칩을 클릭할 때마다 drawTitleBuilder()가 패널 전체(칩·드롭다운·핀·원고지 격자)를
 // innerHTML로 통째로 부수고 새로 그려서, 테두리 있는 원고지 칸(최대 60개)이 매번 재생성되며
@@ -1634,6 +1627,11 @@ function normalizeEditedTitleMainKeywordV26(title, main){
   return raw;
 }
 
+function selectMainKeyword(kw){
+ const row=state.rows.find(r=>normalizeKey(r.kw)===normalizeKey(kw));if(!row)return;
+ let index=state.recommended.findIndex(r=>normalizeKey(r.kw)===normalizeKey(kw));if(index<0){state.recommended.push(row);index=state.recommended.length-1}
+ state.selectedIndex=index;state.titleApplied=null;state.titleState=null;renderRecommendTable();renderSelected();
+}
 function applyTitleToPrompt(){
   const ts=state.titleState; if(!ts) return;
   const chipTails = ts.chosen.map(key=>ts.hooks.find(h=>normalizeKey(h.tail)===key)?.tail).filter(Boolean);
@@ -1646,8 +1644,7 @@ function applyTitleToPrompt(){
   const pattern = ts.pattern || detectTitlePattern(tails);
   const generated = generateTitleByPattern(ts.main, tails, pattern);
   const locked = true; // the preview and the prompt use the same concrete title
-  const draft = edited?normalizeEditedTitleMainKeywordV26(edited,ts.main):generated;
-  if(!normalizeKey(draft).includes(normalizeKey(ts.main))){alert('최종 제목에는 메인 키워드를 유지해주세요.');return;}
+  const draft = edited||generated;
   state.titleApplied = { main:ts.main, tails:[...tails], pattern, draft, locked };
   renderSelected();
   els.draftPrompt.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1860,7 +1857,14 @@ ${modeNote}
   - 규칙 3: 제목은 명사로 끝맺어라. "~하세요/~합니다" 서술형 꼬리와 "총정리·꼭·완벽" 같은 빈 수식어(TMI)는 빼라.
 - **[가장 중요] 목차: 위 섹션 재료를 검색 질문형 소제목으로 바꿔 짠 뒤, 도입부 바로 다음에 '## 목차' 형태로 본문에 반드시 직접 넣어라.** (목차 항목은 본문 소제목과 글자까지 정확히 일치시켜라.)
 ${linkBlock}${dedupBlock}
-## AI 브리핑 대응 구조
+## 검색 품질 · 네이버와 Google 공통
+- 제목은 본문의 핵심을 정확히 설명하고, 핵심 검색 정보 1~2개와 실제 확인된 클릭 이유를 우선한다. 관련 없는 인기 검색어나 반복 키워드를 넣지 않는다.
+- 각 질문에 실제 답을 제공하고 공식 원문 URL과 확인 시점을 출처에 남긴다. 기사·타 블로그의 요약을 짜깁기하지 않고 독자가 판단할 기준·예외·구체적 차이를 설명한다.
+- 직접 경험이 없으면 경험·전문성·체험 후기를 만들지 않는다. 불필요한 표·FAQ·정해진 글자 수를 채우지 않는다.
+- 관련 내부링크는 실제 존재하는 같은 주제의 글만 연결한다. 발행 전 색인 가능 상태·대표 URL·모바일 가독성은 별도로 확인한다.
+- AI 인용 또는 특정 검색엔진의 상위 노출을 약속하지 않는다. 네이버 검색량을 Google 수요로 해석하지 않는다.
+
+## 답변을 이해하기 쉬운 원고 구조
 - 도입부 첫 문단은 2~3문장으로 작성하고, 첫 문장에 메인 키워드 질문의 답을 바로 쓴다.
 - 각 소제목의 첫 문단도 질문에 대한 직접 답으로 시작한다.
 - 날짜·조건·금액·대상·비교·순서가 나오면 표나 체크리스트로 정리한다. 표를 넣기 전에는 그 표가 무엇을 정리한 것인지 한두 문장으로 먼저 설명하고 나서 배치하라 — 예고 없이 표부터 뚝 끼워넣지 마라.
@@ -1897,7 +1901,7 @@ function renderSelected(){
       : '공식·광고·AI가 말하지 않는 차이를 적으면 원고 차별점이 됩니다.';
   }
   els.selectedHint.textContent=row.kw; els.sideKeyword.textContent=row.kw; els.sideBadge.textContent=intent.label; els.sideScore.textContent=scoreText(row); els.sideReason.textContent=row.reason; els.intentShortText.textContent=row.grade;
- if(!readyForRanking(row)||row.monthly<=0){
+ if(!comparableOpportunity(row)||row.monthly<=0){
     els.judgementTitle.textContent = `${row.kw} — 데이터가 부족해 추천 여부를 판단할 수 없습니다`;
     els.judgementReason.textContent = row.reason;
   } else {
@@ -1970,7 +1974,14 @@ ${factCheckByIntent(intent, row)}${experienceBlock()}${contentOverlapNote(row)}$
 
 ---
 
-## AI 브리핑 대응 구조
+## 검색 품질 · 네이버와 Google 공통
+- 제목은 본문의 핵심을 정확히 설명하고, 핵심 검색 정보 1~2개와 실제 확인된 클릭 이유를 우선한다. 관련 없는 인기 검색어나 반복 키워드를 넣지 않는다.
+- 각 질문에 실제 답을 제공하고 공식 원문 URL과 확인 시점을 출처에 남긴다. 기사·타 블로그의 요약을 짜깁기하지 않고 독자가 판단할 기준·예외·구체적 차이를 설명한다.
+- 직접 경험이 없으면 경험·전문성·체험 후기를 만들지 않는다. 불필요한 표·FAQ·정해진 글자 수를 채우지 않는다.
+- 관련 내부링크는 실제 존재하는 같은 주제의 글만 연결한다. 발행 전 색인 가능 상태·대표 URL·모바일 가독성은 별도로 확인한다.
+- AI 인용 또는 특정 검색엔진의 상위 노출을 약속하지 않는다. 네이버 검색량을 Google 수요로 해석하지 않는다.
+
+## 답변을 이해하기 쉬운 원고 구조
 이 글은 사람이 읽기 쉬운 글이면서, AI 브리핑이 문단 단위로 가져가기 쉬운 답변형 글이어야 한다.
 - "오늘은 알아보겠습니다", "최근 많은 분들이 궁금해합니다", "아래에서 자세히 확인하세요"로 시작하지 마라.
 - "이상으로 포스팅을 마칩니다", "도움이 되셨길 바랍니다", "다음에 더 유용한 정보로 찾아뵙겠습니다", "끝까지 읽어주셔서 감사합니다"처럼 정보 없이 인사로만 끝내는 상투적 마무리도 쓰지 마라. 마지막 문단도 다른 문단과 똑같이 실질적인 내용(주의점 정리, 다음에 확인할 것, 핵심 재확인 등)으로 끝내라.

@@ -2085,7 +2085,9 @@ async function startPlanArticle(cardId){
   publishWorkspaceKeyword=normalizeKey(c.kw);
   savePublishingPlan();
   updatePromptMeta();updatePublishKeyword();
-  const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];if(row)renderCluster(row);
+  const row=(state.recommended.length?state.recommended:state.rows)[state.selectedIndex]||state.rows[0];
+  if(row)renderCluster(row);
+  state.activePlanCard=getPlanCard(cardId)||c;
   els.draftPrompt.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -2827,7 +2829,9 @@ function eligiblePublishSections(){
 function articleChanged(){
   updateArticleCount();
   if(state.activePlanCard && (els.articleBox?.value||'').trim()){
-    state.activePlanCard.status='원고 완료';
+    const liveCard=getPlanCard(state.activePlanCard.id)||state.activePlanCard;
+    liveCard.status='원고 완료';
+    state.activePlanCard=liveCard;
     savePublishingPlan();
   }
   const valid=new Set(eligiblePublishSections().map(s=>s.key));

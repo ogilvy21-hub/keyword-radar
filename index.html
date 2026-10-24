@@ -1299,6 +1299,8 @@ const CATEGORIES = [
     terms:['축제','관광','가볼만한곳','맛집','숙소','펜션','주차','입장료','초대가수','벚꽃','단풍','야간개장','계곡'] },
   { key:'life', label:'생활·민원', mode:'merge',
     terms:['여권','비자','비짓재팬','보육료','버스정보','준비물','발급','갱신','재발급','등록방법'] },
+  { key:'legal', label:'법률·분쟁', mode:'merge',
+    terms:['소송','고소','고발','해고','퇴직금','근로기준법','내용증명','민사','형사','손해배상','임대차','보증금','법률'] },
   {key:'issue',label:'사건·진행 상황',mode:'merge',terms:['사건','논란','수사','구속','판결','무죄','의혹','참사']},
   { key:'person', label:'인물·프로필', mode:'single',
     terms:['프로필','학력','고향','와이프','배우자','국적','출생지','본명','경력','지지율','나무위키'] },
@@ -1312,20 +1314,47 @@ const CATEGORIES = [
     terms:['불교박람회','연등회','연등축제','법회','템플스테이'] },
 ];
 const BEAUTY_BRANDS = ['나스','NARS','롬앤','클리오','에뛰드','맥','MAC','디올','샤넬','입생로랑','3CE','페리페라','어뮤즈','힌스','데이지크'];
-function detectCategory(mainKw, relatedRows){
-  const main = normalizeSpace(mainKw);
-  const relText = ''; // candidates do not establish the category of the selected query
-  for(const b of BEAUTY_BRANDS){ if(main.startsWith(b)) return CATEGORIES.find(c=>c.key==='beauty'); }
-  let best = null, bestScore = 0;
-  for(const cat of CATEGORIES){
-    let score = 0;
-    for(const t of cat.terms){
-      if(main.includes(t)) score += 3;
-      if(relText.includes(t)) score += 1;
+
+const CATEGORY_EVIDENCE = {
+  content:['드라마','예능','영화','출연진','등장인물','인물관계도','몇부작','OTT','넷플릭스','티빙','웨이브','디즈니플러스','방영일','공개일','줄거리','결말','원작','웹툰','시청률'],
+  sports:['경기','중계','대표팀','명단','대진','올림픽','월드컵','WBC','프로야구','리그','선수','스코어'],
+  policy:['지원금','장려금','보조금','수당','환급','바우처','소득기준','재산기준','지급일','신청대상'],
+  finance:['대출','금리','한도','상환','이자','연말정산','세액공제','소득공제','ETF','청약','적금','예금'],
+  exam:['시험일정','응시자격','합격률','필기','실기','기출','접수','과목','난이도'],
+  health:['증상','원인','검사','진단','치료','생존율','통증','부작용','전이'],
+  festival:['축제','주차','입장료','초대가수','먹거리','숙소','가볼만한곳'],
+  legal:['소송','고소','해고','퇴직금','내용증명','손해배상','임대차','보증금']
+};
+function relatedCategoryEvidence(relatedRows){
+  let best=null,bestScore=0;
+  for(const [key,terms] of Object.entries(CATEGORY_EVIDENCE)){
+    const signals=new Set(); let rowHits=0;
+    for(const row of (relatedRows||[])){
+      const kw=normalizeSpace(row?.kw||''); let hit=false;
+      for(const term of terms){if(includesTerm(kw,term)){signals.add(normalizeKey(term));hit=true;}}
+      if(hit)rowHits++;
     }
-    if(score > bestScore){ bestScore = score; best = cat; }
+    const score=signals.size*2+Math.min(rowHits,4);
+    if(signals.size>=2&&score>bestScore){best={key,score};bestScore=score;}
   }
-  return best && bestScore >= 2 ? best : { key:'general', label:'일반', mode:'merge', terms:[] };
+  return best;
+}
+function detectCategory(mainKw, relatedRows){
+  const main=normalizeSpace(mainKw);
+  for(const b of BEAUTY_BRANDS){if(main.startsWith(b))return CATEGORIES.find(c=>c.key==='beauty');}
+  let best=null,bestScore=0;
+  for(const cat of CATEGORIES){
+    let score=0;
+    for(const t of cat.terms)if(includesTerm(main,t))score+=3;
+    if(score>bestScore){bestScore=score;best=cat;}
+  }
+  if(best&&bestScore>=2)return best;
+  const inferred=relatedCategoryEvidence(relatedRows);
+  if(inferred){
+    const found=CATEGORIES.find(c=>c.key===inferred.key);
+    if(found)return {...found,inferred:true};
+  }
+  return {key:'general',label:'일반',mode:'merge',terms:[]};
 }
 
 const SIDO = ['서울','경기','인천','대구','대전','부산','광주','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];
@@ -1348,11 +1377,11 @@ const UNIVERSAL_AXES = {
   platform: { label:'플랫폼축', terms:['넷플릭스','티빙','웨이브','디즈니플러스','쿠팡플레이','홈택스','정부24','복지로','티머니','모바일티머니','카카오페이','네이버페이','앱','어플','홈페이지'] },
   problem: { label:'문제·리스크축', terms:['안됨','오류','실패','부결','반려','거절','누락','지연','해지','취소','환불','리콜','독소','논란','불법','경고','문제점','부작용'] },
   compare: { label:'비교·선택축', terms:['차이','비교','vs','VS','순위','추천','장단점','리스트','BEST','대신','갈아타기'] },
-  people: { label:'인물·구성원축', terms:['출연진','등장인물','인물관계도','배우','감독','작가','제작진','PD','MC','참가자','심사위원','라인업','명단','프로필','국적','학력'] },
+  people: { label:'인물·구성원축', terms:['출연진','등장인물','인물관계도','배역','캐릭터','출연자','배우','감독','작가','제작진','PD','MC','참가자','심사위원','라인업','명단','프로필','국적','학력'] },
   story: { label:'서사·평가축', terms:['줄거리','결말','결말해석','원작','웹툰','실화','모티브','관람평','평점','후기','리뷰','쿠키','예고편'] },
-  format: { label:'구성·포맷축', terms:['몇부작','회차','편성표','재방송','다시보기','OTT','시청률','공개시간','방송시간','시즌','파트2'] },
+  format: { label:'구성·포맷축', terms:['몇부작','회차','편성표','재방송','다시보기','OTT','시청률','공개시간','방송시간','중계','생중계','라이브','시즌','파트2'] },
   document: { label:'자료·준비물축', terms:['서류','준비물','제출서류','필요서류','증빙','확인서','양식','서식','문제집','기출문제','책'] },
-  outcome: { label:'결과축', terms:['합격률','취업률','연봉','전망','순위','결과','발표','진출자','탈락자','성적','시청률','당첨'] }
+  outcome: { label:'결과축', terms:['합격률','취업률','연봉','전망','순위','결과','발표','진출자','탈락자','성적','시청률','당첨','우승','승자','스코어','경기결과'] }
 };
 function detectAxes(kw){
   const found=[];
@@ -1362,118 +1391,235 @@ function detectAxes(kw){
   }
   return found;
 }
-const CATEGORY_PROFILES = {
-  content: { spokeAxes:['people','format','story','place'], sectionAxes:['basic','time'] },
-  policy: { spokeAxes:['audience','place','problem','compare'], sectionAxes:['eligibility','action','money','time','document'] },
-  finance: { spokeAxes:['compare','problem','audience','platform'], sectionAxes:['eligibility','money','action','time','document'] },
-  exam: { spokeAxes:['time','place','compare','audience'], sectionAxes:['document','outcome','eligibility','action'] },
-  health: { spokeAxes:['problem','audience','compare'], sectionAxes:['basic','document','outcome'] },
-  eventPlace: { spokeAxes:['place','time','audience','compare'], sectionAxes:['basic','action','money','platform'] },
-  product: { spokeAxes:['compare','problem','audience','platform'], sectionAxes:['money','basic','story'] },
-  general: { spokeAxes:['problem','compare','place','audience','platform','people','format'], sectionAxes:['basic','action','time','money','document','eligibility','story','outcome'] }
+
+/* ===== SEARCH SESSION ENGINE v26 ===== */
+const SESSION_DEFS = {
+  content:{
+    work:{label:'작품 전체 정보',coverage:['기본정보','줄거리','출연진·등장인물','인물관계도','몇부작·OTT','방영·공개일','원작 여부']},
+    cast:{label:'출연진·등장인물',coverage:['출연진','등장인물','배역','인물관계도','캐스팅 변화']},
+    viewing:{label:'시청 정보',coverage:['방영·공개일','몇부작','OTT','재방송·다시보기','방송·공개시간']},
+    story:{label:'줄거리·원작',coverage:['줄거리','원작·웹툰','작품 설정','시즌 연결']},
+    ending:{label:'결말·해석',coverage:['결말','결말 해석','핵심 복선','엔딩 이후']},
+    episode:{label:'회차 이슈',coverage:['해당 회차 줄거리','핵심 장면','다음 회차 연결']},
+    review:{label:'후기·평가',coverage:['후기','평점','관전 포인트','호불호']},
+    location:{label:'촬영지',coverage:['촬영지','촬영 장소','장소 정보']},
+    ost:{label:'OST·음악',coverage:['OST','삽입곡','가창자']},
+    person:{label:'배우 개인',coverage:['프로필','나이','학력','필모그래피','현재 작품 배역']}
+  },
+  policy:{
+    benefit:{label:'정책 완결 정보',coverage:['대상·조건','지원 금액','신청 기간','신청 방법','지급일','필요 서류']},
+    problem:{label:'탈락·오류 해결',coverage:['탈락·제외 사유','오류 원인','재신청·이의 절차']},
+    compare:{label:'비교·선택',coverage:['제도 차이','중복 가능 여부','선택 기준']},
+    calc:{label:'계산·금액',coverage:['계산 기준','예상 금액','예외 조건']}
+  },
+  finance:{
+    product:{label:'금융 완결 정보',coverage:['자격·조건','금리·한도','기간','상환 방식','신청 방법','필요 서류']},
+    problem:{label:'부결·오류 해결',coverage:['부결 원인','거절 조건','재신청 기준','대안']},
+    compare:{label:'상품 비교',coverage:['금리·비용 차이','조건 차이','선택 기준']}
+  },
+  sports:{
+    match:{label:'경기 정보',coverage:['경기 일정','중계','대표팀·출전 명단','시간·장소','대진']},
+    result:{label:'경기 결과',coverage:['스코어','승패','주요 장면','다음 일정']},
+    player:{label:'선수 개인',coverage:['프로필','소속·포지션','최근 경기','현재 이슈']},
+    issue:{label:'부상·논란',coverage:['상황','원인','공식 발표','복귀·후속 일정']}
+  },
+  event:{
+    event:{label:'행사 완결 정보',coverage:['일정','장소','주차·교통','입장료·예매','라인업·프로그램']},
+    food:{label:'먹거리·맛집',coverage:['먹거리','맛집','가격·메뉴']},
+    stay:{label:'숙소',coverage:['숙소','거리','가격대','예약']},
+    tour:{label:'주변 코스',coverage:['가볼만한곳','관광 코스','이동 동선']}
+  },
+  exam:{
+    exam:{label:'시험 완결 정보',coverage:['시험 일정','응시 자격','접수 방법','시험 과목','준비물·기출','합격 기준']},
+    variant:{label:'급수·지역별 시험',coverage:['해당 급수·지역 일정','자격','접수','과목']},
+    career:{label:'취업·연봉·전망',coverage:['취업처','연봉','전망','활용 분야']}
+  },
+  health:{
+    base:{label:'질환 기본 정보',coverage:['주요 증상','원인','주의 신호']},
+    symptom:{label:'증상',coverage:['초기·전조 증상','통증·변화','진료가 필요한 신호']},
+    test:{label:'검사·진단',coverage:['검사 방법','진단 기준','검사 전후 주의']},
+    treatment:{label:'치료',coverage:['치료 방법','치료 과정','주의사항']},
+    food:{label:'식단·생활',coverage:['음식','생활 관리','주의할 식품']},
+    prognosis:{label:'예후',coverage:['생존율','전이','예후 관련 요인']}
+  },
+  person:{profile:{label:'인물 완결 정보',coverage:['프로필','나이','학력','경력','필모그래피·주요 활동','현재 이슈']}},
+  product:{
+    product:{label:'제품 완결 정보',coverage:['기본 정보','가격·구성','사용법','후기·장단점']},
+    compare:{label:'제품 비교',coverage:['차이','장단점','선택 기준']},
+    problem:{label:'문제·리콜',coverage:['문제 내용','대상 제품','조치 방법']}
+  },
+  life:{
+    task:{label:'생활 업무 완결 정보',coverage:['대상·조건','준비물','비용','처리 기간','신청·발급 방법','이용처']},
+    problem:{label:'오류·반려 해결',coverage:['오류 원인','반려 사유','해결 순서']}
+  },
+  legal:{
+    task:{label:'법률 절차 완결 정보',coverage:['요건','기한','필요 증거·서류','진행 절차','비용·주의점']},
+    dispute:{label:'분쟁 대응',coverage:['쟁점','입증 자료','대응 절차','기한·주의점']}
+  },
+  recipe:{recipe:{label:'레시피 완결 정보',coverage:['재료','분량','만드는 법','조리 시간','대체 재료']}},
+  issue:{issue:{label:'사건 진행 상황',coverage:['핵심 사실','발생 배경','현재 진행','당사자 입장','후속 일정']}},
+  general:{general:{label:'완결형 정보',coverage:['핵심 정보','조건·방법','시점','비용','주의점']}}
 };
-function profileForCategory(category){
-  const key = category?.key || 'general';
-  if(['content','movie','concert'].includes(key)) return CATEGORY_PROFILES.content;
-  if(['festival','religion','season','place'].includes(key)) return CATEGORY_PROFILES.eventPlace;
-  if(CATEGORY_PROFILES[key]) return CATEGORY_PROFILES[key];
-  return CATEGORY_PROFILES.general;
+function categoryFamily(category){
+  const key=category?.key||'general';
+  if(['content','movie'].includes(key))return'content';
+  if(['festival','religion','season','concert'].includes(key))return'event';
+  if(key==='policy')return'policy';
+  if(key==='finance')return'finance';
+  if(key==='sports')return'sports';
+  if(key==='exam')return'exam';
+  if(key==='health')return'health';
+  if(key==='person')return'person';
+  if(['product','beauty'].includes(key))return'product';
+  if(key==='life')return'life';
+  if(key==='legal')return'legal';
+  if(key==='recipe')return'recipe';
+  if(key==='issue')return'issue';
+  return'general';
 }
-function classifyRelatedV22(mainKw, row, category){
-  const kw = normalizeSpace(row.kw);
-  const monthly = Number(row.monthly || 0);
-  const r = ratioValue(row);
-  const axes = detectAxes(kw);
-  const profile = profileForCategory(category);
-  const axisKeys = axes.map(a=>a.key);
-  const strongSpoke = axisKeys.find(k => profile.spokeAxes.includes(k));
-  const sectionAxis = axisKeys.find(k => profile.sectionAxes.includes(k));
-  const lt = hasLongtail(kw);
-  if(lt) return { tag:'longtail', axes, reason:`수익형 롱테일(${lt})` };
-  if(strongSpoke && monthly >= 400){
-    return { tag:'spoke', axis:UNIVERSAL_AXES[strongSpoke]?.label || '세부 주제', axes, reason:`독립 검색 의도가 있는 ${UNIVERSAL_AXES[strongSpoke]?.label || strongSpoke}` };
-  }
-  if(strongSpoke && monthly >= 200 && r < 1.0){
-    return { tag:'spoke', axis:UNIVERSAL_AXES[strongSpoke]?.label || '세부 주제', axes, reason:'검색량은 낮지만 확인한 발행량 비율을 참고하는 스포크 후보' };
-  }
-  if(sectionAxis){
-    return { tag:'section', axes, reason:`허브 안에서 설명할 ${UNIVERSAL_AXES[sectionAxis]?.label || sectionAxis}` };
-  }
-  if(axes.length) return { tag:'section', axes, reason:'축은 감지됐지만 독립 글감 신호는 약해 허브에 흡수' };
-  return { tag:'section', axes:[], reason:'분야 확정이 약해 허브에 흡수' };
+function sessionDef(family,key){
+  const defs=SESSION_DEFS[family]||SESSION_DEFS.general;
+  if(defs[key])return defs[key];
+  const base=String(key||'').split(':')[0];
+  if(base==='region')return{label:'지역별 정보',coverage:['해당 지역 대상·조건','금액','신청 기간','신청 방법','지역별 공고 차이']};
+  if(base==='audience')return{label:'대상별 정보',coverage:['해당 대상 조건','지원 내용','신청 방법','예외·제외 기준']};
+  return defs[Object.keys(defs)[0]]||SESSION_DEFS.general.general;
 }
-
-function sharesCoreFestival(kw, mainKw){
-  const core = normalizeKey(mainKw).replace(/(축제|박람회|페스티벌|2026|2025|2027).*$/g,'').replace(/^20\d\d/,'');
-  if(core.length < 2) return false;
-  return normalizeKey(kw).includes(core);
+function contentSession(kw){
+  const text=normalizeSpace(kw);
+  if(/프로필|나이|학력|필모그래피|출연작|고향|본명/.test(text))return'person';
+  if(/결말해석|결말|엔딩|범인|정체|스포일러/.test(text))return'ending';
+  if(/(?:^|\s)\d+\s*(?:회|화)(?:\s|$)|회차별|회차\s*(?:줄거리|리뷰|요약)/.test(text))return'episode';
+  if(/관람평|평점|후기|리뷰/.test(text))return'review';
+  if(/촬영지|촬영장소/.test(text))return'location';
+  if(/OST|ost|삽입곡|주제가/.test(text))return'ost';
+  if(/출연진|등장인물|인물관계도|배역|캐릭터|캐스팅/.test(text))return'cast';
+  if(/몇부작|OTT|ott|재방송|다시보기|편성표|방송시간|공개시간|방영일|공개일|시청률/.test(text))return'viewing';
+  if(/원작|웹툰|줄거리|실화|모티브|예고편/.test(text))return'story';
+  return'work';
 }
-function classifyRelated(mainKw, row, category){
-  const kw = normalizeSpace(row.kw);
-  const monthly = Number(row.monthly||0);
-  if(category.mode === 'policy'){
-    const policyCore = normalizeKey(mainKw).replace(/(신청|조회|방법|기준|대상|조건|금액|지급일|자격).*$/g,'');
-    const sharesPolicy = policyCore.length>=3 && normalizeKey(kw).includes(policyCore);
-    const lt = hasLongtail(kw);
-    if(lt) return { tag:'longtail', reason:`수익형 롱테일(${lt})` };
-    const sido = hasSido(kw, mainKw);
-    if(sido && sharesPolicy) return { tag:'spoke', axis:'지역', reason:`지역축(${sido}) — 지역마다 공고·신청 다름` };
-    const tm = hasTargetModifier(kw, mainKw);
-    if(tm && sharesPolicy) return { tag:'spoke', axis:'대상', reason:`대상·시점축(${tm})` };
-    const attr = hasAttribute(kw, mainKw);
-    if(attr && sharesPolicy) return { tag:'section', reason:`속성축(${attr})` };
-    if(!sharesPolicy) return { tag:'drop', reason:'메인 지원금과 다른 주제' };
-    return { tag:'section', reason:'약한 변종 → 허브 흡수' };
-  }
-  if(category.mode === 'festival'){
-    const isOtherFestival = /축제|박람회|페스티벌/.test(kw) && !sharesCoreFestival(kw, mainKw);
-    if(isOtherFestival && monthly>=400) return { tag:'spoke', axis:'다른 축제', reason:'다른 축제 — 독립글' };
-    const sido = hasSido(kw, mainKw);
-    if(sido && monthly>=400) return { tag:'spoke', axis:'지역', reason:`지역축(${sido})` };
-    const placeWords = ['맛집','숙소','펜션','민박','글램핑','캠핑','캠핑장','가볼만한곳','놀거리','관광','계곡','해수욕장'];
-    if(placeWords.some(p=>kw.includes(p)) && monthly>=400) return { tag:'spoke', axis:'장소', reason:'장소 스포크(맛집·숙소·관광)' };
-    return { tag:'section', reason:'축제 속성(날짜·주차·입장료)' };
-  }
-  if(category.mode === 'exam'){
-    if(/[0-9]급/.test(kw) || hasSido(kw, mainKw)) return { tag:'spoke', axis:'급수·지역', reason:'급수·지역 다름 — 독립' };
-    const mainCore = normalizeKey(mainKw).replace(/(시험일정|자격증|시험|필기|실기|일정|과목|난이도|합격률|접수|인강|학원|기출).*$/g,'');
-    const sharesMain = mainCore.length>=2 && normalizeKey(kw).includes(mainCore);
-    if(!sharesMain) return monthly>=400 ? { tag:'spoke', axis:'다른 자격증', reason:'다른 자격증 — 독립글' } : { tag:'section', reason:'검색량 낮음 → 흡수' };
-    return { tag:'section', reason:'메인 자격증 내부 속성' };
-  }
-  if(category.mode === 'merge'){
-    if(category.key==='health'){
-      const cancers = ['폐암','위암','간암','췌장암','갑상선암','후두암','혈액암','대장암','유방암','신장암'];
-      const c = cancers.find(x=>kw.includes(x) && !mainKw.includes(x));
-      if(c) return { tag:'spoke', axis:'다른 암종', reason:`다른 암종(${c}) — 독립글` };
-    }
-    return { tag:'section', reason:'묶는 형 — 한 글에 섹션' };
-  }
-  if(category.mode === 'single') return { tag:'section', reason:'인물 단독글 — 섹션' };
-  return monthly >= 400 ? { tag:'spoke', axis:'세부', reason:'쪼개는 형 — 축별 독립' } : { tag:'section', reason:'검색량 낮음 → 흡수' };
+function policySession(kw){
+  const text=normalizeSpace(kw);
+  if(/탈락|제외|미지급|지연|오류|반려|거절|안됨|못받/.test(text))return'problem';
+  if(/비교|차이|중복|vs|VS/.test(text))return'compare';
+  if(/계산|계산법|모의계산|예상금액/.test(text))return'calc';
+  const sido=SIDO.find(x=>text.includes(x));if(sido)return'region:'+sido;
+  const target=TARGET_MODIFIERS.find(x=>text.includes(x));if(target)return'audience:'+target;
+  return'benefit';
 }
-
-const HYBRID_LEGACY_MODES = ['policy','festival','exam','single'];
-function classifyRelatedHybrid(mainKw, row, category){
-  const useLegacy = HYBRID_LEGACY_MODES.includes(category.mode) || category.key === 'health';
-  return useLegacy ? classifyRelated(mainKw, row, category) : classifyRelatedV22(mainKw, row, category);
+function financeSession(kw){
+  const text=normalizeSpace(kw);
+  if(/부결|거절|연체|오류|안됨|실패/.test(text))return'problem';
+  if(/비교|차이|갈아타기|대환|vs|VS/.test(text))return'compare';
+  return'product';
 }
-
-function buildCluster(hubKw, rows){
-  const hubKey = normalizeKey(hubKw);
-  const others = (rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey&&sameTopic(hubKw,r.kw));
-  const category = detectCategory(hubKw, others);
-  const spokesRaw=[], sections=[], longtail=[], absorbed=[];
+function sportsSession(kw){
+  const text=normalizeSpace(kw);
+  if(/결과|스코어|승리|패배|우승|승자|몇대몇/.test(text))return'result';
+  if(/부상|논란|징계|퇴장|결장/.test(text))return'issue';
+  if(/프로필|나이|소속팀|연봉/.test(text))return'player';
+  return'match';
+}
+function eventSession(kw){
+  const text=normalizeSpace(kw);
+  if(/맛집|먹거리|메뉴/.test(text))return'food';
+  if(/숙소|펜션|호텔|민박|글램핑/.test(text))return'stay';
+  if(/가볼만한곳|관광|여행코스|데이트코스|놀거리/.test(text))return'tour';
+  return'event';
+}
+function examSession(kw){
+  const text=normalizeSpace(kw);
+  if(/연봉|취업|전망|취업률/.test(text))return'career';
+  if(/[0-9]급/.test(text)||SIDO.some(x=>text.includes(x)))return'variant';
+  return'exam';
+}
+function healthSession(kw){
+  const text=normalizeSpace(kw);
+  if(/검사|진단/.test(text))return'test';
+  if(/치료|수술|약물|치료법/.test(text))return'treatment';
+  if(/좋은음식|피해야할음식|식단|음식/.test(text))return'food';
+  if(/생존율|전이|예후/.test(text))return'prognosis';
+  if(/초기증상|전조증상|증상|통증/.test(text))return'symptom';
+  return'base';
+}
+function productSession(kw){
+  const text=normalizeSpace(kw);
+  if(/리콜|불량|독소|부작용|문제점|고장/.test(text))return'problem';
+  if(/비교|차이|vs|VS|추천|순위/.test(text))return'compare';
+  return'product';
+}
+function lifeSession(kw){return /오류|반려|안됨|실패|거절/.test(normalizeSpace(kw))?'problem':'task'}
+function legalSession(kw){return /소송|고소|고발|분쟁|손해배상|해고/.test(normalizeSpace(kw))?'dispute':'task'}
+function detectSession(kw,category){
+  const family=categoryFamily(category);
+  const map={content:contentSession,policy:policySession,finance:financeSession,sports:sportsSession,event:eventSession,exam:examSession,health:healthSession,product:productSession,life:lifeSession,legal:legalSession};
+  const key=map[family]?map[family](kw):(family==='person'?'profile':family==='recipe'?'recipe':family==='issue'?'issue':'general');
+  return{family,key,...sessionDef(family,key)};
+}
+function sameSearchSession(seed,candidate){
+  if(seed.family!==candidate.family)return false;
+  if(seed.key===candidate.key)return true;
+  if(seed.family==='content'){
+    if(seed.key==='work'&&['work','cast','viewing','story'].includes(candidate.key))return true;
+    if(seed.key==='cast'&&candidate.key==='work')return true;
+    if(seed.key==='story'&&candidate.key==='work')return true;
+  }
+  if(seed.family==='policy'){
+    if(seed.key.startsWith('region:')&&candidate.key==='benefit')return true;
+    if(seed.key.startsWith('audience:')&&candidate.key==='benefit')return true;
+  }
+  if(seed.family==='health'&&seed.key==='base'&&['base','symptom'].includes(candidate.key))return true;
+  if(seed.family==='person'&&candidate.key==='profile')return true;
+  return false;
+}
+function independentDemand(row,hubRow){
+  const monthly=searchState(row)==='exact'?Number(row.monthly||0):0;
+  const hubMonthly=hubRow&&searchState(hubRow)==='exact'?Number(hubRow.monthly||0):0;
+  if(monthly>=300)return true;
+  if(monthly>=100&&ratioValue(row)<1)return true;
+  if(monthly>=50&&hubMonthly>0&&monthly/hubMonthly>=0.12)return true;
+  if(monthly>=50&&Number(row.recommendationScore||0)>=70)return true;
+  return false;
+}
+function classifySearchSession(mainKw,row,category,hubRow){
+  const seed=detectSession(mainKw,category),cand=detectSession(row.kw,category);
+  if(sameSearchSession(seed,cand))return{tag:'section',intentKey:seed.key,intentLabel:seed.label,coverage:seed.coverage,reason:'같은 검색 세션'};
+  const lt=hasLongtail(row.kw);
+  if(independentDemand(row,hubRow))return{tag:'spoke',intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'검색 목적이 바뀌고 독립 수요 확인'};
+  if(lt)return{tag:'longtail',intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'다른 의도지만 독립 수요 약함'};
+  return{tag:'hold',intentKey:cand.key,intentLabel:cand.label,coverage:cand.coverage,reason:'다른 의도지만 현재 독립 글 수요 약함'};
+}
+function bestGroupRow(a,b){
+  const am=searchState(a.row)==='exact'?Number(a.row.monthly||0):0,bm=searchState(b.row)==='exact'?Number(b.row.monthly||0):0;
+  if(am!==bm)return bm-am;
+  return compareOpportunity(a.row,b.row);
+}
+function buildCluster(hubKw,rows){
+  const hubKey=normalizeKey(hubKw);
+  const others=(rows||[]).filter(r=>normalizeKey(r.kw)!==hubKey&&sameTopic(hubKw,r.kw));
+  const category=detectCategory(hubKw,others);
+  const hubRow=(rows||[]).find(r=>normalizeKey(r.kw)===hubKey)||null;
+  const seedSession=detectSession(hubKw,category);
+  const hubAbsorbed=[],longtail=[],held=[],groups=new Map(),seen=new Set();
   for(const r of others){
-    const c = classifyRelatedHybrid(hubKw, r, category);
-    if(c.tag==='spoke') spokesRaw.push({ kw:r.kw, monthly:Number(r.monthly||0), axisLabel:c.axis||'세부 주제' });
-    else if(c.tag==='longtail') longtail.push(r.kw);
-    else if(c.tag==='drop') { /* 클러스터에서 제외 — 아무 버킷에도 안 넣음 */ }
-    else { sections.push(r.kw); absorbed.push(r.kw); }
+    const key=normalizeKey(r.kw);if(!key||seen.has(key))continue;seen.add(key);
+    const c=classifySearchSession(hubKw,r,category,hubRow);
+    if(c.tag==='section'){hubAbsorbed.push(r.kw);continue;}
+    if(c.tag==='longtail'){longtail.push(r.kw);continue;}
+    if(c.tag==='hold'){held.push({kw:r.kw,reason:c.reason,intentLabel:c.intentLabel,monthly:Number(r.monthly||0)});continue;}
+    if(c.tag==='spoke'){
+      if(!groups.has(c.intentKey))groups.set(c.intentKey,{intentKey:c.intentKey,intentLabel:c.intentLabel,coverage:c.coverage,rows:[]});
+      groups.get(c.intentKey).rows.push({row:r,classify:c});
+    }
   }
-  spokesRaw.sort((a,b)=>b.monthly-a.monthly);
-  const spokes = spokesRaw.slice(0,5).map(s=>({ axisKey:s.axisLabel, axisLabel:s.axisLabel, kw:s.kw, monthly:s.monthly }));
-  return { hub:hubKw, spokes, absorbed, category, sections, longtail };
+  const spokes=[];
+  for(const group of groups.values()){
+    group.rows.sort(bestGroupRow);
+    const lead=group.rows[0].row;
+    spokes.push({axisKey:group.intentKey,axisLabel:group.intentLabel,intentKey:group.intentKey,intentLabel:group.intentLabel,coverage:group.coverage,kw:lead.kw,monthly:Number(lead.monthly||0),absorbed:group.rows.slice(1).map(x=>x.row.kw)});
+  }
+  spokes.sort((a,b)=>b.monthly-a.monthly);
+  return{hub:hubKw,spokes:spokes.slice(0,6),absorbed:hubAbsorbed,hubAbsorbed,category,sections:hubAbsorbed,longtail,held,seedSession};
 }
 
 function titleRatio(row){return readyForRanking(row)&&row.monthly>0?row.totalContent/row.monthly:Infinity}

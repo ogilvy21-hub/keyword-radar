@@ -82,13 +82,7 @@ function isRelevantTitle(title, keyword) {
 // 당일 이슈 기사(부상·사고·발표 등)가 빠질 수 있다. 뉴스 스니펫만큼은 프로필/나이/학력 같은
 // 고정 정보 꼬리를 제거한 '핵심 대상 검색어'로 최신순을 조회한다.
 // 예: "구자욱 삼성 야구선수 프로필" -> "구자욱 삼성 야구선수"
-const FRESH_NEWS_GENERIC_TERMS = new Set([
-  '프로필','나이','키','고향','학력','학교','대학','경력','소속','소속사',
-  '결혼','남편','아내','부인','배우자','가족','부모','아버지','어머니','자녀',
-  '아들','딸','재산','연봉','인스타','인스타그램','근황','정보','정리','뜻',
-  '주가전망','전망','공모가','상장일','실적','몇부작','출연진','등장인물','결말',
-  '원작','재방송','다시보기'
-]);
+const FRESH_NEWS_GENERIC_TERMS=new Set(['프로필','나이','키','고향','학력','학교','대학','경력','소속','소속사','정보','정리','뜻']);
 function buildFreshNewsQuery(keyword) {
   const tokens = String(keyword || '').trim().split(/\s+/).filter(Boolean);
   const kept = tokens.filter(t => !FRESH_NEWS_GENERIC_TERMS.has(t));
@@ -99,10 +93,11 @@ function snippetAnchorToken(keyword) {
   return tokens[0] || '';
 }
 function isRelevantSnippet(item, originalKeyword) {
-  const anchor = normalizeKeyCompact(snippetAnchorToken(originalKeyword));
-  if (!anchor) return true;
-  const hay = normalizeKeyCompact((item?.title || '') + ' ' + (item?.description || ''));
-  return hay.includes(anchor);
+  const query=buildFreshNewsQuery(originalKeyword);
+  const parts=query.split(/\s+/).map(normalizeKeyCompact).filter(x=>x.length>=2);
+  const title=normalizeKeyCompact(item?.title||'');
+  const hay=title+normalizeKeyCompact(item?.description||'');
+  return parts.length>0 && title.includes(parts[0]) && parts.every(p=>hay.includes(p));
 }
 
 // [FIX 2026-09-15] display를 30 -> 100(네이버가 허용하는 최대치)으로 올려서, 관련도 필터를
@@ -182,6 +177,8 @@ async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
     ]);
   }
 
+  simItems=simItems.filter(it=>isRelevantSnippet(it,keyword));
+  dateItems=dateItems.filter(it=>isRelevantSnippet(it,keyword));
   // date(최신순) 결과를 먼저 넣어 최신 기사를 우선 확보하고, 링크 기준 중복 제거
   const seen = new Set();
   const merged = [];
@@ -195,7 +192,7 @@ async function fetchNaverNewsSnippets(keyword, clientId, clientSecret) {
   merged.sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0));
   return {
     query: freshQuery,
-    items: merged.slice(0, 5).map(({ link, ...rest }) => rest)
+    items: merged.slice(0,5).map(({link,...rest})=>({...rest,url:link,freshness:Date.parse(rest.pubDate)&&Date.now()-Date.parse(rest.pubDate)<=72*60*60*1000?'72h':'older'}))
   };
 }
 
@@ -322,7 +319,7 @@ export default async function handler(req, res) {
     const newsTitlesFiltered = newsTitlesRaw.filter(t => isRelevantTitle(t, keyword));
     const combinedFiltered = [...blogTitlesFiltered, ...newsTitlesFiltered];
     const combinedRaw = [...blogTitlesRaw, ...newsTitlesRaw];
-    const huntTitles = combinedFiltered.length > 0 ? combinedFiltered : combinedRaw;
+    const huntTitles = [...new Set(combinedFiltered)];
     const droppedCount = combinedRaw.length - huntTitles.length;
 
     const hooks = extractHooks(huntTitles, keyword);
@@ -341,7 +338,8 @@ export default async function handler(req, res) {
       newsSnippets,             // [{title, description, source, pubDate}] — 핵심 대상 검색어 기준 최신순 사실근거
       freshNewsQuery,           // 예: "구자욱 삼성 야구선수 프로필" -> "구자욱 삼성 야구선수"
       _filteredOutCount: droppedCount, // 참고용: 관련도 필터로 제외된 제목 개수(블로그+뉴스 합산)
-      _usedRawFallback: combinedFiltered.length === 0 && combinedRaw.length > 0, // 필터 결과 0개라 원본으로 되돌린 경우 true
+      _usedRawFallback: false,
+      evidenceStatus: huntTitles.length?'matched':'insufficient', // 필터 결과 0개라 원본으로 되돌린 경우 true
     });
   } catch (error) {
     console.error('titlehunt handler error:', error.message);
@@ -350,3 +348,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+
+export { isRelevantTitle, isRelevantSnippet, buildFreshNewsQuery };

@@ -3114,8 +3114,7 @@ function articleChanged(){
     state.activePlanCard=liveCard;
     savePublishingPlan();
   }
-  const valid=new Set(eligiblePublishSections().map(s=>s.key));
-  publishImages.filter(x=>x.kind!=='hero'&&x.id!==publishHeroId).forEach(img=>{ if(img.section!=='unassigned'&&!valid.has(img.section)) img.section='unassigned'; });
+  autoAssignPublishBodyImages();
   renderPublishImages(); renderPublishHero(); refreshPublishPreview(); updateImageButtons(); updatePublishKeyword();
 }
 
@@ -3180,12 +3179,7 @@ function bodyPublishImages(){ return publishImages.filter(x=>x.kind!=='hero'&&x.
 function currentImageProfileV23(){ return platformProfileV23(els.platformSelect?.value).image; }
 function imagesForSection(key){ return bodyPublishImages().filter(x=>x.section===key); }
 function normalizeImagePlacementForPlatformV23(){
-  const sections=eligiblePublishSections();
-  if(!sections.length){
-    bodyPublishImages().forEach(img=>{ img.section='unassigned'; });
-    renderPublishImages(); refreshPublishPreview(); return;
-  }
-  bodyPublishImages().forEach((img,i)=>{ img.section=sections[i%sections.length].key; });
+  autoAssignPublishBodyImages();
   renderPublishImages(); refreshPublishPreview();
 }
 function refreshPublishPreview(){
@@ -3220,6 +3214,24 @@ function renumberPublishImages(){
   const hero=publishImages.find(x=>x.id===publishHeroId); if(hero) hero.filename=`${filenameBase()}-대표.jpg`;
   bodyPublishImages().forEach((img,i)=>img.filename=`${filenameBase()}-${String(i+1).padStart(2,'0')}.jpg`);
 }
+function autoAssignPublishBodyImages(){
+  const sections=eligiblePublishSections(),bodies=bodyPublishImages();
+  if(!sections.length){ bodies.forEach(img=>{img.section='unassigned'}); return; }
+  const sectionCount=sections.length,total=bodies.length,baseCap=sectionCount*3;
+  if(total<baseCap){
+    const base=Math.floor(total/sectionCount),extra=total%sectionCount;
+    let cursor=0;
+    sections.forEach((sec,si)=>{
+      const count=base+(si<extra?1:0);
+      for(let j=0;j<count&&cursor<total;j++,cursor++) bodies[cursor].section=sec.key;
+    });
+    return;
+  }
+  bodies.forEach((img,i)=>{
+    if(i<baseCap) img.section=sections[Math.floor(i/3)].key;
+    else img.section=sections[(i-baseCap)%sectionCount].key;
+  });
+}
 function nextAvailableSection(){
   const sections=eligiblePublishSections();
   if(!sections.length) return 'unassigned';
@@ -3242,9 +3254,10 @@ async function handleBodyFiles(list){
   if(!valid.length) return;
   els.imageStatus.textContent=`${valid.length}장 JPG 변환 중...`; els.imageStatus.className='pub-status warn';
   for(const file of valid){
-    try{ const img=await convertPublishImage(file); img.section=nextAvailableSection(); publishImages.push(img); }
+    try{ const img=await convertPublishImage(file); publishImages.push(img); }
     catch(e){ console.error(e); }
   }
+  autoAssignPublishBodyImages();
   renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
   const unassigned=bodyPublishImages().filter(x=>x.section==='unassigned').length;
   els.imageStatus.textContent=`본문 ${bodyPublishImages().length}장 변환 완료${unassigned?` · 배치할 본문 섹션 없음 ${unassigned}장`:''}`; els.imageStatus.className='pub-status ok';
@@ -3253,8 +3266,8 @@ function setPublishHero(id){
   const next=publishImages.find(x=>x.id===id); if(!next) return;
   const prev=publishImages.find(x=>x.id===publishHeroId);
   if(prev&&prev.kind==='hero'&&prev.id!==id){ try{URL.revokeObjectURL(prev.url)}catch(e){} publishImages=publishImages.filter(x=>x.id!==prev.id); }
-  else if(prev&&prev.id!==id){ prev.section=nextAvailableSection(); }
-  publishHeroId=id; renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
+  else if(prev&&prev.id!==id){ prev.section='unassigned'; }
+  publishHeroId=id; autoAssignPublishBodyImages(); renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
 }
 function renderPublishHero(){
   if(!els.heroSlot) return;
@@ -3288,7 +3301,7 @@ function removePublishImage(id){
   const idx=publishImages.findIndex(x=>x.id===id); if(idx<0) return;
   try{URL.revokeObjectURL(publishImages[idx].url)}catch(e){}
   const wasHero=publishHeroId===id; publishImages.splice(idx,1); if(wasHero) publishHeroId=null;
-  renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
+  autoAssignPublishBodyImages(); renumberPublishImages(); renderPublishHero(); renderPublishImages(); refreshPublishPreview(); updateImageButtons();
 }
 function clearPublishImages(){
   publishImages.forEach(x=>{try{URL.revokeObjectURL(x.url)}catch(e){}}); publishImages=[]; publishHeroId=null;
